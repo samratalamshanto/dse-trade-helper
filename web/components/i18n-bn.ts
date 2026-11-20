@@ -70,7 +70,7 @@ export const BN: Record<string, string> = {
   'This site helps you choose what to research. It does not tell you what to buy.': 'এই সাইট কী নিয়ে গবেষণা করবেন তা বেছে নিতে সাহায্য করে। কী কিনবেন তা বলে না।',
 
   // Lists
-  'Quick picks:': 'দ্রুত বাছাই:', 'Good and cheap': 'ভালো এবং সস্তা', 'High dividend': 'উচ্চ লভ্যাংশ', 'Rising earnings': 'বাড়ন্ত আয়', 'Risky — avoid': 'ঝুঁকিপূর্ণ — এড়িয়ে চলুন',
+  'Quick picks:': 'দ্রুত বাছাই:', 'Good companies': 'ভালো কোম্পানি', 'Passes every quality check, at any price.': 'সব মান যাচাইয়ে উত্তীর্ণ, যেকোনো দামে।', 'Good and cheap': 'ভালো এবং সস্তা', 'High dividend': 'উচ্চ লভ্যাংশ', 'Rising earnings': 'বাড়ন্ত আয়', 'Risky — avoid': 'ঝুঁকিপূর্ণ — এড়িয়ে চলুন',
   'Worth researching, with a P/E at or below its sector median.': 'P/E খাতের মধ্যমার কাছে বা নিচে, গবেষণার যোগ্য।',
   "Yield 5%+ at today's price, no fraud flag, easy to trade.": 'আজকের দামে ফলন ৫%+, প্রতারণার পতাকা নেই, সহজে লেনদেনযোগ্য।',
   'Earnings per share growing 15%+ a year, no fraud flag.': 'প্রতি শেয়ারের আয় বছরে ১৫%+ বাড়ছে, প্রতারণার পতাকা নেই।',

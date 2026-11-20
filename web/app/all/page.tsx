@@ -17,6 +17,8 @@ interface CompaniesResponse { rows: CompanyRow[]; codes: { code: string; sector:
 const LIQUID_BDT = 1_000_000;
 type Medians = Record<string, number | null>;
 const PRESETS: { key: string; label: string; icon: IconName; tone: string; hint: string; sort: string; dir: number; test: (r: CompanyRow, m: Medians) => boolean }[] = [
+  { key: 'good', label: 'Good companies', icon: 'research', tone: 'accent', hint: 'Passes every quality check, at any price.', sort: 'score', dir: -1,
+    test: (r) => r.signal === 'research' },
   { key: 'cheap', label: 'Good and cheap', icon: 'tag', tone: 'accent', hint: 'Worth researching, with a P/E at or below its sector median.', sort: 'pe', dir: 1,
     test: (r, m) => r.signal === 'research' && r.pe != null && m[r.sector] != null && r.pe <= (m[r.sector] as number) },
   { key: 'dividend', label: 'High dividend', icon: 'coins', tone: 'up', hint: 'Yield 5%+ at today\'s price, no fraud flag, easy to trade.', sort: 'dividendYield', dir: -1,

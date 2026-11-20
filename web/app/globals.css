@@ -245,8 +245,8 @@ ol.steps { padding-left: 20px; } ol.steps li { margin-bottom: 8px; }
 a.btn { text-decoration: none; }
 .watch-btn.on .ic path { fill: currentColor; }
 .watch-btn:not(.with-text) { padding: 6px; border-color: var(--control-border); background: transparent; }
-.co-cell { display: flex; align-items: flex-start; gap: 6px; }
-.co-cell .watch-btn { margin: -8px 0 -8px -8px; flex: none; }
+.co-cell { display: flex; align-items: center; gap: 6px; }
+.co-cell .watch-btn { margin-left: -8px; flex: none; }
 .nav-count { margin-left: auto; font-size: 12px; background: var(--panel-2); border-radius: 999px; padding: 1px 8px; color: var(--text); }
 body.nav-collapsed .nav-count { display: none; }
 

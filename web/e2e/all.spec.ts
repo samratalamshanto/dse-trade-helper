@@ -55,6 +55,23 @@ test.describe('/all', () => {
     await expect(chip).toHaveClass(/active/);
   });
 
+  test('"Good companies" lists only Worth researching rows at any price, more than "Good and cheap"', async ({ page }) => {
+    const group = page.getByRole('group', { name: 'Quick picks:' });
+    const cheapChip = group.getByRole('button', { name: 'Good and cheap' });
+    await cheapChip.click();
+    await expect(cheapChip).toHaveAttribute('aria-pressed', 'true');
+    const cheap = await rows(page).count();
+    const goodChip = group.getByRole('button', { name: 'Good companies' });
+    await goodChip.click();
+    await expect(goodChip).toHaveAttribute('aria-pressed', 'true');
+    await expect(page).toHaveURL(/preset=good/);
+    const good = await rows(page).count();
+    expect(good).toBeGreaterThanOrEqual(cheap);
+    expect(good).toBeGreaterThan(0);
+    const signals = await rows(page).locator('td[data-label=Signal]').allInnerTexts();
+    for (const s of signals) expect(s).toContain('Worth researching');
+  });
+
   test('CSV download has a header row', async ({ page }) => {
     const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /^Download list/ }).click()]);
     expect(dl.suggestedFilename()).toBe('dse-companies.csv');
@@ -71,4 +88,16 @@ test('/all asks for /api/companies once on load', async ({ page }) => {
   await expect(rows(page).first()).toContainText('৳');
   await page.waitForLoadState('networkidle');
   expect(n).toBe(1);
+});
+
+test('/all: the watch star is vertically centred in its row, level with the signal badge, also when the name wraps', async ({ page }) => {
+  await page.goto('/all');
+  await expect(rows(page).first()).toContainText('৳');
+  const offsets = await rows(page).evaluateAll((trs) => trs.filter((tr) => tr.querySelector('.watch-btn')).slice(0, 15).map((tr) => {
+    const star = tr.querySelector('.watch-btn')!.getBoundingClientRect();
+    const cell = tr.querySelector('td')!.getBoundingClientRect();
+    return { code: tr.querySelector('b')?.textContent, gapDiff: Math.abs((star.top - cell.top) - (cell.bottom - star.bottom)) };
+  }));
+  expect(offsets.length).toBeGreaterThan(0);
+  for (const o of offsets) expect(o.gapDiff, `${o.code}: space above and below the star differs`).toBeLessThanOrEqual(2);
 });
