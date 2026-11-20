@@ -1,0 +1,70 @@
+/* Portfolio page specific styles */
+
+.lotRow td { cursor: default; }
+.lotRow td:first-child { padding-left: 28px; color: var(--muted); font-size: 13px; }
+.totalsRow td { font-weight: 600; border-top: 2px solid var(--border); }
+
+.formGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: end; }
+
+.fieldWrap { display: flex; flex-direction: column; gap: 4px; }
+.fieldLabel { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.fieldInput { padding: 8px 10px; border-radius: 8px; font: inherit; height: 44px; width: 100%; }
+.fieldInput:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fieldInput.invalid { border-color: var(--down); }
+.fieldError { font-size: 12px; color: var(--down); min-height: 16px; }
+
+.formActions { display: flex; gap: 8px; align-items: center; padding-top: 4px; }
+
+.allotChart { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+.allotLegend { display: flex; flex-direction: column; gap: 6px; min-width: 120px; }
+.allotItem { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.allotDot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+
+.incomeTotal { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 16px; }
+
+.whatIfGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; }
+.whatIfResults { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 12px; }
+.whatIfResult { background: var(--panel-2); border-radius: 10px; padding: 12px 14px; }
+.whatIfLabel { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.whatIfValue { font-size: 20px; font-weight: 600; margin-top: 4px; }
+
+.csvArea { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+.csvPaste { width: 100%; min-height: 90px; padding: 8px 10px; border-radius: 8px; font: 13px/1.4 var(--font-mono), ui-monospace, monospace; resize: vertical; }
+.csvPaste:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.previewTable { font-size: 13px; }
+.previewSkipped { color: var(--down); font-size: 12px; padding: 4px 0 0 10px; }
+.previewOk { color: var(--up); }
+
+
+.whatIfTitle { font-size: 15px; margin: 0 0 10px; }
+.whatIfIntro { margin-bottom: 12px; }
+.csvHelp { margin-bottom: 6px; }
+.fileBtn { cursor: pointer; display: inline-flex; }
+.gapTop { margin-top: 10px; }
+.previewLine { margin: 0 0 8px; }
+.previewTable { margin-bottom: 10px; }
+.replaceRow { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+.replaceLabel { display: flex; gap: 6px; align-items: center; font-size: 13px; cursor: pointer; min-height: 44px; }
+.replaceLabel input { width: 16px; height: 16px; }
+.confirmBox { margin-top: 10px; padding: 10px 12px; }
+.confirmActions { display: flex; gap: 8px; margin-top: 8px; }
+.exportRow { margin-top: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+@media (max-width: 640px) {
+  /* Phones: one compact line per holding (code, value, profit), total first. */
+  .holdings tbody { display: flex; flex-direction: column; }
+  .holdings tr.holdingRow { grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 4px 10px; padding: 8px 4px; }
+  .holdings tr.holdingRow td:first-child { grid-column: auto; }
+  .holdings tr.holdingRow td.wide { display: none; }
+  .holdings tr.holdingRow td[data-label]::before { display: none; }
+  .holdings tr.totalsRow { order: -1; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; background: var(--panel-2); border-radius: 10px; }
+  .holdings tr.totalsRow td.wide { display: none; }
+  .holdings tr.totalsRow td[data-label]::before { display: none; }
+  .formGrid { grid-template-columns: 1fr 1fr; }
+  .csvArea { grid-template-columns: 1fr; }
+  .whatIfGrid { grid-template-columns: 1fr; }
+  .whatIfResults { grid-template-columns: 1fr 1fr; }
+  .allotChart { flex-direction: column; }
+  .incomeTotal { gap: 14px; }
+}

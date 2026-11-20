@@ -1,0 +1,17 @@
+appId: host.exp.exponent
+name: notfound
+env:
+  BASE: exp://192.168.10.206:8081/--
+---
+- stopApp
+- openLink: ${BASE}/nosuch
+- extendedWaitUntil:
+    visible: "This page does not exist"
+    timeout: 90000
+- assertVisible: "Go to Home"
+- takeScreenshot: notfound-01-page
+- tapOn: "Go to Home"
+- extendedWaitUntil:
+    visible: "DSEX index"
+    timeout: 30000
+- takeScreenshot: notfound-02-home

@@ -1,0 +1,161 @@
+import type { Page, Route } from '@playwright/test';
+import { test, expect } from './fixtures';
+
+// The real /api/trades writes to the owner's Google Sheet: every request is mocked, anything unmocked is aborted.
+const KEY = 'k'.repeat(20);
+const json = (route: Route, status: number, body: unknown) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+const LIST = {
+  warnings: [], badRows: [],
+  trades: [
+    { id: 't1', date: '2026-01-05', code: 'GP', side: 'BUY', quantity: 100, price: 250, commission: 50, note: '', source: 'manual', createdAt: '' },
+    { id: 't2', date: '2026-02-05', code: 'GP', side: 'SELL', quantity: 40, price: 300, commission: 30, note: '', source: 'manual', createdAt: '' },
+  ],
+  holdings: [{ code: 'GP', shares: 60, avgCost: 250.5, invested: 15030, realised: 1950, trades: 2, price: 280, value: 16800, unrealised: 1770,
+    limits: { stopPct: 10, targetPct: 20 },
+    check: { action: 'take-profit', label: 'Consider taking some profit', tone: 'warn', reasons: ['Up 21.0% — past your 20% target', 'P/E is high against its own 5-year history'], plPct: 21 } }],
+  settings: { default: { stopPct: 10, targetPct: 20 }, perCode: {} },
+};
+
+async function unlock(page: Page) {
+  await page.goto('/trades');
+  await page.getByLabel('Trades key').fill(KEY);
+  await page.getByRole('button', { name: 'Open my trades' }).click();
+}
+
+test.describe('/trades (API mocked)', () => {
+  test('bad key: 401 shows an error and returns to the key prompt', async ({ page }) => {
+    test.info().annotations.push({ type: 'note', description: 'Chrome logs the mocked 401 as a console error; only that line is allowed.' });
+    await page.route('**/api/trades**', (r) => json(r, 401, { error: 'Wrong trades key.' }));
+    await page.goto('/trades');
+    await expect(page.getByRole('heading', { name: 'My trades' })).toBeVisible();
+    await page.getByLabel('Trades key').fill(KEY);
+    await page.getByRole('button', { name: 'Open my trades' }).click();
+    await expect(page.locator('p[role=alert]')).toHaveText('Wrong trades key.');
+    await expect(page.getByLabel('Trades key')).toBeVisible();
+  });
+  test.use({ allowedConsole: [/status of 40[01]/] });
+
+  test('list: holdings and trades table, sell amount = qty*price - fee', async ({ page }) => {
+    await page.route('**/api/trades**', (r) => json(r, 200, LIST));
+    await unlock(page);
+    const holdings = page.locator('.panel').filter({ has: page.getByRole('heading', { name: 'Holdings', exact: true }) });
+    await expect(holdings.locator('tbody tr').filter({ hasText: 'GP' })).toContainText('60');
+    const trades = page.locator('.panel').filter({ has: page.getByRole('heading', { name: 'All trades' }) });
+    await expect(trades.locator('tbody tr').filter({ hasText: 'SELL 40 GP' })).toContainText('৳11,970.00'); // 40*300-30
+    await expect(trades.locator('tbody tr').filter({ hasText: 'BUY 100 GP' })).toContainText('৳25,050.00'); // 100*250+50
+  });
+
+  test('import preview with 0 new says nothing to add', async ({ page }) => {
+    await page.route('**/api/trades/import', (r) => json(r, 200, { date: '2026-02-05', added: [], skipped: [{ date: '2026-02-05', code: 'GP', side: 'BUY', quantity: 1, price: 1, commission: null, note: '' }], errors: [], saved: false }));
+    await page.route('**/api/trades', (r) => json(r, 200, LIST));
+    await unlock(page);
+    await page.getByLabel('Choose broker file (.xlsx)').setInputFiles({ name: 'order_summary_2026-02-05.xlsx', mimeType: 'application/octet-stream', buffer: Buffer.from('x') });
+    await expect(page.getByText(/Nothing new to add/)).toBeVisible();
+    await expect(page.getByText('0 to add, 1 already in the sheet.')).toBeVisible();
+  });
+
+  test('add-trade form posts the right JSON', async ({ page }) => {
+    let posted: unknown;
+    await page.route('**/api/trades', async (r) => {
+      if (r.request().method() === 'POST') { posted = r.request().postDataJSON(); return json(r, 201, {}); }
+      return json(r, 200, LIST);
+    });
+    await unlock(page);
+    await expect(page.getByRole('heading', { name: 'Add a trade' })).toBeVisible();
+    await page.getByLabel('Date', { exact: true }).fill('2026-03-02');
+    await page.getByLabel('Code').fill('gp');
+    await page.getByRole('combobox', { name: /^Side/ }).selectOption('SELL');
+    await page.getByLabel('Quantity').fill('10');
+    await page.getByLabel('Price ৳').fill('281.5');
+    await page.getByLabel('Commission ৳').fill('5');
+    await page.getByLabel('Note').fill('e2e');
+    const req = page.waitForRequest((q) => q.method() === 'POST' && q.url().endsWith('/api/trades'));
+    await page.getByRole('button', { name: 'Add trade' }).click();
+    expect((await req).headers()['x-trades-key']).toBe(KEY);
+    expect(posted).toEqual({ date: '2026-03-02', code: 'GP', side: 'SELL', quantity: '10', price: '281.5', commission: '5', note: 'e2e' });
+  });
+
+  test('holding check: coloured badge with its reasons (tap to expand on phones)', async ({ page }, info) => {
+    await page.route('**/api/trades**', (r) => json(r, 200, LIST));
+    await unlock(page);
+    await expect(page.getByText('Checks use fixed rules on your numbers and public DSE data — a learning aid, not investment advice.')).toBeVisible();
+    const row = page.locator('.panel').filter({ has: page.getByRole('heading', { name: 'Holdings', exact: true }) }).locator('tbody tr').filter({ hasText: 'GP' });
+    const reason = row.getByText('Up 21.0% — past your 20% target');
+    if (info.project.name === 'phone') {
+      await expect(reason).toBeHidden();
+      await row.getByRole('button', { name: /Consider taking some profit/ }).click();
+    }
+    await expect(row.locator('.pill.s-caution:visible')).toHaveText('Consider taking some profit');
+    await expect(reason).toBeVisible();
+  });
+
+  test('my limits: save sends the PUT, shows the 400 message inline, then saves and reloads', async ({ page }) => {
+    const puts: unknown[] = [];
+    let gets = 0;
+    await page.route('**/api/trades/settings', (r) => {
+      puts.push(r.request().postDataJSON());
+      return puts.length === 1 ? json(r, 400, { error: 'Stop-loss and target must be percentages between 1 and 95.' }) : json(r, 200, r.request().postDataJSON());
+    });
+    await page.route('**/api/trades', (r) => { gets++; return json(r, 200, LIST); });
+    await unlock(page);
+    const panel = page.locator('form').filter({ has: page.getByRole('heading', { name: 'My limits' }) });
+    await panel.getByLabel('Default stop-loss %').fill('12');
+    await panel.getByLabel('Holding with its own limits').selectOption('GP');
+    await panel.getByRole('button', { name: 'Add override' }).click();
+    await panel.getByLabel('GP target %').fill('30');
+    await panel.getByRole('button', { name: 'Save limits' }).click();
+    await expect(panel.getByRole('alert')).toHaveText('Stop-loss and target must be percentages between 1 and 95.');
+    expect(puts[0]).toEqual({ default: { stopPct: 12, targetPct: 20 }, perCode: { GP: { stopPct: 12, targetPct: 30 } } });
+    await panel.getByRole('button', { name: 'Remove GP override' }).click();
+    const before = gets;
+    await panel.getByRole('button', { name: 'Save limits' }).click();
+    await expect.poll(() => gets).toBeGreaterThan(before);
+    expect(puts[1]).toEqual({ default: { stopPct: 12, targetPct: 20 }, perCode: {} });
+    await expect(panel.getByRole('alert')).toHaveCount(0);
+  });
+
+  test('import: a failed second file clears the first file preview and shows only the error', async ({ page }) => {
+    let n = 0;
+    await page.route('**/api/trades/import', (r) => (++n === 1
+      ? json(r, 200, { date: '2026-11-19', added: [], skipped: [], errors: [], saved: false })
+      : json(r, 400, { error: 'The trade date could not be read from the file name. Pick the date and upload again.' })));
+    await page.route('**/api/trades', (r) => json(r, 200, LIST));
+    await unlock(page);
+    const file = page.getByLabel('Choose broker file (.xlsx)');
+    await file.setInputFiles({ name: 'order_summary_2026-11-19.xlsx', mimeType: 'application/octet-stream', buffer: Buffer.from('x') });
+    await expect(page.getByText('0 to add, 0 already in the sheet.')).toBeVisible();
+    await file.setInputFiles({ name: 'export.xlsx', mimeType: 'application/octet-stream', buffer: Buffer.from('x') });
+    await expect(page.getByRole('alert').filter({ hasText: /trade date could not be read/ })).toBeVisible();
+    await expect(page.getByText('0 to add, 0 already in the sheet.')).toHaveCount(0);
+  });
+});
+
+test.describe('dashboard: My holdings today (API mocked)', () => {
+  test('shows value, check badges and a changed marker; links to /trades', async ({ page }) => {
+    await page.addInitScript((k) => {
+      localStorage.setItem('tradesKey', k);
+      localStorage.setItem('holdingChecks', JSON.stringify({ date: '2026-11-19', labels: { GP: 'Hold' } }));
+    }, KEY);
+    await page.route('**/api/trades', (r) => json(r, 200, LIST));
+    await page.goto('/');
+    const card = page.locator('section').filter({ has: page.getByRole('heading', { name: 'My holdings today' }) });
+    await expect(card).toContainText('৳16,800.00');
+    await expect(card.locator('.pill.s-caution')).toHaveText('Consider taking some profit');
+    await expect(card.getByText('Changed since last visit')).toHaveAttribute('title', 'Was: Hold');
+    await expect(card.getByRole('link', { name: 'Open my trades →' })).toHaveAttribute('href', '/trades');
+    expect(JSON.parse((await page.evaluate(() => localStorage.getItem('holdingChecks')))!).labels).toEqual({ GP: 'Consider taking some profit' });
+  });
+
+  test('hidden without a key, and hidden on a 401', async ({ page }) => {
+    await page.route('**/api/trades', (r) => json(r, 401, { error: 'Wrong trades key.' }));
+    await page.goto('/');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'My holdings today' })).toHaveCount(0);
+    await page.evaluate((k) => localStorage.setItem('tradesKey', k), KEY);
+    const req = page.waitForResponse((r) => r.url().endsWith('/api/trades'));
+    await page.reload();
+    await req;
+    await expect(page.getByRole('heading', { name: 'My holdings today' })).toHaveCount(0);
+  });
+  test.use({ allowedConsole: [/status of 401/] });
+});

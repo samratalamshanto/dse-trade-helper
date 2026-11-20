@@ -1,0 +1,27 @@
+appId: host.exp.exponent
+name: learn
+env:
+  BASE: exp://192.168.10.206:8081/--
+---
+- stopApp
+- openLink: ${BASE}/learn
+- extendedWaitUntil:
+    visible: "How it works"
+    timeout: 90000
+- assertVisible: "The four signals"
+- assertVisible: "Worth researching"
+- scrollUntilVisible:
+    element: "Words you will see"
+    direction: DOWN
+- tapOn: "Tap a word to see what it means."
+- takeScreenshot: learn-01-top
+- scrollUntilVisible:
+    element: "Fraud warning patterns"
+    direction: DOWN
+- scrollUntilVisible:
+    element: "Price pump"
+    direction: DOWN
+    centerElement: true
+- tapOn: "Price pump"
+- assertVisible: "Price up more than 30% in 1 month.*"
+- takeScreenshot: learn-02-term-expanded

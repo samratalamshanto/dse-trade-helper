@@ -1,0 +1,36 @@
+appId: host.exp.exponent
+name: trades-import
+# Preview only: picks /sdcard/Download/order_summary_19-Nov-2026.xlsx, whose 2 rows are
+# already in the sheet. Never taps Save.
+env:
+  BASE: exp://192.168.10.206:8081/--
+---
+- stopApp
+- openLink: ${BASE}/trades-import
+- extendedWaitUntil:
+    visible: "Pick the Excel file"
+    timeout: 90000
+- assertVisible: "Import broker Excel"
+- tapOn: "Pick the Excel file"
+# Android system file picker
+- extendedWaitUntil:
+    visible: "Show roots"
+    timeout: 20000
+- tapOn: "Show roots"
+- tapOn: "Downloads"
+- extendedWaitUntil:
+    visible: "order_summary_19-Nov-2026.xlsx"
+    timeout: 15000
+- takeScreenshot: import-01-picker
+- tapOn: "order_summary_19-Nov-2026.xlsx"
+# Preview from the server (reads the Google Sheet)
+- extendedWaitUntil:
+    visible: "Trades for 2026-11-19|.*could not be reached.*"
+    timeout: 60000
+- assertVisible: "Trades for 2026-11-19"
+- assertVisible: "2 skipped — already in your trades"
+- assertVisible: "Nothing new to save from this file."
+- assertVisible: "BUY 1 GP × ৳226.90"
+- assertVisible: "BUY 1 WALTONHIL × ৳330.00"
+- assertNotVisible: "Save \\d+ trades?"
+- takeScreenshot: import-02-preview-2-skipped

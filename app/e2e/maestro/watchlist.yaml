@@ -1,0 +1,55 @@
+appId: host.exp.exponent
+name: watchlist
+env:
+  BASE: exp://192.168.10.206:8081/--
+---
+- stopApp
+- openLink: ${BASE}/c/GP
+- extendedWaitUntil:
+    visible: "52-week range"
+    timeout: 90000
+- runFlow: _hide-devtools.yaml
+- runFlow:
+    when:
+      visible: "Remove from watchlist"
+    commands:
+      - tapOn: "Remove from watchlist"
+- tapOn: "Save to watchlist"
+- extendedWaitUntil:
+    visible: "Remove from watchlist"
+    timeout: 5000
+# Watchlist tab lists GP
+- openLink: ${BASE}/watchlist
+- extendedWaitUntil:
+    visible: "1 saved · .*"
+    timeout: 30000
+- assertVisible: "Grameenphone.*"
+- takeScreenshot: watchlist-01-gp-saved
+# Home shows "Your watchlist today" with GP
+- tapOn: ".*Home"
+- extendedWaitUntil:
+    visible: "Your watchlist today"
+    timeout: 30000
+- assertVisible:
+    text: "GP, .*"
+- takeScreenshot: watchlist-02-home-watchlist-today
+# Remove it again; watchlist ends empty
+- openLink: ${BASE}/c/GP
+- extendedWaitUntil:
+    visible: "Remove from watchlist"
+    timeout: 30000
+- runFlow: _hide-devtools.yaml
+- tapOn: "Remove from watchlist"
+- extendedWaitUntil:
+    visible: "Save to watchlist"
+    timeout: 5000
+- openLink: ${BASE}/watchlist
+- extendedWaitUntil:
+    visible: "No companies saved yet"
+    timeout: 30000
+- takeScreenshot: watchlist-03-empty-again
+- tapOn: ".*Home"
+- extendedWaitUntil:
+    visible: "DSEX index"
+    timeout: 15000
+- assertNotVisible: "Your watchlist today"

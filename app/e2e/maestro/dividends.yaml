@@ -1,0 +1,13 @@
+appId: host.exp.exponent
+name: dividends
+env:
+  BASE: exp://192.168.10.206:8081/--
+---
+- stopApp
+- openLink: ${BASE}/dividends
+- extendedWaitUntil:
+    visible: "Dividends you can still catch"
+    timeout: 90000
+- assertVisible: "Own the share at the end of the last day to buy.*"
+- assertVisible: "\\d+ dividends you can still catch.*"
+- takeScreenshot: dividends-01-list

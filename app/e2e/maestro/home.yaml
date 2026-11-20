@@ -1,0 +1,60 @@
+appId: host.exp.exponent
+name: home
+env:
+  BASE: exp://192.168.10.206:8081/--
+---
+- stopApp
+- openLink: ${BASE}/
+- extendedWaitUntil:
+    visible: "DSEX index"
+    timeout: 90000
+- assertVisible: "Market (open|closed)|● Market open"
+- assertVisible: ".*companies checked"
+- takeScreenshot: home-01-market
+# Movers: switch gainers -> losers -> gainers
+- scrollUntilVisible:
+    element: "Top losers"
+    direction: DOWN
+- tapOn: "Top losers"
+- assertVisible:
+    text: "Top losers"
+    selected: true
+- takeScreenshot: home-02-top-losers
+- tapOn: "Top gainers"
+- assertVisible:
+    text: "Top gainers"
+    selected: true
+# Signal count card -> Companies filtered
+- scrollUntilVisible:
+    element: ".*Worth researching, Passes every quality check.*"
+    direction: DOWN
+- tapOn: ".*Worth researching, Passes every quality check.*"
+- extendedWaitUntil:
+    visible: ".*compan(y|ies) · Passes every quality check and has no fraud flag\\."
+    timeout: 30000
+- assertVisible:
+    text: "Worth researching"
+    selected: true
+- takeScreenshot: home-03-companies-filtered
+# Bottom tabs
+- tapOn: ".*Watchlist"
+- extendedWaitUntil:
+    visible: "Watchlist"
+    timeout: 15000
+- tapOn: ".*Trades"
+- extendedWaitUntil:
+    visible: "My trades"
+    timeout: 30000
+- tapOn: "More"   # exact tab label (renamed from "Learn"; it now holds the theme switch)
+- extendedWaitUntil:
+    visible: "Settings and help"
+    timeout: 15000
+- tapOn: ".*Companies"
+- extendedWaitUntil:
+    visible: "Search companies"
+    timeout: 15000
+- tapOn: ".*Home"
+- extendedWaitUntil:
+    visible: "DSEX index"
+    timeout: 15000
+- takeScreenshot: home-04-tabs-back-home

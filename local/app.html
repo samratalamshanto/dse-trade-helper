@@ -1,0 +1,945 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DSE Trade Helper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #f4f6fa; --panel: #fff; --panel-2: #eef1f6; --border: #dde3ec; --text: #121826; --muted: #5d6779;
+  --accent: #1f57c3; --accent-soft: #e3ecfc; --up: #0a7343; --good-soft: #e1f5ec; --down: #b42323; --bad-soft: #fde8e8;
+  --warn: #8a5300; --warn-soft: #fff4dc; --shadow: 0 1px 2px rgba(16,24,40,.06);
+}
+:root[data-theme="dark"] {
+  --bg: #0d1117; --panel: #151b24; --panel-2: #1c2430; --border: #283241; --text: #e6ebf2; --muted: #8b97a8;
+  --accent: #5b93f5; --accent-soft: #1b2a45; --up: #2fc483; --good-soft: #12342a; --down: #f06363; --bad-soft: #3d1a1d;
+  --warn: #f0b429; --warn-soft: #3a2f12; --shadow: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1117; --panel: #151b24; --panel-2: #1c2430; --border: #283241; --text: #e6ebf2; --muted: #8b97a8;
+    --accent: #5b93f5; --accent-soft: #1b2a45; --up: #2fc483; --good-soft: #12342a; --down: #f06363; --bad-soft: #3d1a1d;
+    --warn: #f0b429; --warn-soft: #3a2f12; --shadow: none;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 "IBM Plex Sans", system-ui, sans-serif; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+a { color: var(--accent); }
+.layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 100vh; }
+aside { background: var(--panel); border-right: 1px solid var(--border); padding: 20px 14px; position: sticky; top: 0; height: 100vh; }
+.brand { font-weight: 700; font-size: 17px; display: flex; gap: 8px; align-items: center; margin: 0 6px 22px; }
+.brand span { width: 28px; height: 28px; border-radius: 8px; background: var(--accent); display: grid; place-items: center; color: #fff; }
+aside a { display: flex; align-items: center; min-height: 44px; padding: 8px 10px; border-radius: 8px; color: var(--text); text-decoration: none; }
+aside a:hover, aside a.active { background: var(--panel-2); }
+.navlabel { font-size: 11px; letter-spacing: .08em; color: var(--muted); margin: 14px 8px 6px; }
+main { padding: 22px 28px 60px; width: 100%; max-width: 1680px; margin: 0 auto; }
+.topbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
+.search { flex: 1; min-width: 200px; position: relative; }
+.search input { width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--panel); color: var(--text); font: inherit; }
+.suggest { position: absolute; top: 100%; left: 0; right: 0; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; margin-top: 4px; z-index: 5; max-height: 320px; overflow: auto; }
+.suggest a { display: flex; justify-content: space-between; padding: 8px 12px; text-decoration: none; color: var(--text); }
+.suggest a:hover, .suggest a.hl { background: var(--panel-2); }
+.btn { border: 1px solid var(--border); background: var(--panel); color: var(--text); padding: 8px 12px; border-radius: 8px; cursor: pointer; font: inherit; }
+.btn:hover { background: var(--panel-2); }
+h1 { font-size: 24px; margin: 0 0 4px; } h2 { font-size: 18px; margin: 28px 0 10px; } h3 { font-size: 15px; margin: 0 0 8px; }
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 18px; box-shadow: var(--shadow); }
+.grid { display: grid; gap: 14px; } .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.muted { color: var(--muted); } .small { font-size: 13px; }
+.up { color: var(--up); } .down { color: var(--down); }
+.pill { display: inline-flex; gap: 4px; align-items: center; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.s-research { background: var(--good-soft); color: var(--up); } .s-caution { background: var(--warn-soft); color: var(--warn); }
+.s-avoid { background: var(--bad-soft); color: var(--down); } .s-neutral { background: var(--panel-2); color: var(--muted); }
+.f-clean { background: var(--good-soft); color: var(--up); } .f-suspicious { background: var(--warn-soft); color: var(--warn); } .f-high { background: var(--bad-soft); color: var(--down); }
+.card { text-decoration: none; color: inherit; display: block; transition: transform .15s; }
+.card:hover { transform: translateY(-2px); border-color: var(--accent); }
+.card .top { display: flex; justify-content: space-between; gap: 8px; }
+.score { font-size: 26px; font-weight: 700; }
+.bar { height: 8px; border-radius: 6px; background: var(--panel-2); overflow: hidden; margin: 6px 0; }
+.bar i { display: block; height: 100%; background: var(--accent); }
+.note { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 10px 14px; border-radius: 0 10px 10px 0; margin: 10px 0; font-size: 14px; }
+.note.warn { border-color: var(--warn); background: var(--warn-soft); } .note.bad { border-color: var(--down); background: var(--bad-soft); } .note.good { border-color: var(--up); background: var(--good-soft); }
+.verdict { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+.verdict .big { font-size: 22px; font-weight: 700; }
+ul.reasons { list-style: none; padding: 0; margin: 0; } ul.reasons li { padding: 8px 0; border-bottom: 1px solid var(--border); display: flex; gap: 10px; }
+ul.reasons li:last-child { border: 0; }
+.why { font-size: 13px; color: var(--muted); }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); }
+th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: uppercase; }
+th[data-sort] { cursor: pointer; } td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+tbody tr { cursor: pointer; } tbody tr:hover { background: var(--panel-2); }
+.table-wrap { overflow-x: auto; }
+.filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+select { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel); color: var(--text); font: inherit; }
+.chart-box { position: relative; height: 240px; }
+.kpi { display: flex; flex-direction: column; gap: 2px; }
+.kpi .val { font-size: 22px; font-weight: 600; }
+.kpi .cagr { font-size: 12px; }
+.kpi .mini { position: relative; height: 70px; margin: 6px 0; }
+.kpi .why { margin-top: auto; }
+.missing { border-style: dashed; color: var(--muted); }
+.market-top { display: flex; justify-content: space-between; gap: 18px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 8px; }
+.big-num { font-size: 34px; font-weight: 700; line-height: 1.1; }
+.market-stats { display: flex; gap: 28px; flex-wrap: wrap; }
+.stat { font-size: 20px; font-weight: 600; }
+.breadth { display: flex; height: 12px; border-radius: 8px; overflow: hidden; margin-top: 12px; }
+.breadth-labels { display: flex; justify-content: space-between; margin-top: 4px; }
+.quick { margin-top: 14px; }
+.quick-card { display: flex; gap: 12px; align-items: flex-start; }
+.quick-card > .ic { width: 26px; height: 26px; color: var(--accent); margin-top: 2px; }
+.today-item { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; }
+.today-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.today-head a { margin-left: auto; white-space: nowrap; }
+.chart-empty { height: 120px; display: grid; place-items: center; color: var(--muted); border: 1px dashed var(--border); border-radius: 10px; margin: 8px 0; text-align: center; padding: 0 12px; }
+.session-note { margin: 0 0 8px; }
+.start { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 14px; border-left: 4px solid var(--accent); }
+.start ol { margin: 8px 0 4px; padding-left: 20px; }
+.start .btn { white-space: nowrap; flex: none; } .start li { margin: 4px 0; }
+.tab-link { padding: 10px 14px; border-radius: 9px; text-decoration: none; color: var(--muted); white-space: nowrap; min-height: 44px; display: inline-flex; align-items: center; }
+.tab-link[aria-current="page"] { background: var(--panel); color: var(--text); font-weight: 600; box-shadow: var(--shadow); }
+.today-list { list-style: none; margin: 0; padding: 0; }
+.today-list li { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-top: 1px solid var(--border); font-size: 14px; }
+.hero-top { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.hero-price { text-align: right; }
+.verdict { margin-top: 12px; }
+.sr-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.questions { margin-top: 14px; }
+.qcard { text-align: left; font: inherit; color: inherit; cursor: pointer; display: flex; flex-direction: column; gap: 6px; min-height: 44px; }
+.qcard:hover { border-color: var(--accent); }
+.qans { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.qcard .more { color: var(--accent); margin-top: auto; }
+.tabs { display: flex; gap: 4px; background: var(--panel-2); padding: 4px; border-radius: 12px; margin: 18px 0 14px; overflow-x: auto; }
+.tabs button { border: 0; background: none; color: var(--muted); padding: 10px 14px; min-height: 44px; border-radius: 9px; cursor: pointer; font: inherit; white-space: nowrap; }
+.tabs button[aria-selected="true"] { background: var(--panel); color: var(--text); font-weight: 600; box-shadow: var(--shadow); }
+.info { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--muted); color: var(--muted); font-size: 10px; font-weight: 700; font-style: normal; cursor: help; position: relative; text-transform: none; letter-spacing: 0; vertical-align: 1px; }
+.info:hover::after, .info:focus::after { content: attr(data-tip); position: absolute; left: 50%; bottom: 140%; transform: translateX(-50%); width: max-content; max-width: 240px; background: var(--text); color: var(--bg); padding: 8px 10px; border-radius: 8px; font-size: 12px; font-weight: 400; line-height: 1.4; z-index: 10; white-space: normal; }
+.brand { position: relative; }
+.collapse { margin-left: auto; width: 44px; height: 44px; border: 1px solid var(--border); background: var(--panel); color: var(--muted); border-radius: 8px; display: grid; place-items: center; cursor: pointer; }
+aside a { gap: 10px; }
+aside a .ic { width: 18px; height: 18px; color: var(--muted); }
+aside a.active .ic { color: var(--accent); }
+body.nav-collapsed .layout { grid-template-columns: 68px minmax(0, 1fr); }
+body.nav-collapsed aside { padding: 20px 10px; }
+body.nav-collapsed .nav-text, body.nav-collapsed .navlabel, body.nav-collapsed .brand > span { display: none; }
+body.nav-collapsed .brand { justify-content: center; margin: 0 0 22px; }
+body.nav-collapsed .collapse { margin: 0; }
+body.nav-collapsed aside a { justify-content: center; padding: 8px; }
+.range { height: 10px; border-radius: 6px; background: linear-gradient(90deg, var(--up), var(--warn), var(--down)); position: relative; margin: 10px 0 4px; }
+.range i { position: absolute; top: -5px; width: 18px; height: 18px; border-radius: 50%; background: var(--panel); border: 3px solid var(--text); transform: translateX(-50%); }
+.range-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+.metric { background: var(--panel-2); border-radius: 10px; padding: 10px 12px; }
+.metric .k { font-size: 11px; color: var(--muted); text-transform: uppercase; } .metric .v { font-weight: 600; font-size: 17px; }
+.progress { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--muted); }
+.progress .bar { flex: 1; max-width: 300px; }
+dl.gloss dt { font-weight: 600; margin-top: 14px; } dl.gloss dd { margin: 4px 0 0; color: var(--muted); }
+.empty { text-align: center; padding: 30px; color: var(--muted); }
+footer { margin-top: 40px; font-size: 12px; color: var(--muted); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.btn, select, .search input { min-height: 44px; }
+.btn { display: inline-flex; align-items: center; gap: 6px; }
+.ic { width: 1.05em; height: 1.05em; flex: none; vertical-align: -0.15em; }
+.t-good { color: var(--up); } .t-warn { color: var(--warn); } .t-bad { color: var(--down); } .t-neutral { color: var(--muted); }
+th { white-space: nowrap; }
+th[data-sort] .sort-btn::after { content: " ↕"; opacity: .45; }
+th[data-sort][aria-sort="ascending"] .sort-btn::after { content: " ▲"; opacity: 1; }
+th[data-sort][aria-sort="descending"] .sort-btn::after { content: " ▼"; opacity: 1; }
+.sort-btn { all: unset; cursor: pointer; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; white-space: nowrap; padding: 6px 0; }
+.sort-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.updated { font-size: 12px; color: var(--muted); }
+.skel { background: linear-gradient(90deg, var(--panel-2), var(--border), var(--panel-2)); background-size: 200% 100%; animation: shimmer 1.2s infinite; border-radius: 12px; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+.spin .ic { animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .skel, .spin .ic { animation: none; } .card { transition: none; } }
+@media (max-width: 640px) {
+  table.cards thead { display: none; }
+  table.cards tr { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; padding: 12px 4px; border-bottom: 1px solid var(--border); }
+  table.cards td { border: 0; padding: 0; text-align: left; }
+  table.cards td:first-child { grid-column: 1 / -1; }
+  table.cards td[data-label]::before { content: attr(data-label); display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; }
+}
+@media (max-width: 960px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  aside { position: static; height: auto; display: flex; flex-wrap: wrap; gap: 2px 4px; padding: 6px 12px; }
+  aside a { min-height: 40px; padding: 6px 10px; }
+  aside a { white-space: nowrap; flex: none; }
+  aside .brand, aside .navlabel { display: none; }
+  body.nav-collapsed .nav-text { display: inline; }
+  body.nav-collapsed .layout { grid-template-columns: minmax(0, 1fr); }
+  .hero-price { text-align: left; }
+  main { padding: 16px; }
+  .g2, .g3 { grid-template-columns: minmax(0, 1fr); } .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside id="nav">
+  <div class="brand"><span>৳</span><b class="nav-text">DSE Trade Helper</b>
+    <button class="collapse" id="collapse" aria-label="Hide sidebar" aria-expanded="true"></button></div>
+  <div class="navlabel">EXPLORE</div>
+  <a href="#/" data-nav="home" data-icon="home"><span class="nav-text">Dashboard</span></a>
+  <a href="#/all" data-nav="all" data-icon="list"><span class="nav-text">All companies</span></a>
+  <a href="#/dividends" data-nav="dividends" data-icon="calendar"><span class="nav-text">Dividend calendar</span></a>
+  <a href="#/fraud" data-nav="fraud" data-icon="high"><span class="nav-text">Fraud alerts</span></a>
+  <div class="navlabel">HELP</div>
+  <a href="#/learn" data-nav="learn" data-icon="help"><span class="nav-text">How it works</span></a>
+  <a href="/plan" data-icon="file"><span class="nav-text">My plan</span></a>
+</aside>
+<main>
+  <div class="topbar">
+    <div class="search">
+      <input id="q" placeholder="Search company (code or name)" autocomplete="off" aria-label="Search company">
+      <div class="suggest" id="suggest" hidden></div>
+    </div>
+    <span class="updated" id="updated" aria-live="polite"></span>
+    <button class="btn" id="refresh" aria-label="Refresh data now"></button>
+    <button class="btn" id="theme" aria-label="Toggle dark or light theme">◐ Theme</button>
+  </div>
+  <div id="view"></div>
+  <footer>Data: Dhaka Stock Exchange public website (dse.com.bd). Signals come from fixed rules on that data. They are learning aids, not investment advice. A red flag shows a pattern, not proof of fraud.</footer>
+</main>
+</div>
+
+<script>
+const svg = (paths, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+const SHIELD = '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>';
+const I = {
+  check: svg('<path d="M20 6 9 17l-5-5"/>', 't-good'),
+  cross: svg('<path d="M18 6 6 18M6 6l12 12"/>', 't-bad'),
+  research: svg('<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>'),
+  neutral: svg('<circle cx="12" cy="12" r="10"/><path d="M8 12h8"/>'),
+  caution: svg('<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/>'),
+  avoid: svg('<path d="M7.86 2h8.28L22 7.86v8.28L16.14 22H7.86L2 16.14V7.86z"/><path d="m15 9-6 6M9 9l6 6"/>'),
+  clean: svg(SHIELD + '<path d="m9 12 2 2 4-4"/>'),
+  suspicious: svg(SHIELD + '<path d="M12 8v4M12 16h.01"/>'),
+  high: svg('<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/>'),
+  trend: svg('<path d="M22 7 13.5 15.5 8.5 10.5 2 17"/><path d="M16 7h6v6"/>', 't-neutral'),
+  home: svg('<path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>'),
+  star: svg('<path d="M11.5 3.2a.6.6 0 0 1 1 0l2.3 4.7 5.2.8a.6.6 0 0 1 .3 1l-3.8 3.6.9 5.2a.6.6 0 0 1-.8.6L12 16.7l-4.6 2.4a.6.6 0 0 1-.8-.6l.9-5.2-3.8-3.6a.6.6 0 0 1 .3-1l5.2-.8z"/>'),
+  list: svg('<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>'),
+  calendar: svg('<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>'),
+  help: svg('<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/>'),
+  file: svg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>'),
+  panel: svg('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>'),
+  refresh: svg('<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>'),
+};
+const TONE_ICON = { good: svg('<path d="M20 6 9 17l-5-5"/>', 't-good'), warn: svg('<path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="10"/>', 't-warn'), bad: I.cross, neutral: svg('<path d="M8 12h8"/>', 't-neutral') };
+const SIGNALS = {
+  research: { label: 'Worth researching', text: 'Passes every quality check and has no fraud flag.' },
+  neutral: { label: 'No strong signal', text: 'Not bad, but misses one or more quality checks.' },
+  caution: { label: 'Caution', text: 'Has a warning: falling profit, high price, thin trading or one fraud flag.' },
+  avoid: { label: 'Avoid', text: 'Loss-making, category Z, or a high-risk fraud pattern. If you hold it, review it.' },
+};
+const FRAUD = { clean: 'Clean', suspicious: 'Suspicious', high: 'High risk' };
+const SIGNAL_ORDER = { avoid: 0, caution: 1, neutral: 2, research: 3 };
+let allState = null;
+let lastSession = null;
+const view = document.getElementById('view');
+const charts = [];
+let market = null;
+
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = (n, d = 2) => (n == null || !isFinite(n) ? '—' : Number(n).toLocaleString('en-IN', { minimumFractionDigits: d, maximumFractionDigits: d }));
+const SECTOR_NAMES = { 'Financial In': 'Financial institutions', TravelLeisur: 'Travel & leisure', ServRealEst: 'Services & real estate', PharmaChem: 'Pharma & chemicals',
+  FoodAllied: 'Food & allied', FuelPower: 'Fuel & power', PaperPrint: 'Paper & printing', Misc: 'Miscellaneous', MutFund: 'Mutual funds', Engineering: 'Engineering' };
+const sectorName = (s) => SECTOR_NAMES[s] || s;
+const fmtDate = (iso) => (iso ? new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—');
+const dhakaToday = () => new Date(Date.now() + 6 * 3_600_000).toISOString().slice(0, 10);
+const lastBuyCell = (r) => {
+  if (!r.lastBuyDate) return '—';
+  const late = r.lastBuyDate < dhakaToday();
+  return `<span class="mono${late ? ' muted' : ''}">${fmtDate(r.lastBuyDate)}</span>${r.lastBuyEstimated ? ' <span class="small muted" title="DSE has not posted its spot-market notice yet. This is the trading day before the record date.">est.</span>' : ''}${late ? ' <span class="pill s-neutral">too late</span>' : ''}`;
+};
+// Before the first trade DSE reports no change; show that plainly instead of a fake 0.00%.
+const changeText = (pct, suffix = '') => (marketState(lastSession).key !== 'open' && !pct
+  ? '<span class="muted">no trade yet today</span>' : `<span class="${tone(pct)}">${signed(pct, 2)}${suffix}</span>`);
+const moneyPerDay = (v) => (v == null ? '—' : v >= 1e7 ? '৳' + fmt(v / 1e7, 1) + ' cr' : v < 1e4 ? 'under ৳0.1 lakh' : '৳' + fmt(v / 1e5, 1) + ' lakh');
+const pctNum = (v) => (v == null ? '—' : Number.isInteger(v) ? String(v) : fmt(v, 2));
+const signed = (n, d = 1) => (n == null ? '—' : `${n > 0 ? '+' : ''}${fmt(n, d)}%`);
+const tone = (n) => (n == null || n === 0 ? '' : n > 0 ? 'up' : 'down');
+const sigPill = (s) => `<span class="pill s-${s}">${I[s]} ${SIGNALS[s].label}</span>`;
+const fraudPill = (f) => `<span class="pill f-${f}">${I[f]} ${FRAUD[f]}</span>`;
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function store(key, value) {
+  try { if (value === undefined) return localStorage.getItem(key); localStorage.setItem(key, value); } catch { return null; }
+}
+
+async function api(path) {
+  const res = await fetch(path);
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error || 'Request failed (' + res.status + ')');
+  return body;
+}
+
+let marketRequest = null;
+async function loadMarket() {
+  // Share one request between the page and the search box when both ask at the same time.
+  marketRequest ||= api('/api/companies').finally(() => { setTimeout(() => { marketRequest = null; }, 2000); });
+  market = await marketRequest;
+  return market;
+}
+
+function scanBar() {
+  const s = market.scan;
+  if (!s.running) return '';
+  const p = s.total ? Math.round((s.done / s.total) * 100) : 0;
+  return `<div class="progress panel" style="margin-bottom:14px">Reading all DSE companies: ${s.done} of ${s.total}
+    <div class="bar"><i style="width:${p}%"></i></div> Lists update by themselves every minute.</div>`;
+}
+
+function companyCard(r) {
+  return `<a class="panel card" href="#/c/${encodeURIComponent(r.code)}">
+    <div class="top"><div><b class="mono">${esc(r.code)}</b><div class="small muted">${esc(r.name)}</div></div>
+    <div style="text-align:right"><div class="score mono">${r.score}</div><div class="small muted">score</div></div></div>
+    <div class="bar"><i style="width:${r.score}%"></i></div>
+    <div class="small">${esc(sectorName(r.sector))} · ৳${fmt(r.price)} ${changeText(r.changePct)}</div>
+    <div class="small muted">P/E ${fmt(r.pe, 1)} · Dividend yield ${fmt(r.dividendYield, 1)}% · EPS growth ${signed(r.epsCagr)}/yr</div>
+  </a>`;
+}
+
+const SIGNAL_COLORS = { research: '--up', neutral: '--muted', caution: '--warn', avoid: '--down' };
+
+function todayItem(icon, title, count, href, items) {
+  return `<div class="today-item"><div class="today-head">${icon}<b>${title}</b><span class="pill s-neutral mono">${count}</span><a href="${href}" class="small open-link">Open →</a></div>
+    ${items.length ? `<ul class="today-list">${items.join('')}</ul>` : '<p class="small muted">Nothing today.</p>'}</div>`;
+}
+
+async function renderHome() {
+  const d = await api('/api/dashboard');
+  setUpdated(d);
+  const dsex = d.index.find((x) => x.key === 'DSEX') || {};
+  const b = d.breadth || {}, total = (b.advanced || 0) + (b.declined || 0) + (b.unchanged || 0) || 1;
+  const crore = (mn) => '৳' + fmt(mn / 10, 0) + ' cr';
+  const turnoverChange = d.previous?.turnover ? ((d.totals.turnover - d.previous.turnover) / d.previous.turnover) * 100 : null;
+  const link = (code, right) => `<li><a href="#/c/${esc(code)}" class="mono">${esc(code)}</a><span>${right}</span></li>`;
+  let startHidden = false;
+  try { startHidden = localStorage.getItem('startHidden') === '1'; } catch { startHidden = false; }
+  view.innerHTML = `${d.scan.running ? `<div class="progress panel" style="margin-bottom:14px">Reading all DSE companies: ${d.scan.done} of ${d.scan.total}. Lists below grow as it reads.</div>` : ''}
+    ${startHidden ? '' : `<section class="panel start" aria-label="Start here">
+      <div><b>New here? Start in 3 steps.</b>
+        <ol><li><a href="#/learn">Read "How it works"</a> (2 minutes): what the signals and words mean.</li>
+        <li><a href="#/all?signal=research">Open the shortlist</a>: companies that pass every check.</li>
+        <li>Open one company and read its <b>four answers</b> at the top. Then check its Dividends tab.</li></ol>
+        <p class="small muted">This site helps you choose what to research. It does not tell you what to buy.</p></div>
+      <button class="btn" id="hide-start">Got it</button></section>`}
+    <h1 class="sr-title">DSE dashboard</h1>
+    <section class="panel market" aria-label="Market">
+      ${d.live ? '' : `<p class="small muted session-note">Showing the last session, <b>${fmtDate(d.showingDate)}</b>. Today's figures appear when trading starts.</p>`}
+      <div class="market-top">
+        <div><div class="small muted">DSEX index ${info('The main index of the Dhaka Stock Exchange.')}</div>
+          <div class="big-num mono">${fmt(dsex.value)}</div>
+          <div class="mono ${tone(dsex.change)}">${dsex.change == null ? 'change not available' : `${dsex.change >= 0 ? '+' : ''}${fmt(dsex.change)} (${signed(dsex.percent, 2)})`}</div></div>
+        <div class="market-stats">
+          <div><div class="small muted">Turnover</div><div class="mono stat">${crore(d.totals.turnover)}</div><div class="small ${tone(turnoverChange)}">${turnoverChange == null ? '' : signed(turnoverChange) + ' vs day before'}</div></div>
+          <div><div class="small muted">Trades</div><div class="mono stat">${fmt(d.totals.trades, 0)}</div></div>
+          <div><div class="small muted">Market now</div><div class="stat"><span class="pill ${marketState(d.session).key === 'open' ? 's-research' : 's-neutral'}">${marketState(d.session).short}</span></div><div class="small muted">figures: ${fmtDate(d.showingDate)}</div></div>
+        </div>
+      </div>
+      ${d.intraday.length ? `<div class="chart-box" style="height:160px"><canvas id="ch-dsex" role="img" aria-label="DSEX through the day, ${fmtDate(d.intradayDay)}"></canvas></div>`
+        : '<div class="chart-empty">The DSEX line through the day appears after trading starts at 10:00.</div>'}
+      <div class="breadth" role="img" aria-label="${b.advanced} up, ${b.declined} down, ${b.unchanged} unchanged">
+        <i style="width:${(b.advanced / total) * 100}%;background:var(--up)"></i><i style="width:${(b.unchanged / total) * 100}%;background:var(--muted)"></i><i style="width:${(b.declined / total) * 100}%;background:var(--down)"></i></div>
+      <div class="small breadth-labels"><span class="up">${b.advanced} up</span><span class="muted">${b.unchanged} unchanged</span><span class="down">${b.declined} down</span></div>
+    </section>
+
+    <div class="grid g4 quick">
+      <a class="panel card quick-card" href="#/all?signal=research">${I.star}<div><div class="small muted">Shortlist</div><div class="stat mono">${d.counts.research}</div><div class="small muted">pass every check</div></div></a>
+      <a class="panel card quick-card" href="#/dividends">${I.calendar}<div><div class="small muted">Dividends coming</div><div class="stat mono">${d.upcomingCount}</div><div class="small muted">upcoming record dates</div></div></a>
+      <a class="panel card quick-card" href="#/fraud">${I.high}<div><div class="small muted">Fraud alerts</div><div class="stat mono">${d.fraudCount}</div><div class="small muted">companies with warnings</div></div></a>
+      <a class="panel card quick-card" href="#/learn">${I.help}<div><div class="small muted">New here?</div><div class="stat">How it works</div><div class="small muted">signals in plain words</div></div></a>
+    </div>
+
+    <h2>Today's important things</h2>
+    <div class="grid g3">
+      ${todayItem(I.calendar, 'Dividends: record date within 7 days', d.recordSoon.length, '#/dividends',
+        d.recordSoon.slice(0, 5).map((r) => link(r.code, `${pctNum(r.cashPct)}% · buy by ${lastBuyCell(r)}`)))}
+      ${todayItem(I.research, 'Dividends declared this week', d.declaredThisWeek.length, '#/dividends',
+        d.declaredThisWeek.slice(0, 5).map((r) => link(r.code, `${pctNum(r.cashPct)}%${r.stockPct ? ` + ${pctNum(r.stockPct)}% bonus` : ''} · ${fmtDate(r.announced)}${r.fraud && r.fraud !== 'clean' ? ' ' + fraudPill(r.fraud) : ''}`)))}
+      ${todayItem(I.caution, 'Unusual trading volume', d.unusualCount ?? d.unusual.length, '#/fraud',
+        d.unusual.map((u) => link(u.code, `${fmt(u.x, 1)}× normal volume`)))}
+      ${todayItem(I.trend, d.live ? 'Top gainers' : 'Top gainers (last session)', d.gainers.length, '#/all',
+        d.gainers.map((g) => link(g.code, `<span class="up mono">${signed(g.percent, 2)}</span> · ৳${fmt(g.price)}`)))}
+      ${todayItem(I.avoid, d.live ? 'Top losers' : 'Top losers (last session)', d.losers.length, '#/all',
+        d.losers.map((g) => link(g.code, `<span class="down mono">${signed(g.percent, 2)}</span> · ৳${fmt(g.price)}`)))}
+      ${todayItem(I.high, 'Fraud warnings (outside category Z)', d.fraudCount, '#/fraud',
+        (d.fraudTop || []).map((f) => link(f.code, `<span class="small">${f.flags.map(esc).join(', ')}</span>`)))}
+    </div>
+
+    <h2>Market in pictures</h2>
+    <div class="grid g3">
+      <div class="panel"><h3>${d.companyCount} companies by signal ${info('Every DSE company, sorted by our rules. Click a slice to see that list.')}</h3><div class="chart-box"><canvas id="ch-signals"></canvas></div></div>
+      <div class="panel"><h3>${d.live ? 'Sectors today' : 'Sectors, last session'} ${info('Average price change of the companies in each sector.')}</h3><div class="chart-box" style="height:${Math.max(240, d.sectors.length * 18)}px"><canvas id="ch-sectors"></canvas></div></div>
+      <div class="panel"><h3>Turnover, last 10 days ${info('Value of shares traded each day, in crore taka.')}</h3><div class="chart-box"><canvas id="ch-turnover"></canvas></div></div>
+    </div>
+
+    <h2>Top of the shortlist</h2>
+    <p class="muted small">Companies that pass every research check, best score first. A place to start research, not a buy order.</p>
+    <div class="grid g3">${d.shortlist.map(companyCard).join('') || '<div class="empty panel">No company has passed yet.</div>'}</div>
+    <p><a href="#/all?signal=research">See the whole shortlist →</a></p>`;
+  document.getElementById('hide-start')?.addEventListener('click', () => {
+    try { localStorage.setItem('startHidden', '1'); } catch { /* storage blocked: guide reappears next visit */ }
+    document.querySelector('.start')?.remove();
+  });
+  drawDashboardCharts(d);
+}
+
+function drawDashboardCharts(d) {
+  charts.splice(0).forEach((ch) => ch.destroy());
+  if (typeof Chart === 'undefined') return;
+  Chart.defaults.color = css('--muted'); Chart.defaults.borderColor = css('--border'); Chart.defaults.animation = false;
+  Chart.defaults.interaction.mode = 'index'; Chart.defaults.interaction.intersect = false;
+  const dsex = d.index.find((x) => x.key === 'DSEX') || {};
+  if (document.getElementById('ch-dsex')) charts.push(new Chart(document.getElementById('ch-dsex'), {
+    type: 'line',
+    data: { labels: d.intraday.map((p) => p.t), datasets: [{ data: d.intraday.map((p) => p.value), borderColor: css(dsex.change >= 0 ? '--up' : '--down'), pointRadius: 0, pointHoverRadius: 4, borderWidth: 2, tension: 0.2 }] },
+    options: { maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { displayColors: false, callbacks: { label: (ctx) => 'DSEX ' + fmt(ctx.parsed.y) } } }, scales: { x: { ticks: { maxTicksLimit: 8 } } } },
+  }));
+  const keys = Object.keys(SIGNALS);
+  charts.push(new Chart(document.getElementById('ch-signals'), {
+    type: 'doughnut',
+    data: { labels: keys.map((k) => SIGNALS[k].label), datasets: [{ data: keys.map((k) => d.counts[k]), backgroundColor: keys.map((k) => css(SIGNAL_COLORS[k])), borderColor: css('--panel'), borderWidth: 2 }] },
+    options: { maintainAspectRatio: false, cutout: '58%', interaction: { mode: 'nearest', intersect: true },
+      onClick: (_, els) => { if (els[0]) location.hash = '#/all?signal=' + keys[els[0].index]; },
+      plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.parsed} companies` } } } },
+  }));
+  charts.push(new Chart(document.getElementById('ch-sectors'), {
+    type: 'bar',
+    data: { labels: d.sectors.map((s) => sectorName(s.sector)), datasets: [{ data: d.sectors.map((s) => s.avg), backgroundColor: d.sectors.map((s) => css(s.avg >= 0 ? '--up' : '--down')), borderRadius: 3 }] },
+    options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { displayColors: false, callbacks: { label: (ctx) => `${signed(ctx.parsed.x, 2)} average · ${d.sectors[ctx.dataIndex].n} companies` } } },
+      scales: { x: { ticks: { callback: (v) => v + '%' } }, y: { ticks: { autoSkip: false, font: { size: 11 } } } } },
+  }));
+  charts.push(new Chart(document.getElementById('ch-turnover'), {
+    type: 'bar',
+    data: { labels: d.daily.map((x) => x.date.slice(5)), datasets: [{ data: d.daily.map((x) => x.turnover / 10), backgroundColor: css('--accent'), borderRadius: 3 }] },
+    options: { maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { displayColors: false, callbacks: { title: (items) => d.daily[items[0].dataIndex].date, label: (ctx) => `৳${fmt(ctx.parsed.y, 0)} crore · ${d.daily[ctx.dataIndex].advanced} up / ${d.daily[ctx.dataIndex].declined} down` } } } },
+  }));
+}
+
+// Empty values (no P/E, no yield) always sort to the end, whichever direction is chosen.
+function compareNullsLast(x, y, dir) {
+  const xn = x == null || (typeof x === 'number' && !isFinite(x)), yn = y == null || (typeof y === 'number' && !isFinite(y));
+  if (xn || yn) return xn === yn ? 0 : xn ? 1 : -1;
+  return (x > y ? 1 : x < y ? -1 : 0) * dir;
+}
+
+// Sortable headers hold a real <button>, so keyboards and screen readers treat them as controls.
+function sortButtons(root, onSort) {
+  root.querySelectorAll('th[data-sort]').forEach((th) => {
+    if (!th.querySelector('button')) th.innerHTML = `<button type="button" class="sort-btn">${th.innerHTML}</button>`;
+    th.querySelector('button').onclick = () => onSort(th);
+  });
+}
+
+const ALL_FILTERS = ['signal', 'sector', 'fraud', 'cat', 'yield', 'liquid'];
+function renderAll(params) {
+  const sectors = [...new Set(market.rows.map((r) => r.sector))].sort();
+  const allowed = { signal: Object.keys(SIGNALS), sector: sectors, fraud: Object.keys(FRAUD), cat: ['A', 'B', 'N', 'Z'], yield: ['3', '5', '8'], liquid: ['10', '100'] };
+  const state = Object.fromEntries(ALL_FILTERS.map((k) => [k, allowed[k].includes(params.get(k)) ? params.get(k) : '']));
+  state.sort = params.get('sort') || 'score'; state.dir = Number(params.get('dir')) || -1;
+  const fresh = market.rows.filter((r) => !r.stale).length;
+  view.innerHTML = `${scanBar()}<h1>All companies</h1>
+    <p class="muted">${market.rows.length} companies listed${fresh < market.rows.length ? `, ${fresh} with the newest data (the rest update as the scan runs)` : ''}. Click a row for the full explanation.</p>
+    <div class="filters">
+      <select id="f-signal" aria-label="Signal"><option value="">All signals</option>${Object.entries(SIGNALS).map(([k, s]) => `<option value="${k}">${s.label}</option>`).join('')}</select>
+      <select id="f-sector" aria-label="Sector"><option value="">All sectors</option>${sectors.map((s) => `<option value="${esc(s)}">${esc(sectorName(s))}</option>`).join('')}</select>
+      <select id="f-fraud" aria-label="Fraud check"><option value="">Any fraud check</option>${Object.entries(FRAUD).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
+      <select id="f-cat" aria-label="Category"><option value="">Any category</option>${['A', 'B', 'N', 'Z'].map((c) => `<option value="${c}">Category ${c}</option>`).join('')}</select>
+      <select id="f-yield" aria-label="Dividend yield"><option value="">Any dividend yield</option><option value="3">Yield 3%+</option><option value="5">Yield 5%+</option><option value="8">Yield 8%+</option></select>
+      <select id="f-liquid" aria-label="Trading"><option value="">Any trading</option><option value="10">৳10 lakh+ a day</option><option value="100">৳1 crore+ a day</option></select>
+    </div>
+    <div class="panel table-wrap"><table class="cards">
+      <thead><tr><th data-sort="code">Company</th><th data-sort="signalRank">Signal</th><th>Fraud check</th><th class="n" data-sort="score">Score</th><th class="n" data-sort="price">Price</th><th class="n" data-sort="pe">P/E</th><th class="n" data-sort="dividendYield">Yield</th><th class="n" data-sort="dailyValue">Traded / day</th><th class="n" data-sort="change1y">1 year</th></tr></thead>
+      <tbody id="rows"></tbody></table></div>`;
+  ALL_FILTERS.forEach((k) => { document.getElementById('f-' + k).value = state[k]; });
+  const key = (r) => (state.sort === 'signalRank' ? SIGNAL_ORDER[r.signal] * 1000 + r.score : r[state.sort]);
+  const save = () => {
+    const q = new URLSearchParams(Object.entries(state).filter(([k, v]) => v && !(k === 'sort' && v === 'score') && !(k === 'dir' && v === -1)));
+    history.replaceState(null, '', '#/all' + (q.toString() ? '?' + q : ''));
+  };
+  const draw = () => {
+    view.querySelectorAll('th[data-sort]').forEach((th) => th.setAttribute('aria-sort', th.dataset.sort === state.sort ? (state.dir > 0 ? 'ascending' : 'descending') : 'none'));
+    const rows = market.rows
+      .filter((r) => (!state.signal || r.signal === state.signal) && (!state.sector || r.sector === state.sector) && (!state.fraud || r.fraud === state.fraud)
+        && (!state.cat || r.category === state.cat) && (!state.yield || (r.dividendYield ?? 0) >= Number(state.yield))
+        && (!state.liquid || (r.dailyValue ?? 0) >= Number(state.liquid) * 1e5))
+      .sort((a, b) => compareNullsLast(key(a), key(b), state.dir));
+    document.getElementById('rows').innerHTML = rows.map((r) => `<tr data-code="${esc(r.code)}">
+      <td><b class="mono">${esc(r.code)}</b><div class="small muted">${esc(r.name)} · ${esc(sectorName(r.sector))} · Cat ${esc(r.category)}</div></td>
+      <td data-label="Signal">${sigPill(r.signal)}</td><td data-label="Fraud check">${fraudPill(r.fraud)}${r.flags.length ? `<div class="small muted">${r.flags.map(esc).join(', ')}</div>` : ''}</td>
+      <td class="n mono" data-label="Score">${r.score}</td><td class="n mono" data-label="Price">৳${fmt(r.price)}</td><td class="n mono" data-label="P/E">${fmt(r.pe, 1)}</td>
+      <td class="n mono" data-label="Yield">${r.dividendYield != null ? fmt(r.dividendYield, 1) + '%' : '—'}</td>
+      <td class="n mono" data-label="Traded / day">${moneyPerDay(r.dailyValue)}</td>
+      <td class="n mono ${tone(r.change1y)}" data-label="1 year">${signed(r.change1y)}</td></tr>`).join('') || '<tr><td colspan="9" class="empty">No company matches these filters.</td></tr>';
+    document.getElementById('count').textContent = `${rows.length} shown`;
+  };
+  view.querySelector('.filters').insertAdjacentHTML('beforeend', '<span id="count" class="small muted" aria-live="polite"></span>');
+  ALL_FILTERS.forEach((k) => { document.getElementById('f-' + k).onchange = (e) => { state[k] = e.target.value; save(); draw(); }; });
+  sortButtons(view, (th) => {
+    state.dir = state.sort === th.dataset.sort ? -state.dir : (th.dataset.sort === 'code' ? 1 : -1); state.sort = th.dataset.sort; save(); draw();
+    th.querySelector('button').focus();
+  });
+  document.getElementById('rows').onclick = (e) => { const tr = e.target.closest('tr[data-code]'); if (tr) location.hash = '#/c/' + encodeURIComponent(tr.dataset.code); };
+  draw();
+}
+
+function renderFraud(params) {
+  const lane = params.get('lane') === 'z' ? 'z' : 'warn';
+  const warn = market.rows.filter((r) => r.fraud !== 'clean' && r.category !== 'Z').sort((a, b) => b.flags.length - a.flags.length || (b.change1y ?? 0) - (a.change1y ?? 0));
+  const z = market.rows.filter((r) => r.category === 'Z').sort((a, b) => (b.change1y ?? -Infinity) - (a.change1y ?? -Infinity));
+  const rows = lane === 'z' ? z : warn;
+  view.innerHTML = `${scanBar()}<h1>Fraud alerts</h1>
+    <div class="note warn">A flag shows a pattern that often comes with manipulation, such as a price pump or owners selling. It is <b>not proof</b> of fraud. Before you buy a flagged share, read its DSE disclosures and the latest results.</div>
+    <nav class="tabs" aria-label="Alert lists">
+      <a class="tab-link" ${lane === 'warn' ? 'aria-current="page"' : ''} href="#/fraud">Warnings outside category Z (${warn.length})</a>
+      <a class="tab-link" ${lane === 'z' ? 'aria-current="page"' : ''} href="#/fraud?lane=z">Category Z (${z.length})</a>
+    </nav>
+    <p class="muted small">${lane === 'z' ? 'Category Z companies missed AGMs, paid no dividend or stopped operating. Sorted by 1-year price change: a big rise in a Z share is the classic manipulation pattern.' : 'Sorted by number of flags, then by 1-year price change.'}</p>
+    <div class="panel table-wrap"><table class="cards"><thead><tr><th>Company</th><th>Fraud check</th><th>Flags</th><th class="n">Price</th><th class="n">1 year</th></tr></thead>
+    <tbody id="rows">${rows.map((r) => `<tr data-code="${esc(r.code)}"><td><b class="mono">${esc(r.code)}</b><div class="small muted">${esc(r.name)} · ${esc(sectorName(r.sector))}</div></td>
+      <td data-label="Fraud check">${fraudPill(r.fraud)}</td><td class="small" data-label="Flags">${r.flags.map(esc).join(' · ') || '—'}</td>
+      <td class="n mono" data-label="Price">৳${fmt(r.price)}</td><td class="n mono ${tone(r.change1y)}" data-label="1 year">${signed(r.change1y)}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">None.</td></tr>'}</tbody></table></div>`;
+  document.getElementById('rows').onclick = (e) => { const tr = e.target.closest('tr[data-code]'); if (tr) location.hash = '#/c/' + encodeURIComponent(tr.dataset.code); };
+}
+
+function metric(k, v, hint) {
+  return `<div class="metric"><div class="k">${k} ${info(hint)}</div><div class="v mono">${v}</div></div>`;
+}
+
+let routeToken = 0;
+const SKELETON = `<div aria-busy="true" aria-label="Loading company"><div class="skel" style="height:170px"></div>
+  <div class="grid g4" style="margin-top:14px">${'<div class="skel" style="height:64px"></div>'.repeat(8)}</div>
+  <div class="grid g2" style="margin-top:14px"><div class="skel" style="height:240px"></div><div class="skel" style="height:240px"></div></div></div>`;
+
+let lastCompany = null;
+async function renderCompany(code, opts = {}) {
+  const token = routeToken;
+  if (code !== lastCompany) { companyTab = 'overview'; lastCompany = code; }
+  if (!opts.silent) view.innerHTML = SKELETON;
+  let d;
+  try { d = await api('/api/company/' + encodeURIComponent(code) + (opts.fresh ? '?fresh=1' : '')); } catch (e) {
+    if (token !== routeToken || opts.silent) return;
+    view.innerHTML = `<div class="note bad">Could not load ${esc(code)}: ${esc(e.message)}. Check the code, or try again in a minute.</div>`;
+    return;
+  }
+  if (token !== routeToken) return;
+  setUpdated(d);
+  try { drawCompany(d); } catch (e) {
+    console.error('company page render failed', e);
+    view.innerHTML = `<div class="note bad">Could not show ${esc(code)}. Try Refresh. If it keeps failing, restart <code>node server.js</code>.</div>`;
+  }
+}
+
+const COMPANY_TABS = [['overview', 'Overview'], ['valuation', 'Cheap or expensive'], ['financials', '5-year financials'], ['dividends', 'Dividends'], ['safety', 'Safety checks'], ['owners', 'Owners']];
+const ANSWER_UI = { yes: ['Yes', 't-good', 'research'], partly: ['Partly', 't-warn', 'caution'], no: ['No', 't-bad', 'avoid'], unknown: ['Unknown', 't-neutral', 'neutral'] };
+let companyTab = 'overview';
+
+function info(text) {
+  return `<span class="info" tabindex="0" role="note" aria-label="${esc(text)}" data-tip="${esc(text)}">i</span>`;
+}
+
+function questionCards(questions) {
+  return `<div class="grid g4 questions">${questions.map((q) => {
+    const [label, cls, icon] = ANSWER_UI[q.answer] || ANSWER_UI.unknown;
+    return `<button class="panel qcard" data-goto="${q.tab}"><div class="small muted">${esc(q.q)}</div>
+      <div class="qans ${cls}">${I[icon]} ${esc(q.label || label)}</div><div class="small">${esc(q.text)}</div><div class="small more">See details →</div></button>`;
+  }).join('')}</div>`;
+}
+
+function dividendTab(c, dv, s) {
+  const decl = c.events?.declarations || [];
+  const up = dv?.upcoming;
+  const status = up && dv.canStillBuy
+    ? `<div class="note good"><b>Dividend coming:</b> ${pctNum(up.cashPct)}% cash${up.stockPct ? ` + ${pctNum(up.stockPct)}% bonus shares` : ''} ${up.cashPct != null ? `(৳${fmt((up.cashPct / 100) * (c.faceValue || 10))} a share)` : ''}.
+       <b>Last day to buy: ${fmtDate(up.lastBuyDate)}</b>${up.lastBuyEstimated ? ' (estimate: DSE posts the exact day a few days before)' : ' (from DSE spot-market notice)'}. Record date ${fmtDate(up.recordDate)}. It still needs approval at the AGM${up.agmDate ? ` on ${fmtDate(up.agmDate)}` : ''}.
+       The price usually drops by about the dividend after the record date.</div>`
+    : up ? `<div class="note warn"><b>Too late for this one:</b> the last day to buy for the ${pctNum(up.cashPct)}% dividend was ${fmtDate(up.lastBuyDate)}. Record date ${fmtDate(up.recordDate)}.${dv.nextExpected ? ` Next announcement expected around <b>${esc(monthName(dv.nextExpected))}</b>.` : ''}</div>`
+    : dv?.recordToday ? `<div class="note warn"><b>Today is the record date</b> for the ${pctNum(dv.recordToday.cashPct)}% dividend. Buying today does not qualify.${dv.nextExpected ? ` Next announcement expected around <b>${esc(monthName(dv.nextExpected))}</b>.` : ''}</div>`
+    : dv?.latest ? `<div class="note warn"><b>No dividend coming soon.</b> The last one (${pctNum(dv.latest.cashPct)}% cash) had its record date on ${fmtDate(dv.latest.recordDate)}.
+       ${dv.nextExpected ? `Next announcement expected around <b>${esc(monthName(dv.nextExpected))}</b>${dv.regular ? ', based on its regular timing' : ' (estimate from one year only)'}.` : ''}</div>`
+    : '<div class="note">No dividend announcement in DSE\'s recent news for this company.</div>';
+  const rows = decl.map((d) => `<tr><td data-label="Announced">${fmtDate(d.announced)}</td>
+    <td data-label="Dividend">${d.cashPct != null ? pctNum(d.cashPct) + '% cash' : ''}${d.stockPct ? ` + ${pctNum(d.stockPct)}% bonus` : ''}${d.cashPct == null && !d.stockPct ? (d.noDividend ? '<b>No dividend</b>' : 'see DSE') : ''}${d.interim ? ' <span class="pill s-neutral">interim</span>' : ''}${d.partial ? ' <span class="pill s-caution">not for sponsors</span>' : ''}</td>
+    <td data-label="Cash per share" class="n mono">${d.cashPct != null ? '৳' + fmt((d.cashPct / 100) * (c.faceValue || 10)) : '—'}</td>
+    <td data-label="Last day to buy">${lastBuyCell(d)}</td>
+    <td data-label="Record date" class="mono">${fmtDate(d.recordDate)}</td><td data-label="AGM" class="mono">${fmtDate(d.agmDate)}</td>
+    <td data-label="Paid">${d.paidOn ? `${I.check} ${fmtDate(d.paidOn)}` : (d.recordDate && d.recordDate < dv.today ? 'not yet' : '—')}</td></tr>`).join('');
+  return `${status}
+    <div class="panel table-wrap"><h3>Announcements ${info('From DSE company news for about the last 2 years. Cash per share = cash % × face value.')}</h3>
+      ${rows ? `<table class="cards"><thead><tr><th>Announced</th><th>Dividend</th><th class="n">Cash / share</th><th>Last day to buy</th><th>Record date</th><th>AGM</th><th>Paid</th></tr></thead><tbody>${rows}</tbody></table>` : '<p class="muted">None found.</p>'}</div>
+    ${s?.years?.length ? `<div class="panel table-wrap" style="margin-top:14px"><h3>5-year dividend record</h3><table><thead><tr><th>Year</th><th class="n">Cash / share</th><th class="n">Bonus %</th><th class="n">Payout</th><th class="n">Yield</th></tr></thead>
+      <tbody>${[...s.years].reverse().map((y) => `<tr><td>${esc(y.year)}</td><td class="n mono">${y.dps != null ? '৳' + fmt(y.dps) : '—'}</td><td class="n mono">${fmt(y.stockPct, 0)}</td><td class="n mono">${y.payout != null ? fmt(y.payout, 0) + '%' : '—'}</td><td class="n mono">${y.dividendYield != null ? fmt(y.dividendYield, 1) + '%' : '—'}</td></tr>`).join('')}</tbody></table></div>` : ''}
+    <p class="why">Record date: you must own the share on this day to get the dividend. AGM: the meeting where shareholders approve it. Payment usually comes within about 30 days after the AGM.</p>`;
+}
+
+const OWNER_GROUPS = [['sponsor', 'Sponsors'], ['institution', 'Institutions'], ['foreign', 'Foreign'], ['government', 'Government'], ['public', 'Public']];
+const OWNER_COLORS = ['--accent', '--up', '--warn', '--muted', '--down'];
+const loanText = (v) => (v == null ? 'none reported' : '৳' + fmt(v, 1) + ' mn');
+const monthName = (ym) => new Date(ym + '-01T00:00:00Z').toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+
+function drawCompany(d) {
+  const { company: c, analysis: a, sectorPe, summary: s, position: pos, dividend: dv, questions } = d;
+  const m = a.metrics;
+  const sp = c.sharePattern.at(-1) || {};
+  const missingEps = c.years.filter((y) => y.eps == null).map((y) => y.year);
+  const dir = (c.events?.directorTrades || []).slice(0, 8);
+  const tabs = {
+    overview: `
+      <div class="grid g4">
+        ${metric('P/E', fmt(m.pe, 1), 'Price ÷ yearly profit per share. Lower can mean cheaper.')}
+        ${metric('Sector P/E', fmt(sectorPe, 1), 'Median P/E of profitable companies in the same sector.')}
+        ${metric('Dividend yield', m.latestYield != null ? fmt(m.latestYield, 2) + '%' : '—', 'Cash dividend ÷ today\'s price. Basis: ' + (m.yieldBasis || 'DSE figure'))}
+        ${metric('Traded a day', moneyPerDay(m.avgDailyValue), 'Average value traded per day, last 20 days. Higher = easier to sell.')}
+      </div>
+      <div class="grid g2" style="margin-top:14px">
+        <div class="panel"><h3>Why this signal</h3><ul class="reasons">${a.reasons.map((r) => `<li>${TONE_ICON[r.tone]}<span>${esc(r.text)}</span></li>`).join('')}</ul></div>
+        <div class="panel"><h3>What past data says</h3><ul class="reasons">${a.history.map((h) => `<li>${I.trend}<span>${esc(h)}</span></li>`).join('') || '<li>Not enough history.</li>'}</ul></div>
+      </div>
+      <div class="panel" style="margin-top:14px"><h3>Price, last year ${info('Move the mouse over the line to see the price on each day.')}</h3><div class="chart-box"><canvas id="ch-price"></canvas></div></div>`,
+    valuation: pos ? positionPanel(pos) : '<p class="muted">Not enough history.</p>',
+    financials: `${s?.years?.length ? `<p class="muted small">From DSE's yearly data for ${esc(s.years[0].year)}–${esc(s.years.at(-1).year)}. Growth is per year. DSE does not publish revenue, cash flow or balance-sheet lines.</p>
+      <div class="grid g4">${summaryCards(s)}</div>
+      <div class="panel table-wrap" style="margin-top:14px"><h3>Year by year</h3>${summaryTable(s)}</div>` : ''}
+      <div class="panel" style="margin-top:14px"><h3>Profit per share (EPS), all years on DSE</h3><div class="chart-box"><canvas id="ch-eps"></canvas></div>
+        ${missingEps.length ? `<p class="why">No EPS on DSE for ${missingEps.join(', ')}. A missing bar is missing data, not a loss.</p>` : ''}</div>`,
+    dividends: dividendTab(c, dv, s),
+    safety: `<div class="panel"><h3>Fraud check ${fraudPill(a.fraud.level)}</h3>
+        ${a.fraud.flags.length ? a.fraud.flags.map((f) => `<div class="note ${a.fraud.level === 'high' ? 'bad' : 'warn'}"><b>${esc(f.title)}:</b> ${esc(f.detail)}<div class="why">Why it matters: ${esc(f.why)}</div></div>`).join('')
+          : '<p class="muted">No warning pattern found: no price pump, no volume spike, no owner selling, no sudden profit jump, and results are up to date.</p>'}</div>
+      <div class="panel" style="margin-top:14px"><h3>Quality checklist</h3>
+        <ul class="reasons">${a.checks.map((x) => `<li>${x.ok ? I.check : I.cross}<span><span class="sr-only">${x.ok ? 'Passed: ' : 'Failed: '}</span><b>${esc(x.label)}</b> — ${esc(x.detail)}<div class="why">${esc(x.why)}</div></span></li>`).join('')}</ul></div>`,
+    owners: `<div class="grid g2"><div class="panel"><h3>Who owns the shares now ${info('Latest shareholding report on DSE. Hover a slice for its percentage.')}</h3><div class="chart-box"><canvas id="ch-owners" role="img" aria-label="Shareholding: ${OWNER_GROUPS.map(([k, l]) => `${l} ${fmt(sp[k], 1)}%`).join(', ')}"></canvas></div>
+        <p class="why">As on ${esc(sp.date || '—')}. Sponsors are the owners and directors. BSEC requires them to hold at least 30% together.</p></div>
+      <div class="panel"><h3>Sponsor holding over time</h3><div class="chart-box"><canvas id="ch-sponsor"></canvas></div><p class="why">A falling line means the owners are selling.</p></div></div>
+      <div class="panel table-wrap" style="margin-top:14px"><h3>Shareholding reports</h3><table><thead><tr><th>As on</th><th class="n">Sponsor</th><th class="n">Govt</th><th class="n">Institution</th><th class="n">Foreign</th><th class="n">Public</th></tr></thead>
+        <tbody>${c.sharePattern.map((x) => `<tr><td>${esc(x.date)}</td><td class="n mono">${fmt(x.sponsor, 1)}</td><td class="n mono">${fmt(x.government, 1)}</td><td class="n mono">${fmt(x.institution, 1)}</td><td class="n mono">${fmt(x.foreign, 1)}</td><td class="n mono">${fmt(x.public, 1)}</td></tr>`).join('')}</tbody></table>
+        <p class="why">If the sponsor % falls over time, the owners are selling. Loans: short-term ${loanText(c.loanStatus?.shortTerm)}, long-term ${loanText(c.loanStatus?.longTerm)}.</p></div>
+      <div class="panel" style="margin-top:14px"><h3>Director share trades</h3>
+        ${dir.length ? `<ul class="reasons">${dir.map((x) => `<li>${x.side === 'sell' ? TONE_ICON.warn : TONE_ICON.good}<span><b>${x.side === 'sell' ? 'Plans to sell' : 'Plans to buy'}</b> — ${esc(x.who)} · ${esc(x.date)}</span></li>`).join('')}</ul>` : '<p class="muted">No director buy or sell notices in DSE news.</p>'}</div>`,
+  };
+  if (!tabs[companyTab]) companyTab = 'overview';
+  view.innerHTML = `
+    <div class="panel hero">
+      <div class="hero-top">
+        <div><h1>${esc(c.name)}</h1><div class="muted mono small">${esc(c.code)} · ${esc(sectorName(c.sector))} · Category ${esc(c.category)} · Listed ${esc(c.listingYear)}</div></div>
+        <div class="hero-price"><div class="mono" style="font-size:28px;font-weight:600">৳${fmt(c.price)}</div>
+          <div class="mono small">${changeText(c.changePct, ' today')}</div></div>
+      </div>
+      <div class="verdict">
+        <span class="pill s-${a.signal}" style="font-size:16px">${I[a.signal]} ${SIGNALS[a.signal].label}</span>
+        <span class="mono small muted">Score ${a.score}/100 ${info('Each signal has its own range. Avoid 0–30, Caution 31–60, No strong signal 61–75, Worth researching 76–100.')}</span>
+      </div>
+      <div class="note ${a.signal === 'research' ? 'good' : a.signal === 'avoid' ? 'bad' : a.signal === 'caution' ? 'warn' : ''}"><b>Suggestion:</b> ${esc(a.suggestion)}</div>
+    </div>
+    <h2 class="sr-title">Four questions before you buy</h2>
+    ${questionCards(questions || [])}
+    <div class="tabs" role="tablist" aria-label="Company details">${COMPANY_TABS.map(([k, label]) => `<button role="tab" id="tab-${k}" aria-controls="pane" aria-selected="${k === companyTab}" tabindex="${k === companyTab ? 0 : -1}" data-tab="${k}">${label}</button>`).join('')}</div>
+    <div id="pane" role="tabpanel" tabindex="0" aria-labelledby="tab-${companyTab}">${tabs[companyTab]}</div>
+    <p class="why"><a href="https://www.dse.com.bd/company/${encodeURIComponent(c.code)}" target="_blank" rel="noopener">Open on DSE ↗</a></p>`;
+  const show = (k) => {
+    companyTab = k;
+    view.querySelectorAll('[role=tab]').forEach((b) => { const on = b.dataset.tab === k; b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; });
+    const pane = document.getElementById('pane');
+    pane.setAttribute('aria-labelledby', 'tab-' + k);
+    pane.innerHTML = tabs[k];
+    drawCompanyCharts(c, s);
+    document.getElementById('tab-' + k)?.focus();
+  };
+  view.querySelectorAll('[role=tab]').forEach((b) => { b.onclick = () => show(b.dataset.tab); });
+  view.querySelector('[role=tablist]').onkeydown = (e) => {
+    const i = COMPANY_TABS.findIndex(([k]) => k === companyTab);
+    const n = COMPANY_TABS.length;
+    const to = { ArrowRight: (i + 1) % n, ArrowLeft: (i + n - 1) % n, Home: 0, End: n - 1 }[e.key];
+    if (to != null) { e.preventDefault(); show(COMPANY_TABS[to][0]); }
+  };
+  view.querySelectorAll('[data-goto]').forEach((b) => { b.onclick = () => { show(b.dataset.goto); view.querySelector('.tabs').scrollIntoView({ behavior: 'smooth', block: 'start' }); }; });
+  drawCompanyCharts(c, s);
+}
+
+function rangeBar(title, b, unit, hint) {
+  if (!b) return `<div><b>${title}</b><p class="muted small">Not enough data.</p></div>`;
+  const pctPos = Math.round(Math.min(1, Math.max(0, b.position)) * 100);
+  return `<div><div style="display:flex;justify-content:space-between;gap:8px"><b>${title}</b><span class="mono">${unit(b.now)}</span></div>
+    <div class="range" role="img" aria-label="${title}: ${pctPos}% of the way from low to high"><i style="left:${pctPos}%"></i></div>
+    <div class="range-labels mono"><span>Low ${unit(b.low)}</span><span>Avg ${unit(b.avg)}</span><span>High ${unit(b.high)}</span></div>
+    <p class="why">${hint}</p></div>`;
+}
+
+function positionPanel(p) {
+  const v = p.verdict;
+  const history = p.history.length ? `<div class="table-wrap"><table class="cards"><thead><tr><th>Year</th><th class="n">P/E</th><th class="n">Price (approx.)</th><th class="n">A year later</th><th class="n">Change</th></tr></thead>
+    <tbody>${p.history.map((h) => `<tr><td>${esc(h.year)}</td><td class="n mono" data-label="P/E">${fmt(h.pe, 1)}</td><td class="n mono" data-label="Price">৳${fmt(h.price)}</td><td class="n mono" data-label="A year later">৳${fmt(h.nextPrice)}</td><td class="n mono ${tone(h.change)}" data-label="Change">${signed(h.change)}</td></tr>`).join('')}</tbody></table></div>
+    <p class="why">In the years when its P/E was at or below its usual ${fmt(p.usualPe, 1)}, the price was higher a year later in <b>${p.cheapYearsUp} of ${p.cheapYears}</b> cases. This is history, not a forecast: a few yearly points cannot predict the future.</p>` : '';
+  return `<div class="panel" style="margin-top:14px"><h3>Is it cheap or expensive now?</h3>
+    ${v ? `<div class="note ${v.tone === 'good' ? 'good' : v.tone === 'bad' ? 'bad' : v.tone === 'warn' ? 'warn' : ''}"><b>${esc(v.label)}:</b> ${esc(v.text)}</div>` : ''}
+    <div class="grid g2">
+      ${rangeBar('Price vs last 5 years', p.price, (x) => '৳' + fmt(x), 'Green end = near its 5-year low. Year-end prices are approximate (P/E × EPS) and not adjusted for bonus shares, so the P/E bar is the fairer test.')}
+      ${rangeBar('P/E vs last 5 years', p.pe, (x) => fmt(x, 1), 'P/E is a fairer test than price, because it allows for profit growth.')}
+    </div>${history}</div>`;
+}
+
+const SUMMARY_CARDS = [
+  { key: 'profit', label: 'Net profit', unit: (v) => '৳' + fmt(v, 0) + ' mn', growth: 'profit', why: 'What the company earned after all costs and tax.' },
+  { key: 'eps', label: 'EPS', unit: (v) => '৳' + fmt(v), growth: 'eps', why: 'Profit for each share you own.' },
+  { key: 'nav', label: 'NAV per share', unit: (v) => '৳' + fmt(v), growth: 'nav', why: 'What each share owns after debts. Growth means the company keeps value.' },
+  { key: 'roe', label: 'Return on equity', unit: (v) => fmt(v, 1) + '%', average: 'roe', why: 'Profit ÷ NAV. Above 15% is strong for DSE.' },
+  { key: 'dps', label: 'Cash dividend / share', unit: (v) => '৳' + fmt(v), growth: 'dps', why: 'Cash paid to you for each share.' },
+  { key: 'payout', label: 'Payout ratio', unit: (v) => fmt(v, 0) + '%', average: 'payout', why: 'Share of profit paid as cash. Above 100% cannot last.' },
+  { key: 'pe', label: 'P/E at year end', unit: (v) => fmt(v, 1), average: 'pe', why: 'How expensive the share was each year.' },
+  { key: 'dividendYield', label: 'Dividend yield', unit: (v) => fmt(v, 1) + '%', average: 'dividendYield', why: 'Cash dividend ÷ price that year.' },
+];
+
+function summaryCards(s) {
+  return SUMMARY_CARDS.map((k) => {
+    const last = [...s.years].reverse().find((y) => y[k.key] != null);
+    const g = k.growth ? s.growth[k.growth] : null;
+    const tag = k.growth
+      ? (g == null ? '<span class="muted">growth: not enough data</span>' : `<span class="${tone(g)}">${signed(g)} a year</span>`)
+      : `<span class="muted">${s.span + 1}-year average ${k.unit(s.average[k.average])}</span>`;
+    return `<div class="panel kpi"><div class="small muted">${k.label}${last ? ' · ' + esc(last.year) : ''}</div>
+      <div class="val mono">${last ? k.unit(last[k.key]) : '—'}</div><div class="cagr">${tag}</div>
+      <div class="mini"><canvas data-mini="${k.key}" aria-label="${k.label} by year" role="img"></canvas></div><div class="why">${k.why}</div></div>`;
+  }).join('') + `<div class="panel kpi missing"><div class="small">Revenue, cash flow, debt</div><div class="why">Not in DSE's public data. Read them in the company's annual report.</div></div>`;
+}
+
+function summaryTable(s) {
+  const rows = [['Net profit (৳ mn)', 'profit', 0], ['EPS (৳)', 'eps', 2], ['NAV / share (৳)', 'nav', 2], ['ROE (%)', 'roe', 1],
+    ['P/E', 'pe', 1], ['P/B', 'pb', 2], ['Cash dividend / share (৳)', 'dps', 2], ['Bonus shares (%)', 'stockPct', 0], ['Payout (%)', 'payout', 0], ['Dividend yield (%)', 'dividendYield', 1]];
+  return `<table><thead><tr><th>Metric</th>${s.years.map((y) => `<th class="n">${esc(y.year)}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(([label, key, dp]) => `<tr><td>${label}</td>${s.years.map((y) => `<td class="n mono">${fmt(y[key], dp)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+
+function drawMiniCharts(s) {
+  view.querySelectorAll('canvas[data-mini]').forEach((cv) => {
+    const vals = s.years.map((y) => y[cv.dataset.mini]);
+    charts.push(new Chart(cv, {
+      type: 'bar',
+      data: { labels: s.years.map((y) => y.year), datasets: [{ data: vals, backgroundColor: vals.map((v) => (v != null && v < 0 ? css('--down') : css('--accent'))), borderRadius: 3 }] },
+      options: { maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { displayColors: false, callbacks: { label: (ctx) => (ctx.parsed.y == null ? 'No data' : SUMMARY_CARDS.find((k) => k.key === cv.dataset.mini).unit(ctx.parsed.y)) } } }, scales: { x: { display: false }, y: { display: false, beginAtZero: true } } },
+    }));
+  });
+}
+
+function drawCompanyCharts(c, s) {
+  charts.splice(0).forEach((ch) => ch.destroy());
+  if (typeof Chart === 'undefined') return;
+  Chart.defaults.color = css('--muted'); Chart.defaults.borderColor = css('--border'); Chart.defaults.animation = false;
+  Chart.defaults.interaction.mode = 'index'; Chart.defaults.interaction.intersect = false;
+  if (s?.years?.length) drawMiniCharts(s);
+  const price = document.getElementById('ch-price');
+  if (price) charts.push(new Chart(price, {
+    type: 'line',
+    data: { labels: c.series.map((x) => x.date), datasets: [{ label: 'Close', data: c.series.map((x) => x.price), borderColor: css('--accent'), pointRadius: 0, pointHoverRadius: 5, pointHoverBackgroundColor: css('--accent'), borderWidth: 2, tension: 0.2 }] },
+    options: { maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { displayColors: false, callbacks: { label: (ctx) => 'Close ৳' + fmt(ctx.parsed.y) } } }, scales: { x: { ticks: { maxTicksLimit: 6 } } } },
+  }));
+  const owners = document.getElementById('ch-owners');
+  const sp = c.sharePattern.at(-1);
+  if (owners && sp) charts.push(new Chart(owners, {
+    type: 'doughnut',
+    data: { labels: OWNER_GROUPS.map(([, l]) => l), datasets: [{ data: OWNER_GROUPS.map(([k]) => sp[k] || 0), backgroundColor: OWNER_COLORS.map(css), borderColor: css('--panel'), borderWidth: 2 }] },
+    options: { maintainAspectRatio: false, cutout: '58%', interaction: { mode: 'nearest', intersect: true }, plugins: { legend: { position: 'right' }, tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${fmt(ctx.parsed, 1)}%` } } } },
+  }));
+  const sponsor = document.getElementById('ch-sponsor');
+  if (sponsor) charts.push(new Chart(sponsor, {
+    type: 'line',
+    data: { labels: c.sharePattern.map((x) => x.date.replace(' (year ended)', '')), datasets: [{ label: 'Sponsors', data: c.sharePattern.map((x) => x.sponsor), borderColor: css('--accent'), backgroundColor: css('--accent'), pointRadius: 4, tension: 0 }] },
+    options: { maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { displayColors: false, callbacks: { label: (ctx) => 'Sponsors ' + fmt(ctx.parsed.y, 2) + '%' } } },
+      scales: { y: { suggestedMin: Math.max(0, Math.min(...c.sharePattern.map((x) => x.sponsor)) - 5), suggestedMax: Math.min(100, Math.max(...c.sharePattern.map((x) => x.sponsor)) + 5), ticks: { callback: (v) => v + '%' } } } },
+  }));
+  const eps = document.getElementById('ch-eps');
+  if (eps) charts.push(new Chart(eps, {
+    type: 'bar',
+    data: { labels: c.years.map((y) => y.year), datasets: [{ label: 'EPS', data: c.years.map((y) => y.eps), backgroundColor: c.years.map((y) => (y.eps >= 0 ? css('--up') : css('--down'))), borderRadius: 4 }] },
+    options: { maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { displayColors: false, callbacks: { label: (ctx) => (ctx.parsed.y == null ? 'No data' : 'EPS ৳' + fmt(ctx.parsed.y)) } } } },
+  }));
+}
+
+let calendarSort = { key: 'recordDate', dir: 1 };
+async function renderDividends() {
+  const d = await api('/api/dividends');
+  setUpdated(d);
+  const head = (k, label, n) => `<th${n ? ' class="n"' : ''} data-sort="${k}" aria-sort="${calendarSort.key === k ? (calendarSort.dir > 0 ? 'ascending' : 'descending') : 'none'}">${label}</th>`;
+  const sorted = [...d.upcoming].sort((a, b) => compareNullsLast(a[calendarSort.key], b[calendarSort.key], calendarSort.dir));
+  const company = (r) => `<td><b class="mono">${esc(r.code)}</b> ${r.fraud !== 'clean' ? fraudPill(r.fraud) : ''}<div class="small muted">${esc(r.name)} · ${esc(sectorName(r.sector))} · Cat ${esc(r.category)}</div></td>`;
+  const dividend = (r) => `<td data-label="Dividend">${r.cashPct != null ? pctNum(r.cashPct) + '% cash' : '—'}${r.stockPct ? ` + ${pctNum(r.stockPct)}% bonus` : ''}${r.interim ? ' <span class="pill s-neutral">interim</span>' : ''}${r.partial ? ' <span class="pill s-caution">not for sponsors</span>' : ''}</td>`;
+  const yieldCell = (r) => `<td data-label="Yield" class="n mono">${r.yieldPct != null ? `${fmt(r.yieldPct, 2)}%${r.yieldPct < 1 ? ' <span class="pill s-neutral">tiny</span>' : ''}` : '—'}</td>`;
+  view.innerHTML = `${d.scan.running ? `<div class="progress panel" style="margin-bottom:14px">Reading company news: ${d.scan.done} of ${d.scan.total}. This list grows as it reads.</div>` : ''}
+    <h1>Dividend calendar</h1>
+    <div class="note"><b>How to get a dividend:</b> buy the share on or before the <b>last day to buy</b>. Owners on the <b>record date</b> receive it after the AGM approves it. The price usually falls by about the dividend after the record date, so a dividend is not free money.</div>
+    <h2>Upcoming record dates</h2>
+    <div class="panel table-wrap"><table class="cards"><thead><tr>${head('code', 'Company')}<th>Dividend</th>${head('cashPerShare', 'Cash / share', 1)}${head('price', 'Price', 1)}${head('yieldPct', 'Yield', 1)}${head('lastBuyDate', 'Last day to buy')}${head('recordDate', 'Record date')}</tr></thead>
+      <tbody>${sorted.map((r) => `<tr data-code="${esc(r.code)}">${company(r)}${dividend(r)}<td data-label="Cash / share" class="n mono">${r.cashPerShare != null ? '৳' + fmt(r.cashPerShare) : '—'}</td>
+        <td data-label="Price" class="n mono">৳${fmt(r.price)}</td>${yieldCell(r)}<td data-label="Last day to buy">${lastBuyCell(r)}</td><td data-label="Record date" class="mono">${fmtDate(r.recordDate)}</td></tr>`).join('') || '<tr><td colspan="7" class="empty">No upcoming record date found.</td></tr>'}</tbody></table></div>
+    <h2>Declared in the last 60 days (record date passed)</h2>
+    <div class="panel table-wrap"><table class="cards"><thead><tr><th>Company</th><th>Dividend</th><th class="n">Yield</th><th>Announced</th><th>Record date</th></tr></thead>
+      <tbody>${d.recent.map((r) => `<tr data-code="${esc(r.code)}">${company(r)}${dividend(r)}${yieldCell(r)}<td data-label="Announced" class="mono">${fmtDate(r.announced)}</td><td data-label="Record date" class="mono">${fmtDate(r.recordDate)}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">None.</td></tr>'}</tbody></table></div>
+    <h2>Expected next announcements</h2>
+    <p class="muted small">Estimated from last year's announcement month. "Regular" means the last two years matched within about 6 weeks.</p>
+    <div class="panel table-wrap"><table class="cards"><thead><tr><th>Company</th><th>Last dividend</th><th class="n">Yield at today's price</th><th>Expected</th></tr></thead>
+      <tbody>${d.expected.slice(0, 80).map((r) => `<tr data-code="${esc(r.code)}">${company(r)}${dividend(r)}${yieldCell(r)}<td data-label="Expected">${esc(monthName(r.nextExpected))}${r.regular ? ' <span class="pill s-research">regular</span>' : ''}</td></tr>`).join('') || '<tr><td colspan="4" class="empty">None yet.</td></tr>'}</tbody></table></div>`;
+  view.querySelectorAll('tbody').forEach((tb) => { tb.onclick = (e) => { const tr = e.target.closest('tr[data-code]'); if (tr) location.hash = '#/c/' + encodeURIComponent(tr.dataset.code); }; });
+  sortButtons(view, async (th) => {
+    const k = th.dataset.sort;
+    calendarSort = { key: k, dir: calendarSort.key === k ? -calendarSort.dir : (k === 'yieldPct' ? -1 : 1) };
+    await renderDividends();
+    view.querySelector(`th[data-sort="${k}"] button`)?.focus();
+  });
+}
+
+function renderLearn() {
+  view.innerHTML = `<h1>How it works</h1>
+    <p class="muted">Every signal comes from fixed rules on public DSE data. Nothing is guessed. Each reason on a company page shows the number behind it, so you can check it.</p>
+    <div class="grid g2">
+      <div class="panel"><h3>The four signals</h3><ul class="reasons">${Object.entries(SIGNALS).map(([k, s]) => `<li>${I[k]}<span><b>${s.label}</b><div class="why">${s.text}</div></span></li>`).join('')}</ul></div>
+      <div class="panel"><h3>The fraud check</h3><ul class="reasons">
+        <li>${I.caution}<span><b>Price pump</b><div class="why">Price up more than 30% in 1 month, 50% in 3 months or 100% in 1 year, while yearly earnings grew less than 10%.</div></span></li>
+        <li>${I.caution}<span><b>Volume spike</b><div class="why">Volume 5× or more above the 3-month average, together with a price move of 5%+ in a day or 15%+ in a month.</div></span></li>
+        <li>${I.caution}<span><b>Sponsors selling</b><div class="why">Owner holding fell 2 points or more.</div></span></li>
+        <li>${I.caution}<span><b>Small company, fast rise</b><div class="why">Paid-up capital under ৳30 crore, up 25%+ in 3 months, with no earnings growth.</div></span></li>
+        <li>${I.caution}<span><b>Directors plan to sell</b><div class="why">A director or sponsor sell notice on DSE in the last 6 months.</div></span></li>
+        <li>${I.caution}<span><b>Sudden profit jump</b><div class="why">From a loss to a profit, or profit tripled in one year.</div></span></li>
+        <li>${I.caution}<span><b>Old financials</b><div class="why">No yearly result for last year.</div></span></li>
+        <li>${I.caution}<span><b>Loss-making but rising</b><div class="why">A loss, yet the price is up 20%+ in 3 months.</div></span></li>
+        <li>${I.caution}<span><b>Category Z</b><div class="why">DSE marks companies that miss AGMs, skip dividends or stop work.</div></span></li>
+      </ul><p class="why">Any flag gives ${fraudPill('suspicious')}. ${fraudPill('high')} needs category Z, or a price pump or loss-making rise confirmed by a flag of another kind (for example owners selling or old financials). A flag is a pattern, not proof.</p></div>
+    </div>
+    <div class="panel" style="margin-top:14px"><h3>Words you will see</h3><dl class="gloss">
+      <dt>EPS (earnings per share)</dt><dd>Yearly profit ÷ number of shares. EPS ৳10 means each share earned ৳10 last year.</dd>
+      <dt>P/E (price to earnings)</dt><dd>Price ÷ EPS. A P/E of 8 means you pay ৳8 for each ৳1 of yearly profit. Compare it with the same sector and with the company's own past.</dd>
+      <dt>NAV (net asset value) and P/B</dt><dd>NAV is what the company owns minus what it owes, per share. P/B is price ÷ NAV. A P/B above 5 is expensive for most DSE shares.</dd>
+      <dt>Dividend yield</dt><dd>Yearly cash dividend ÷ price. A 5% yield on ৳200 pays ৳10 a year.</dd>
+      <dt>Categories A, B, N, Z</dt><dd>A: holds AGMs and pays 10%+ dividend. B: pays less than 10%. N: newly listed. Z: missed AGMs, no dividend, or stopped operating.</dd>
+      <dt>Sponsor / director holding</dt><dd>Shares held by the owners. BSEC rules require at least 30% together.</dd>
+      <dt>Dividend % and taka per share</dt><dd>DSE states dividends as a % of the face value, which is usually ৳10. So 130% cash = ৳13 per share, and 10% = ৳1.</dd>
+      <dt>Cash, bonus, interim and final</dt><dd>Cash dividend: money paid to you. Bonus (stock) dividend: free extra shares, the price adjusts down. Interim: paid during the year. Final: paid after the yearly results.</dd>
+      <dt>Last day to buy (cum date)</dt><dd>The last trading day on which buying the share still gets you the dividend. DSE moves the share to the spot market for a few days before the record date and states this date in its notice.</dd>
+      <dt>Record date</dt><dd>The day the company checks who owns the share. Owners on this day get the dividend. Buying on the record date itself is too late.</dd>
+      <dt>AGM (annual general meeting)</dt><dd>The yearly meeting where shareholders approve the dividend. Payment usually follows within about a month.</dd>
+      <dt>Quarterly (interim) results</dt><dd>Unaudited results for 3, 6 or 9 months. A loss there is an early warning, even when the last full year was profitable.</dd>
+      <dt>Cheap or expensive now</dt><dd>Compares today's P/E with the company's own P/E over the last 5 years, then checks whether earnings still grow. Near its low with growing earnings is "Possible value". Near its low with falling earnings is "Cheap for a reason". It is not a prediction: a cheap share can stay cheap.</dd>
+      <dt>Score</dt><dd>Each signal has its own range: Avoid 0–30, Caution 31–60, No strong signal 61–75, Worth researching 76–100. Inside a range, a company ranks higher for passing more checks, faster earnings growth, a P/E below its sector and its own past, and a higher dividend yield.</dd>
+    </dl></div>
+    <div class="note warn">These rules do not see news, auditor opinions or bank loan quality. Use the signal to choose what to research, then read the company's disclosures before you trade.</div>`;
+}
+
+const SEARCH_LIMIT = 8;
+function setupSearch() {
+  const q = document.getElementById('q'), box = document.getElementById('suggest');
+  let hits = [], hi = 0;
+  const show = () => {
+    const t = q.value.trim().toLowerCase();
+    if (!t || !market) { box.hidden = true; return; }
+    const names = Object.fromEntries(market.rows.map((r) => [r.code, r]));
+    hits = market.codes.filter((c) => c.code.toLowerCase().includes(t) || (names[c.code]?.name || '').toLowerCase().includes(t)).slice(0, SEARCH_LIMIT);
+    hi = 0;
+    box.innerHTML = hits.map((c, i) => `<a href="#/c/${esc(c.code)}" class="${i === hi ? 'hl' : ''}"><span><b class="mono">${esc(c.code)}</b> <span class="small muted">${esc(names[c.code]?.name || '')}</span></span>${names[c.code] ? sigPill(names[c.code].signal) : `<span class="small muted">${esc(c.sector)}</span>`}</a>`).join('') || '<div class="empty small">No match</div>';
+    box.hidden = false;
+  };
+  q.addEventListener('input', show);
+  q.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && hits[hi]) { location.hash = '#/c/' + hits[hi].code; }
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { hi = (hi + (e.key === 'ArrowDown' ? 1 : hits.length - 1)) % (hits.length || 1); box.querySelectorAll('a').forEach((a, i) => a.classList.toggle('hl', i === hi)); e.preventDefault(); }
+    else if (e.key === 'Escape') box.hidden = true;
+  });
+  document.addEventListener('click', (e) => { if (!e.target.closest('.search')) box.hidden = true; });
+  window.addEventListener('hashchange', () => { box.hidden = true; q.value = ''; });
+}
+
+async function route(opts = {}) {
+  const token = ++routeToken;
+  const y = window.scrollY;
+  const [path, query] = (location.hash.slice(1) || '/').split('?');
+  const params = new URLSearchParams(query || '');
+  const page = path.startsWith('/c/') ? 'company' : path.slice(1) || 'home';
+  document.querySelectorAll('[data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === page));
+  if (!opts.silent) window.scrollTo(0, 0);
+  if (page === 'company') {
+    let code = path.slice(3);
+    try { code = decodeURIComponent(code); } catch { view.innerHTML = '<div class="note bad">That link is not valid.</div>'; return; }
+    await renderCompany(code, opts);
+    if (opts.silent) window.scrollTo(0, y);
+    return;
+  }
+  if (page === 'learn') return renderLearn();
+  if (page === 'dividends') {
+    try { await renderDividends(); } catch (e) { if (!opts.silent) view.innerHTML = `<div class="note bad">Could not load the dividend calendar: ${esc(e.message)}</div>`; }
+    if (opts.silent) window.scrollTo(0, y);
+    return;
+  }
+  try { setUpdated(await loadMarket()); } catch (e) {
+    if (token !== routeToken || opts.silent) return;
+    view.innerHTML = `<div class="note bad">Live DSE data is not available: ${esc(e.message)}. Make sure <code>node server.js</code> is running.</div>`;
+    return;
+  }
+  if (token !== routeToken) return;
+  if (page === 'all') renderAll(params);
+  else if (page === 'fraud') renderFraud(params);
+  else {
+    try { await renderHome(); } catch (e) {
+      if (!opts.silent) view.innerHTML = `<div class="note bad">Could not load the dashboard: ${esc(e.message)}. Make sure <code>node server.js</code> is running.</div>`;
+    }
+  }
+  if (opts.silent) window.scrollTo(0, y);
+}
+
+const AUTO_REFRESH_MS = 60_000;
+// One place decides the market state, so the header and the dashboard never disagree.
+function marketState(s) {
+  if (!s) return { key: 'unknown', short: 'Unknown', long: '' };
+  const dhakaNow = new Date(Date.now() + 6 * 3_600_000).toISOString().slice(11, 16);
+  if (s.isOpen) return { key: 'open', short: '● Open', long: 'Market open · updates every minute' };
+  if (s.tradingDay && s.opening && dhakaNow < s.opening) return { key: 'preopen', short: 'Pre-open', long: `Pre-open · market opens ${s.opening} today` };
+  return { key: 'closed', short: 'Closed', long: `Market closed${s.next ? ` · next session ${fmtDate(s.next)}` : ''}` };
+}
+
+function setUpdated(d) {
+  lastSession = d.session || lastSession;
+  const s = lastSession;
+  if (!s) { document.getElementById('updated').textContent = ''; return; }
+  document.getElementById('updated').textContent = `DSE data: ${s.dataTime || fmtDate(s.sessionDate)} · ${marketState(s).long}`;
+}
+
+document.querySelectorAll('aside a[data-icon]').forEach((a) => { a.insertAdjacentHTML('afterbegin', I[a.dataset.icon]); a.title = a.textContent.trim(); });
+const collapseBtn = document.getElementById('collapse');
+collapseBtn.innerHTML = I.panel;
+const setCollapsed = (on) => {
+  document.body.classList.toggle('nav-collapsed', on);
+  collapseBtn.setAttribute('aria-expanded', String(!on));
+  collapseBtn.setAttribute('aria-label', on ? 'Show sidebar' : 'Hide sidebar');
+  store('nav', on ? 'collapsed' : 'open');
+};
+collapseBtn.onclick = () => setCollapsed(!document.body.classList.contains('nav-collapsed'));
+setCollapsed(store('nav') === 'collapsed');
+
+const refreshBtn = document.getElementById('refresh');
+refreshBtn.innerHTML = `${I.refresh} Refresh`;
+refreshBtn.onclick = async () => {
+  refreshBtn.disabled = true; refreshBtn.classList.add('spin');
+  try { await route({ silent: true, fresh: true }); } finally { refreshBtn.disabled = false; refreshBtn.classList.remove('spin'); }
+};
+setInterval(() => {
+  if (document.hidden) return;
+  if (lastSession?.isOpen || market?.scan?.running) route({ silent: true });
+}, AUTO_REFRESH_MS);
+
+document.getElementById('theme').onclick = () => {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  root.dataset.theme = dark ? 'light' : 'dark';
+  store('theme', root.dataset.theme);
+  route();
+};
+const savedTheme = store('theme');
+if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+setupSearch();
+window.addEventListener('hashchange', () => route());
+loadMarket().catch(() => null);
+route();
+</script>
+</body>
+</html>

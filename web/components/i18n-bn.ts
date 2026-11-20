@@ -1,0 +1,252 @@
+// Bangla UI text. Market terms investors use in English (P/E, EPS, NAV, AGM, DSE, BSEC) stay in English on purpose.
+export const BN: Record<string, string> = {
+  // Navigation and shell
+  'EXPLORE': 'খুঁজুন', 'MINE': 'আমার', 'HELP': 'সাহায্য',
+  'Dashboard': 'ড্যাশবোর্ড', 'All companies': 'সব কোম্পানি', 'Sectors': 'খাত', 'Compare': 'তুলনা', 'Dividend calendar': 'লভ্যাংশ ক্যালেন্ডার',
+  'Fraud alerts': 'প্রতারণা সতর্কতা', 'Watchlist': 'ওয়াচলিস্ট', 'Portfolio': 'পোর্টফোলিও', 'Alerts': 'অ্যালার্ট', 'How it works': 'কীভাবে কাজ করে',
+  'My plan': 'আমার পরিকল্পনা', 'DSE Trade Helper': 'DSE ট্রেড হেল্পার', 'Hide sidebar': 'সাইডবার লুকান', 'Show sidebar': 'সাইডবার দেখান',
+  'Search company (code or name)': 'কোম্পানি খুঁজুন (কোড বা নাম)', 'Search company': 'কোম্পানি খুঁজুন', 'No match': 'কিছু পাওয়া যায়নি',
+  'Refresh': 'রিফ্রেশ', 'Refresh data now': 'এখনই তথ্য রিফ্রেশ করুন', 'Theme': 'থিম', 'Toggle dark or light theme': 'ডার্ক বা লাইট থিম বদলান',
+  'DSE data': 'DSE তথ্য', 'Open': 'খোলা', 'Pre-open': 'খোলার আগে', 'Closed': 'বন্ধ', 'Unknown': 'অজানা',
+  'Market open · updates every minute': 'বাজার খোলা · প্রতি মিনিটে হালনাগাদ', 'market opens': 'বাজার খুলবে', 'today': 'আজ',
+  'Market closed': 'বাজার বন্ধ', 'next session': 'পরের সেশন',
+  'Data: Dhaka Stock Exchange public website (dse.com.bd). Signals come from fixed rules on that data. They are learning aids, not investment advice. A red flag shows a pattern, not proof of fraud.':
+    'তথ্য: ঢাকা স্টক এক্সচেঞ্জের পাবলিক ওয়েবসাইট (dse.com.bd)। সংকেতগুলো এই তথ্যের উপর নির্দিষ্ট নিয়মে তৈরি। এগুলো শেখার সহায়ক, বিনিয়োগ পরামর্শ নয়। লাল পতাকা একটি ধরন দেখায়, প্রতারণার প্রমাণ নয়।',
+
+  // Signals and fraud
+  'Worth researching': 'গবেষণার যোগ্য', 'No strong signal': 'জোরালো সংকেত নেই', 'Caution': 'সতর্কতা', 'Avoid': 'এড়িয়ে চলুন',
+  'Passes every quality check and has no fraud flag.': 'সব মান-পরীক্ষায় উত্তীর্ণ এবং কোনো প্রতারণা-পতাকা নেই।',
+  'Not bad, but misses one or more quality checks.': 'খারাপ নয়, তবে এক বা একাধিক মান-পরীক্ষায় ঘাটতি আছে।',
+  'Has a warning: falling profit, high price, thin trading or one fraud flag.': 'সতর্কতা আছে: মুনাফা কমছে, দাম বেশি, লেনদেন কম বা একটি প্রতারণা-পতাকা।',
+  'Loss-making, category Z, or a high-risk fraud pattern. If you hold it, review it.': 'লোকসানে, Z ক্যাটাগরিতে বা উচ্চ-ঝুঁকির প্রতারণা-ধরন আছে। আপনার কাছে থাকলে পর্যালোচনা করুন।',
+  'Clean': 'পরিষ্কার', 'Suspicious': 'সন্দেহজনক', 'High risk': 'উচ্চ ঝুঁকি',
+  'Price pump': 'দাম ফাঁপানো', 'Volume spike': 'হঠাৎ বেশি লেনদেন', 'Sponsors selling': 'উদ্যোক্তারা বিক্রি করছেন', 'Small company, fast rise': 'ছোট কোম্পানি, দ্রুত দাম বৃদ্ধি',
+  'Directors plan to sell': 'পরিচালকরা বিক্রির পরিকল্পনা করছেন', 'Sudden profit jump': 'হঠাৎ মুনাফা লাফ', 'Old financials': 'পুরনো আর্থিক প্রতিবেদন',
+  'Loss-making but rising': 'লোকসানে, তবু দাম বাড়ছে', 'Category Z': 'Z ক্যাটাগরি',
+
+  // Four questions and answers
+  'Is it a good business?': 'ব্যবসা কি ভালো?', 'Is it cheap now?': 'এখন কি সস্তা?', 'Any fraud warning signs?': 'প্রতারণার কোনো লক্ষণ?', 'Is a dividend coming?': 'লভ্যাংশ কি আসছে?',
+  'Four questions before you buy': 'কেনার আগে চারটি প্রশ্ন', 'See details →': 'বিস্তারিত দেখুন →',
+  'Yes': 'হ্যাঁ', 'Partly': 'আংশিক', 'No': 'না', 'None found': 'পাওয়া যায়নি', 'Some': 'কিছু আছে', 'Serious': 'গুরুতর',
+  'Yes, soon': 'হ্যাঁ, শিগগির', 'Yes, soon (date estimated)': 'হ্যাঁ, শিগগির (তারিখ আনুমানিক)', 'Too late': 'দেরি হয়ে গেছে', 'Not soon': 'শিগগির নয়',
+
+  // Company page
+  'Overview': 'সারসংক্ষেপ', 'Cheap or expensive': 'সস্তা না দামি', '5-year financials': '৫ বছরের আর্থিক', 'Dividends': 'লভ্যাংশ', 'News': 'খবর',
+  'Safety checks': 'নিরাপত্তা পরীক্ষা', 'Owners': 'মালিকানা', 'Company details': 'কোম্পানির বিস্তারিত', 'Suggestion': 'পরামর্শ', 'Score': 'স্কোর',
+  'Category': 'ক্যাটাগরি', 'Listed': 'তালিকাভুক্ত', 'no trade yet today': 'আজ এখনো লেনদেন হয়নি',
+  'Save to watchlist': 'ওয়াচলিস্টে রাখুন', 'Saved to watchlist': 'ওয়াচলিস্টে রাখা আছে', 'Compare with others': 'অন্যদের সাথে তুলনা',
+  'Why this signal': 'এই সংকেত কেন', 'What past data says': 'অতীত তথ্য কী বলে', 'Price, last year': 'দাম, গত এক বছর', 'Open on DSE ↗': 'DSE-তে খুলুন ↗',
+  'Sector P/E': 'খাতের P/E', 'Dividend yield': 'লভ্যাংশ ফলন', 'Traded a day': 'দৈনিক লেনদেন',
+  'Good business, and cheaper than its usual P/E. Worth researching now.': 'ভালো ব্যবসা, এবং স্বাভাবিক P/E-এর চেয়ে সস্তা। এখন গবেষণার যোগ্য।',
+  'Good business at a normal or higher P/E than usual. Research it before deciding.': 'ভালো ব্যবসা, তবে P/E স্বাভাবিক বা বেশি। সিদ্ধান্তের আগে গবেষণা করুন।',
+  'Good business, but the price is near its 52-week high. Research it and wait for a calmer price.': 'ভালো ব্যবসা, তবে দাম ৫২ সপ্তাহের সর্বোচ্চের কাছে। গবেষণা করুন এবং শান্ত দামের অপেক্ষা করুন।',
+  'High risk. Not a candidate to buy now. If you hold it, review why.': 'উচ্চ ঝুঁকি। এখন কেনার মতো নয়। আপনার কাছে থাকলে কারণ পর্যালোচনা করুন।',
+  'Wait. Read the latest disclosures and quarterly results first.': 'অপেক্ষা করুন। আগে সর্বশেষ ঘোষণা ও ত্রৈমাসিক ফলাফল পড়ুন।',
+  'No strong signal. Research more before you decide.': 'জোরালো সংকেত নেই। সিদ্ধান্তের আগে আরও গবেষণা করুন।',
+  'Is it cheap or expensive now?': 'এখন সস্তা না দামি?', 'Price vs last 5 years': 'দাম বনাম গত ৫ বছর', 'P/E vs last 5 years': 'P/E বনাম গত ৫ বছর',
+  'Possible value': 'সম্ভাব্য সুযোগ', 'Cheap for a reason': 'কারণ আছে বলেই সস্তা', 'Priced high': 'দাম বেশি', 'Expensive and weakening': 'দামি এবং দুর্বল হচ্ছে', 'Fairly priced': 'ন্যায্য দাম',
+  'Fraud check': 'প্রতারণা পরীক্ষা', 'Quality checklist': 'মান-পরীক্ষার তালিকা', 'Latest DSE announcements': 'DSE-এর সর্বশেষ ঘোষণা', 'Read more': 'আরও পড়ুন',
+  'Who owns the shares now': 'এখন শেয়ারের মালিক কারা', 'Sponsor holding over time': 'সময়ের সাথে উদ্যোক্তাদের অংশ', 'Shareholding reports': 'শেয়ার ধারণ প্রতিবেদন',
+  'Director share trades': 'পরিচালকদের শেয়ার লেনদেন', 'Year by year': 'বছরভিত্তিক', 'Latest quarterly results (unaudited)': 'সর্বশেষ ত্রৈমাসিক ফলাফল (নিরীক্ষিত নয়)',
+  'Announcements': 'ঘোষণা', '5-year dividend record': '৫ বছরের লভ্যাংশ রেকর্ড',
+  'Category A': 'A ক্যাটাগরি', 'Profit every year (5 years)': 'প্রতি বছর মুনাফা (৫ বছর)', 'Earnings growing': 'আয় বাড়ছে', 'Dividend in 3+ of last 5 years': 'গত ৫ বছরে ৩+ বার লভ্যাংশ',
+  'Sponsors hold 30%+': 'উদ্যোক্তাদের অংশ ৩০%+', 'Price not stretched': 'দাম অতিরিক্ত নয়', 'Easy to buy and sell': 'সহজে কেনা-বেচা যায়', 'No fraud warning': 'প্রতারণার সতর্কতা নেই',
+
+  // Dashboard
+  'DSE dashboard': 'DSE ড্যাশবোর্ড', 'Market': 'বাজার', 'DSEX index': 'DSEX সূচক', 'Turnover': 'লেনদেনের মূল্য', 'Trades': 'লেনদেন সংখ্যা', 'Market now': 'এখন বাজার',
+  'figures': 'তথ্য', 'change not available': 'পরিবর্তন পাওয়া যায়নি', 'vs day before': 'আগের দিনের তুলনায়', 'up': 'বেড়েছে', 'down': 'কমেছে', 'unchanged': 'অপরিবর্তিত',
+  'Showing the last session': 'শেষ সেশন দেখাচ্ছে', "Today's figures appear when trading starts.": 'লেনদেন শুরু হলে আজকের তথ্য দেখা যাবে।',
+  'The DSEX line through the day appears after trading starts at 10:00.': 'সকাল ১০টায় লেনদেন শুরু হলে দিনের DSEX রেখা দেখা যাবে।',
+  'Shortlist': 'বাছাই তালিকা', 'pass every check': 'সব পরীক্ষায় উত্তীর্ণ', 'Dividends coming': 'আসন্ন লভ্যাংশ', 'upcoming record dates': 'আসন্ন রেকর্ড ডেট',
+  'companies with warnings': 'সতর্কতাসহ কোম্পানি', 'New here?': 'নতুন?', 'signals in plain words': 'সহজ ভাষায় সংকেত',
+  "Today's important things": 'আজকের গুরুত্বপূর্ণ বিষয়', 'Dividends: record date within 7 days': 'লভ্যাংশ: ৭ দিনের মধ্যে রেকর্ড ডেট',
+  'Dividends declared this week': 'এই সপ্তাহে ঘোষিত লভ্যাংশ', 'Unusual trading volume': 'অস্বাভাবিক লেনদেন', 'Top gainers': 'সর্বোচ্চ বৃদ্ধি', 'Top losers': 'সর্বোচ্চ পতন',
+  'Top gainers (last session)': 'সর্বোচ্চ বৃদ্ধি (শেষ সেশন)', 'Top losers (last session)': 'সর্বোচ্চ পতন (শেষ সেশন)',
+  'Fraud warnings (outside category Z)': 'প্রতারণা সতর্কতা (Z ক্যাটাগরির বাইরে)', 'Open →': 'খুলুন →', 'Nothing today.': 'আজ কিছু নেই।',
+  'Market in pictures': 'ছবিতে বাজার', 'companies by signal': 'কোম্পানি, সংকেত অনুযায়ী', 'Sectors today': 'আজ খাতভিত্তিক', 'Sectors, last session': 'খাতভিত্তিক, শেষ সেশন',
+  'Turnover, last 10 days': 'লেনদেনের মূল্য, গত ১০ দিন', 'Top of the shortlist': 'বাছাই তালিকার শীর্ষ', 'See the whole shortlist →': 'পুরো বাছাই তালিকা দেখুন →',
+  'Companies that pass every research check, best score first. A place to start research, not a buy order.': 'যেসব কোম্পানি সব পরীক্ষায় উত্তীর্ণ, সেরা স্কোর আগে। গবেষণা শুরুর জায়গা, কেনার নির্দেশ নয়।',
+  'New here? Start in 3 steps.': 'নতুন? ৩ ধাপে শুরু করুন।', 'Got it': 'বুঝেছি', 'score': 'স্কোর',
+  'This site helps you choose what to research. It does not tell you what to buy.': 'এই সাইট কী নিয়ে গবেষণা করবেন তা বেছে নিতে সাহায্য করে। কী কিনবেন তা বলে না।',
+
+  // Lists
+  'Quick picks:': 'দ্রুত বাছাই:', 'Good and cheap': 'ভালো এবং সস্তা', 'High dividend': 'উচ্চ লভ্যাংশ', 'Rising earnings': 'বাড়ন্ত আয়', 'Risky — avoid': 'ঝুঁকিপূর্ণ — এড়িয়ে চলুন',
+  'Worth researching, with a P/E at or below its sector median.': 'P/E খাতের মধ্যমার কাছে বা নিচে, গবেষণার যোগ্য।',
+  "Yield 5%+ at today's price, no fraud flag, easy to trade.": 'আজকের দামে ফলন ৫%+, প্রতারণার পতাকা নেই, সহজে লেনদেনযোগ্য।',
+  'Earnings per share growing 15%+ a year, no fraud flag.': 'প্রতি শেয়ারের আয় বছরে ১৫%+ বাড়ছে, প্রতারণার পতাকা নেই।',
+  'Loss-making, category Z or a high-risk fraud pattern.': 'লোকসানে, Z ক্যাটাগরিতে বা উচ্চ-ঝুঁকির প্রতারণা-ধরন আছে।',
+  'Any signal': 'যেকোনো সংকেত', 'All sectors': 'সব খাত', 'Any fraud risk': 'যেকোনো প্রতারণা ঝুঁকি', 'Any category': 'যেকোনো ক্যাটাগরি',
+  'Any dividend yield': 'যেকোনো লভ্যাংশ ফলন', 'Any trading volume': 'যেকোনো লেনদেনের পরিমাণ', 'Showing {n} companies': '{n}টি কোম্পানি দেখানো হচ্ছে', 'Company': 'কোম্পানি', 'Signal': 'সংকেত',
+  'Price': 'দাম', 'Yield': 'ফলন', 'Traded / day': 'দৈনিক লেনদেন', '1 year': '১ বছর', 'Today': 'আজ', 'No company matches these filters.': 'এই ফিল্টারে কোনো কোম্পানি নেই।',
+  'Loading…': 'লোড হচ্ছে…', 'Click a row for the full explanation.': 'পূর্ণ ব্যাখ্যার জন্য একটি সারিতে ক্লিক করুন।',
+  'Dividend': 'লভ্যাংশ', 'Cash / share': 'নগদ / শেয়ার', 'Last day to buy': 'কেনার শেষ দিন', 'Record date': 'রেকর্ড ডেট', 'Announced': 'ঘোষণা', 'Expected': 'প্রত্যাশিত',
+  'Upcoming record dates': 'আসন্ন রেকর্ড ডেট', 'Expected next announcements': 'প্রত্যাশিত পরবর্তী ঘোষণা', 'too late': 'দেরি হয়ে গেছে', 'est.': 'আনুমানিক',
+  'Flags': 'পতাকা', 'Warnings outside category Z': 'Z ক্যাটাগরির বাইরে সতর্কতা', 'None.': 'কিছু নেই।',
+  'Compare companies': 'কোম্পানি তুলনা', 'Add a company': 'কোম্পানি যোগ করুন', 'Add': 'যোগ করুন', 'Measure': 'মাপকাঠি', 'best': 'সেরা',
+  'Median P/E': 'মধ্যমা P/E', 'Average move': 'গড় পরিবর্তন', 'Highest scores': 'সর্বোচ্চ স্কোর', 'companies': 'কোম্পানি',
+  'Your watchlist is empty.': 'আপনার ওয়াচলিস্ট খালি।', 'Next dividend': 'পরবর্তী লভ্যাংশ', 'none announced': 'ঘোষণা হয়নি',
+
+  // Learn
+  'The four signals': 'চারটি সংকেত', 'The fraud check': 'প্রতারণা পরীক্ষা', 'Words you will see': 'যে শব্দগুলো দেখবেন',
+  'Every signal comes from fixed rules on public DSE data. Nothing is guessed. Each reason on a company page shows the number behind it, so you can check it.':
+    'প্রতিটি সংকেত DSE-এর পাবলিক তথ্যের উপর নির্দিষ্ট নিয়মে তৈরি। কিছুই অনুমান নয়। কোম্পানির পাতায় প্রতিটি কারণের পেছনের সংখ্যা দেখানো হয়, তাই আপনি যাচাই করতে পারেন।',
+
+  // Portfolio
+  'Your holdings, stored in this browser only. They do not sync to other devices.': 'আপনার হোল্ডিং শুধু এই ব্রাউজারে সংরক্ষিত। অন্য ডিভাইসে সিঙ্ক হয় না।',
+  'Your portfolio is empty.': 'আপনার পোর্টফোলিও খালি।',
+  'Add your first holding below. Data stays in this browser only.': 'নিচে আপনার প্রথম হোল্ডিং যোগ করুন। তথ্য শুধু এই ব্রাউজারে থাকবে।',
+  'Allocation': 'বরাদ্দ',
+  'Add a holding': 'হোল্ডিং যোগ করুন',
+  'Import / Export CSV': 'CSV আমদানি / রপ্তানি',
+  'Prices refresh every minute while the market is open. All data stays in this browser.': 'বাজার খোলা থাকলে দাম প্রতি মিনিটে হালনাগাদ হয়। সব তথ্য এই ব্রাউজারে থাকে।',
+  'Could not load live prices': 'লাইভ দাম লোড হয়নি',
+  'Your holdings are safe — try Refresh.': 'আপনার হোল্ডিং নিরাপদ — রিফ্রেশ করুন।',
+  // LotForm
+  'Stock code': 'শেয়ার কোড', 'Shares': 'শেয়ার', 'Buy price (৳)': 'ক্রয়মূল্য (৳)', 'Buy date (optional)': 'ক্রয়ের তারিখ (ঐচ্ছিক)',
+  'Required': 'প্রয়োজনীয়', 'Invalid code': 'ভুল কোড', 'Must be a whole number > 0': 'পূর্ণ সংখ্যা হতে হবে, শূন্যের বেশি',
+  'Must be > 0': 'শূন্যের বেশি হতে হবে', 'Use YYYY-MM-DD': 'YYYY-MM-DD ফরম্যাটে লিখুন',
+  'Add holding': 'হোল্ডিং যোগ করুন', 'Cancel': 'বাতিল', 'Save': 'সংরক্ষণ করুন',
+  // HoldingsTable
+  'Avg buy ৳': 'গড় ক্রয়মূল্য ৳', 'Cost': 'খরচ', 'Price now': 'বর্তমান দাম', 'Value now': 'বর্তমান মূল্য',
+  'Profit / Loss': 'লাভ / ক্ষতি', 'Fraud': 'প্রতারণা', 'Lot': 'লট', 'Buy price ৳': 'ক্রয়মূল্য ৳', 'Buy date': 'ক্রয়ের তারিখ',
+  'Edit': 'সম্পাদনা', 'Remove': 'সরান', 'Total': 'মোট',
+  // AllocationChart
+  'Portfolio allocation data': 'পোর্টফোলিও বরাদ্দের তথ্য', 'Other': 'অন্যান্য',
+  // IncomeSection
+  'Dividend income planner': 'লভ্যাংশ আয়ের পরিকল্পনাকারী',
+  'Based on the last declared or expected dividend for each company you hold.': 'আপনার হোল্ডিং কোম্পানির সর্বশেষ ঘোষিত বা প্রত্যাশিত লভ্যাংশের উপর ভিত্তি করে।',
+  'Income, next 12 months': 'আয়, পরবর্তী ১২ মাস', 'Yield on cost': 'খরচের উপর ফলন',
+  'Expected monthly income — next 12 months': 'প্রত্যাশিত মাসিক আয় — পরবর্তী ১২ মাস',
+  'Bar chart of expected dividend income by month': 'মাসভিত্তিক প্রত্যাশিত লভ্যাংশ আয়ের বার চার্ট',
+  'Expected income (৳)': 'প্রত্যাশিত আয় (৳)', 'Per share (৳)': 'প্রতি শেয়ারে (৳)',
+  'Per declaration': 'প্রতি ঘোষণায়', 'Expected month': 'প্রত্যাশিত মাস', 'No holdings yet.': 'এখনো হোল্ডিং নেই।',
+  // WhatIfCalc
+  'What-if calculator': 'অনুমান হিসাব',
+  'Pick a company and an investment amount to estimate dividend income.': 'লভ্যাংশ আয় অনুমান করতে কোম্পানি ও পরিমাণ বেছে নিন।',
+  'Amount (৳)': 'পরিমাণ (৳)', 'Select a company…': 'কোম্পানি বেছে নিন…', 'Current price': 'বর্তমান দাম',
+  'Whole shares': 'পূর্ণ শেয়ার সংখ্যা', 'Per declaration (est.)': 'প্রতি ঘোষণায় (আনুমানিক)',
+  'Next payment': 'পরবর্তী পরিশোধ', 'No dividend data': 'লভ্যাংশের তথ্য নেই', 'Enter an amount': 'পরিমাণ লিখুন',
+  // CsvPanel
+  'Import from a broker statement CSV. Columns detected by header name: code/symbol, quantity/shares, avg cost/buy price. Comma, semicolon, and tab delimiters are supported.':
+    'ব্রোকারের CSV স্টেটমেন্ট থেকে আমদানি করুন। কলাম হেডারে: code/symbol, quantity/shares, avg cost/buy price। কমা, সেমিকোলন ও ট্যাব বিভাজক সমর্থিত।',
+  'Choose broker file': 'ব্রোকারের ফাইল বেছে নিন', 'Or paste CSV text:': 'অথবা CSV পেস্ট করুন:',
+  'Replace existing holdings': 'বিদ্যমান হোল্ডিং প্রতিস্থাপন করুন', 'Replace all holdings?': 'সব হোল্ডিং প্রতিস্থাপন করবেন?',
+  'Yes, replace all': 'হ্যাঁ, সব প্রতিস্থাপন করুন', 'Export holdings as CSV': 'CSV হিসেবে হোল্ডিং রপ্তানি করুন',
+  'Replace': 'প্রতিস্থাপন করুন', 'Append': 'যোগ করুন', 'Code': 'কোড', 'Buy price': 'ক্রয়মূল্য',
+  // Compare
+  '"best" marks the strongest value in rows where a clear better direction exists.': '"সেরা" মানে ওই সারিতে সবচেয়ে ভালো মান।',
+  'Pick at least two companies.': 'অন্তত দুটি কোম্পানি বেছে নিন।',
+  'Type a code above, or open a company and press "Compare with others".': 'উপরে কোড টাইপ করুন, অথবা কোনো কোম্পানি খুলে "তুলনা" বাটন চাপুন।',
+  'Earnings growth, first profitable year = 100': 'আয়ের প্রবৃদ্ধি, প্রথম মুনাফার বছর = ১০০',
+  'Earnings per share indexed to 100 in the first year, for each company': 'প্রতিটি কোম্পানির EPS, প্রথম বছর = ১০০ ধরে',
+  'Lines above 100 mean earnings per share grew since the first year shown. Companies of very different size become comparable this way.':
+    '১০০-এর উপরের রেখা মানে সেই বছরের পর EPS বেড়েছে। বিভিন্ন আকারের কোম্পানি এভাবে তুলনীয় হয়।',
+  // All companies filters
+  'Category B': 'B ক্যাটাগরি', 'Category N': 'N ক্যাটাগরি',
+  'Yield 3%+': 'ফলন ৩%+', 'Yield 5%+': 'ফলন ৫%+', 'Yield 8%+': 'ফলন ৮%+',
+  '৳10 lakh+ a day': '৳১০ লাখ+ দৈনিক', '৳1 crore+ a day': '৳১ কোটি+ দৈনিক',
+  // Company page
+  'Not enough history.': 'পর্যাপ্ত ইতিহাস নেই।', 'Loading company': 'কোম্পানি লোড হচ্ছে',
+  'Check the code, or try again in a minute.': 'কোড যাচাই করুন, বা এক মিনিট পরে আবার চেষ্টা করুন।',
+  // Not-found and error pages
+  'Page not found.': 'পৃষ্ঠা পাওয়া যায়নি।',
+  'Check the trade code or the address, or go back to the': 'ট্রেড কোড বা ঠিকানা যাচাই করুন, অথবা ফিরে যান',
+  'dashboard': 'ড্যাশবোর্ড',
+  'Something went wrong on this page.': 'এই পৃষ্ঠায় একটি সমস্যা হয়েছে।',
+  'Try again. If it keeps failing, reload the page in a minute.': 'আবার চেষ্টা করুন। বারবার হলে এক মিনিট পরে পৃষ্ঠাটি পুনরায় লোড করুন।',
+  'Try again': 'আবার চেষ্টা করুন',
+  'Type a code, e.g. GP': 'কোড লিখুন, যেমন GP',
+
+  // Shell (phone menu, skip link)
+  'Menu': 'মেনু', 'Close': 'বন্ধ করুন', 'Main': 'প্রধান মেনু',
+  // Learn page
+  'Any flag gives': 'যেকোনো একটি পতাকা মানে',
+  'needs category Z, or a price pump or loss-making rise confirmed by a flag of another kind (for example owners selling or old financials). A flag is a pattern, not proof.':
+    'এর জন্য লাগে Z ক্যাটাগরি, অথবা দাম ফাঁপানো বা লোকসানে দাম বৃদ্ধি, যা অন্য ধরনের একটি পতাকা দিয়ে নিশ্চিত (যেমন মালিকদের বিক্রি বা পুরনো আর্থিক প্রতিবেদন)। পতাকা একটি ধরন, প্রমাণ নয়।',
+  "These rules do not see news, auditor opinions or bank loan quality. Use the signal to choose what to research, then read the company's disclosures before you trade.":
+    'এই নিয়মগুলো খবর, নিরীক্ষকের মতামত বা ব্যাংকের ঋণের মান দেখে না। কী নিয়ে গবেষণা করবেন তা বাছতে সংকেত ব্যবহার করুন, তারপর লেনদেনের আগে কোম্পানির প্রকাশিত তথ্য পড়ুন।',
+  'Price up more than 30% in 1 month, 50% in 3 months or 100% in 1 year, while yearly earnings grew less than 10%.':
+    '১ মাসে ৩০%, ৩ মাসে ৫০% বা ১ বছরে ১০০%-এর বেশি দাম বেড়েছে, অথচ বার্ষিক আয় বেড়েছে ১০%-এর কম।',
+  'Volume 5× or more above the 3-month average, together with a price move of 5%+ in a day or 15%+ in a month.':
+    '৩ মাসের গড়ের চেয়ে ৫ গুণ বা বেশি লেনদেন, সাথে এক দিনে ৫%+ বা এক মাসে ১৫%+ দাম পরিবর্তন।',
+  'Owner holding fell 2 points or more.': 'মালিকদের শেয়ার ২ পয়েন্ট বা বেশি কমেছে।',
+  'Paid-up capital under ৳30 crore, up 25%+ in 3 months, with no earnings growth.': 'পরিশোধিত মূলধন ৳৩০ কোটির কম, ৩ মাসে দাম ২৫%+ বেড়েছে, অথচ আয় বাড়েনি।',
+  'A director or sponsor sell notice on DSE in the last 6 months.': 'গত ৬ মাসে DSE-তে কোনো পরিচালক বা উদ্যোক্তার বিক্রির ঘোষণা।',
+  'From a loss to a profit, or profit tripled in one year.': 'লোকসান থেকে মুনাফায়, বা এক বছরে মুনাফা তিন গুণ।',
+  'No yearly result for last year.': 'গত বছরের বার্ষিক ফলাফল নেই।',
+  'A loss, yet the price is up 20%+ in 3 months.': 'লোকসান, তবু ৩ মাসে দাম ২০%+ বেড়েছে।',
+  'DSE marks companies that miss AGMs, skip dividends or stop work.': 'যেসব কোম্পানি AGM করে না, লভ্যাংশ দেয় না বা কাজ বন্ধ করেছে, DSE তাদের এভাবে চিহ্নিত করে।',
+  'EPS (earnings per share)': 'EPS (শেয়ারপ্রতি আয়)',
+  'Yearly profit ÷ number of shares. EPS ৳10 means each share earned ৳10 last year.': 'বার্ষিক মুনাফা ÷ শেয়ার সংখ্যা। EPS ৳১০ মানে গত বছর প্রতিটি শেয়ার ৳১০ আয় করেছে।',
+  'P/E (price to earnings)': 'P/E (দাম ও আয়ের অনুপাত)',
+  "Price ÷ EPS. A P/E of 8 means you pay ৳8 for each ৳1 of yearly profit. Compare it with the same sector and with the company's own past.":
+    'দাম ÷ EPS। P/E ৮ মানে প্রতি ৳১ বার্ষিক মুনাফার জন্য আপনি ৳৮ দিচ্ছেন। একই খাত এবং কোম্পানির নিজের অতীতের সাথে তুলনা করুন।',
+  'NAV (net asset value) and P/B': 'NAV (নিট সম্পদ মূল্য) ও P/B',
+  'NAV is what the company owns minus what it owes, per share. P/B is price ÷ NAV. A P/B above 5 is expensive for most DSE shares.':
+    'NAV হলো শেয়ারপ্রতি কোম্পানির সম্পদ বাদ দেনা। P/B হলো দাম ÷ NAV। বেশিরভাগ DSE শেয়ারের জন্য P/B ৫-এর বেশি মানে দামি।',
+  'Yearly cash dividend ÷ price. A 5% yield on ৳200 pays ৳10 a year.': 'বার্ষিক নগদ লভ্যাংশ ÷ দাম। ৳২০০ দামে ৫% ফলন মানে বছরে ৳১০।',
+  'Categories A, B, N, Z': 'ক্যাটাগরি A, B, N, Z',
+  'A: holds AGMs and pays 10%+ dividend. B: pays less than 10%. N: newly listed. Z: missed AGMs, no dividend, or stopped operating.':
+    'A: AGM করে এবং ১০%+ লভ্যাংশ দেয়। B: ১০%-এর কম দেয়। N: নতুন তালিকাভুক্ত। Z: AGM করেনি, লভ্যাংশ নেই বা কাজ বন্ধ।',
+  'Sponsor / director holding': 'উদ্যোক্তা / পরিচালকদের শেয়ার', 'Shares held by the owners. BSEC rules require at least 30% together.': 'মালিকদের হাতে থাকা শেয়ার। BSEC-এর নিয়মে একসাথে অন্তত ৩০% থাকতে হয়।',
+  'Dividend % and taka per share': 'লভ্যাংশ % ও শেয়ারপ্রতি টাকা',
+  'DSE states dividends as a % of the face value, which is usually ৳10. So 130% cash = ৳13 per share, and 10% = ৳1.': 'DSE লভ্যাংশ বলে অভিহিত মূল্যের % হিসেবে, যা সাধারণত ৳১০। তাই ১৩০% নগদ = শেয়ারপ্রতি ৳১৩, আর ১০% = ৳১।',
+  'Cash, bonus, interim and final': 'নগদ, বোনাস, অন্তর্বর্তী ও চূড়ান্ত',
+  'Cash dividend: money paid to you. Bonus (stock) dividend: free extra shares, the price adjusts down. Interim: paid during the year. Final: paid after the yearly results.':
+    'নগদ লভ্যাংশ: আপনাকে টাকা দেওয়া হয়। বোনাস (স্টক) লভ্যাংশ: বিনা মূল্যে বাড়তি শেয়ার, দাম সেই অনুযায়ী কমে। অন্তর্বর্তী: বছরের মাঝে দেওয়া। চূড়ান্ত: বার্ষিক ফলাফলের পরে দেওয়া।',
+  'Last day to buy (cum date)': 'কেনার শেষ দিন (কাম তারিখ)',
+  'The last trading day on which buying the share still gets you the dividend. DSE moves the share to the spot market for a few days before the record date and states this date in its notice.':
+    'শেষ লেনদেনের দিন, যেদিন কিনলেও লভ্যাংশ পাবেন। রেকর্ড তারিখের কয়েক দিন আগে DSE শেয়ারটি স্পট মার্কেটে নেয় এবং নোটিশে এই তারিখ জানায়।',
+  'The day the company checks who owns the share. Owners on this day get the dividend. Buying on the record date itself is too late.':
+    'যেদিন কোম্পানি দেখে কে শেয়ারের মালিক। এই দিনের মালিকরা লভ্যাংশ পান। রেকর্ড তারিখে কিনলে দেরি হয়ে যায়।',
+  'AGM (annual general meeting)': 'AGM (বার্ষিক সাধারণ সভা)',
+  'The yearly meeting where shareholders approve the dividend. Payment usually follows within about a month.': 'বার্ষিক সভা, যেখানে শেয়ারহোল্ডাররা লভ্যাংশ অনুমোদন করেন। সাধারণত প্রায় এক মাসের মধ্যে টাকা আসে।',
+  'Quarterly (interim) results': 'ত্রৈমাসিক (অন্তর্বর্তী) ফলাফল',
+  'Unaudited results for 3, 6 or 9 months. A loss there is an early warning, even when the last full year was profitable.': '৩, ৬ বা ৯ মাসের অনিরীক্ষিত ফলাফল। সেখানে লোকসান একটি আগাম সতর্কতা, এমনকি গত পুরো বছর মুনাফা হলেও।',
+  'Cheap or expensive now': 'এখন সস্তা না দামি',
+  "Compares today's P/E with the company's own P/E over the last 5 years, then checks whether earnings still grow. Near its low with growing earnings is \"Possible value\". Near its low with falling earnings is \"Cheap for a reason\". It is not a prediction: a cheap share can stay cheap.":
+    'আজকের P/E-কে কোম্পানির গত ৫ বছরের P/E-এর সাথে তুলনা করে, তারপর দেখে আয় এখনো বাড়ছে কিনা। নিচের দিকে থাকলে এবং আয় বাড়লে "সম্ভাব্য সুযোগ"। নিচের দিকে থাকলে এবং আয় কমলে "কারণ আছে বলেই সস্তা"। এটি ভবিষ্যদ্বাণী নয়: সস্তা শেয়ার সস্তাই থাকতে পারে।',
+  'Each signal has its own range: Avoid 0–30, Caution 31–60, No strong signal 61–75, Worth researching 76–100. Inside a range, a company ranks higher for passing more checks, faster earnings growth, a P/E below its sector and its own past, and a higher dividend yield.':
+    'প্রতিটি সংকেতের নিজস্ব সীমা: এড়িয়ে চলুন ০–৩০, সতর্কতা ৩১–৬০, জোরালো সংকেত নেই ৬১–৭৫, গবেষণার যোগ্য ৭৬–১০০। একই সীমার মধ্যে বেশি পরীক্ষায় উত্তীর্ণ, দ্রুত আয় বৃদ্ধি, খাত ও নিজের অতীতের চেয়ে কম P/E এবং বেশি লভ্যাংশ ফলন থাকলে কোম্পানি উপরে থাকে।',
+  // Company page additions
+  'Could not load': 'লোড করা যায়নি', 'Check the trade code.': 'ট্রেড কোড যাচাই করুন।', 'source': 'উৎস', 'what the signals mean': 'সংকেতগুলোর মানে',
+  'Category A: holds its AGM and pays a 10%+ dividend.': 'ক্যাটাগরি A: AGM করে এবং ১০%+ লভ্যাংশ দেয়।',
+  'Category B: holds its AGM but paid less than a 10% dividend.': 'ক্যাটাগরি B: AGM করে, তবে ১০%-এর কম লভ্যাংশ দিয়েছে।',
+  'Category N: newly listed, no full year on DSE yet.': 'ক্যাটাগরি N: নতুন তালিকাভুক্ত, DSE-তে এখনো পুরো এক বছর হয়নি।',
+  'Category Z: missed AGMs, paid no dividend or stopped operating. Highest risk on DSE.': 'ক্যাটাগরি Z: AGM করেনি, লভ্যাংশ দেয়নি বা কাজ বন্ধ। DSE-তে সবচেয়ে ঝুঁকিপূর্ণ।',
+  'Tap or hover the line to see the price on each day.': 'প্রতিদিনের দাম দেখতে রেখায় ট্যাপ করুন বা মাউস রাখুন।',
+  // Dashboard additions
+  'My stocks today': 'আজ আমার শেয়ার', 'From your watchlist and portfolio': 'আপনার ওয়াচলিস্ট ও পোর্টফোলিও থেকে', 'not in the DSE list': 'DSE তালিকায় নেই',
+  'not traded': 'লেনদেন হয়নি', 'buy by': 'কিনুন এর মধ্যে', 'Important things from the last session': 'শেষ সেশনের গুরুত্বপূর্ণ বিষয়',
+  'Dividends you can still buy for (record date within 7 days)': 'যে লভ্যাংশ এখনো কিনে পাওয়া যায় (৭ দিনের মধ্যে রেকর্ড তারিখ)',
+  'Top gainers today': 'আজ সর্বোচ্চ বৃদ্ধি', 'Top losers today': 'আজ সর্বোচ্চ পতন',
+  "Last session's top gainers": 'শেষ সেশনে সর্বোচ্চ বৃদ্ধি', "Last session's top losers": 'শেষ সেশনে সর্বোচ্চ পতন',
+  'Can I trust these numbers?': 'এই সংখ্যাগুলো কি বিশ্বাসযোগ্য?', 'Source:': 'উৎস:', 'Updates:': 'হালনাগাদ:', 'What it is:': 'এটি কী:', 'Who made it:': 'কে বানিয়েছে:',
+  'the public Dhaka Stock Exchange website (dse.com.bd): prices, company pages and news.': 'ঢাকা স্টক এক্সচেঞ্জের পাবলিক ওয়েবসাইট (dse.com.bd): দাম, কোম্পানির পাতা ও খবর।',
+  'prices every minute while the market is open; company figures about once a day.': 'বাজার খোলা থাকলে দাম প্রতি মিনিটে; কোম্পানির তথ্য দিনে প্রায় একবার।',
+  'a free learning tool. Signals come from fixed rules you can read on How it works. It is not investment advice.': 'একটি বিনামূল্যের শেখার টুল। সংকেত আসে নির্দিষ্ট নিয়ম থেকে, যা "কীভাবে কাজ করে" পাতায় পড়তে পারেন। এটি বিনিয়োগ পরামর্শ নয়।',
+  'an independent developer. It is not linked to DSE, BSEC or any broker, and it does not sell shares.': 'একজন স্বাধীন ডেভেলপার। এটি DSE, BSEC বা কোনো ব্রোকারের সাথে যুক্ত নয়, এবং শেয়ার বিক্রি করে না।',
+  // Dividend wording
+  'cash': 'নগদ', 'bonus': 'বোনাস', 'interim': 'অন্তর্বর্তী', 'not for sponsors': 'উদ্যোক্তাদের জন্য নয়', 'tiny': 'খুব কম', 'regular': 'নিয়মিত',
+  'last day today': 'আজই শেষ দিন', 'trading day left': 'লেনদেনের দিন বাকি', 'trading days left': 'লেনদেনের দিন বাকি',
+  'Show rows where the last day to buy has passed': 'কেনার শেষ দিন পেরিয়ে যাওয়া সারিও দেখান',
+  'Companies with no fraud flag are listed first.': 'প্রতারণা-পতাকা ছাড়া কোম্পানিগুলো আগে দেখানো হয়েছে।',
+  'No dividend you can still buy for. Tick the box above to see the ones that closed.': 'এখন কিনে পাওয়ার মতো কোনো লভ্যাংশ নেই। বন্ধ হয়ে যাওয়াগুলো দেখতে উপরের বাক্সে টিক দিন।',
+  // All companies, compare, portfolio
+  'Download list': 'তালিকা ডাউনলোড', 'old data': 'পুরনো তথ্য', '৳0.1 cr+ a day': '৳০.১ কোটি+ দৈনিক', '৳1 cr+ a day': '৳১ কোটি+ দৈনিক',
+  'Saved before the latest rule update; it refreshes in the background.': 'সর্বশেষ নিয়ম হালনাগাদের আগে সংরক্ষিত; পেছনে হালনাগাদ হচ্ছে।',
+  'No DSE company with the code': 'এই কোডে DSE-তে কোনো কোম্পানি নেই', 'Remove it with its ✕ button.': '✕ বোতাম দিয়ে এটি সরান।',
+  'Swipe the table sideways to see every company →': 'সব কোম্পানি দেখতে টেবিলটি পাশে সরান →',
+  'Could not read this file. Save it as CSV (comma, semicolon or tab) and try again.': 'ফাইলটি পড়া যায়নি। CSV (কমা, সেমিকোলন বা ট্যাব) হিসেবে সংরক্ষণ করে আবার চেষ্টা করুন।',
+  '12-month cash yield': '১২ মাসের নগদ ফলন', 'Not rated — no EPS published': 'রেটিং নেই — EPS প্রকাশিত হয়নি', 'Not rated': 'রেটিং নেই',
+  'Cheap, but profits falling': 'সস্তা, তবে মুনাফা কমছে',
+  'Start investing': 'বিনিয়োগ শুরু',
+  'record date': 'রেকর্ড তারিখ',
+  '52-week range': '৫২ সপ্তাহের সীমা', 'No 52-week range from DSE.': 'DSE থেকে ৫২ সপ্তাহের সীমা পাওয়া যায়নি।', 'Market cap': 'বাজার মূলধন',
+  'Key facts': 'মূল তথ্য', 'Sector': 'খাত', 'NAV per share': 'শেয়ারপ্রতি NAV', 'EPS (last year)': 'EPS (গত বছর)', 'P/E (audited)': 'P/E (নিরীক্ষিত)',
+  'P/E (latest results)': 'P/E (সর্বশেষ ফলাফল)', 'Shares outstanding': 'মোট শেয়ার', 'Paid-up capital': 'পরিশোধিত মূলধন', 'Website': 'ওয়েবসাইট',
+  'No price history from DSE yet.': 'DSE থেকে এখনো দামের ইতিহাস নেই।', 'Price range': 'দামের সময়সীমা',
+  'below the 52-week high.': '৫২ সপ্তাহের সর্বোচ্চের নিচে।', 'Who owns the shares': 'শেয়ারের মালিক কারা', 'As on': 'তারিখ',
+  'Data as of': 'তথ্যের সময়', 'Source: DSE public website': 'উৎস: DSE পাবলিক ওয়েবসাইট',
+  'My trades': 'আমার লেনদেন',
+};

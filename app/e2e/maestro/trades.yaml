@@ -1,0 +1,118 @@
+appId: host.exp.exponent
+name: trades
+# REAL Google Sheet round trip: add, edit, delete one test trade.
+# The two existing trades (GP, WALTONHIL) are never touched.
+env:
+  BASE: exp://192.168.10.206:8081/--
+  NOTE: E2E TEST — delete
+---
+- stopApp
+- openLink: ${BASE}/trades
+- extendedWaitUntil:
+    visible: "My trades"
+    timeout: 90000
+- extendedWaitUntil:
+    visible: "Holdings|Try again"
+    timeout: 60000
+# The server's Google Sheets call has a 10 s timeout; retry once on a transient 502.
+- runFlow:
+    when:
+      visible: "Try again"
+    commands:
+      - takeScreenshot: trades-00-sheets-unreachable-retry
+      - tapOn: "Try again"
+- extendedWaitUntil:
+    visible: "Holdings"
+    timeout: 60000
+- assertVisible: "GP"
+- assertVisible: "WALTONHIL"
+- assertNotVisible: ${NOTE}
+- takeScreenshot: trades-01-before
+# Add
+- tapOn: ".*Add trade"
+- extendedWaitUntil:
+    visible: "Save trade"
+    timeout: 15000
+- tapOn:
+    below: "Note \\(optional\\)"
+    above: "Save trade"
+- inputText: ${NOTE}
+- pressKey: Enter   # submit closes the keyboard; hideKeyboard can send Back and close the modal
+- tapOn: "GP"   # empty field, matched by its placeholder
+- inputText: "GP"
+- pressKey: Enter
+- tapOn: "BUY"
+- tapOn: "100"   # quantity placeholder
+- inputText: "1"
+- pressKey: Enter
+- tapOn: "226.70"   # price placeholder
+- inputText: "1.00"
+- pressKey: Enter   # submit closes the keyboard; hideKeyboard can send Back and close the modal
+- assertVisible: "1.00"
+- assertVisible: "1"
+- scrollUntilVisible:
+    element:
+      text: ${NOTE}
+    direction: DOWN
+    timeout: 20000
+- takeScreenshot: trades-02-add-form
+- tapOn: "Save trade"
+- extendedWaitUntil:
+    visible: "1 × ৳1.00"
+    timeout: 60000
+- assertVisible: "My trades"
+- assertVisible: "1 × ৳1.00"
+- takeScreenshot: trades-03-added
+# Edit price 1.00 -> 2.00
+- scrollUntilVisible:   # the trade list sits below the taller primary/secondary buttons
+    element:
+      text: ${NOTE}
+    direction: DOWN
+    timeout: 20000
+- tapOn: ${NOTE}
+- extendedWaitUntil:
+    visible: "Save changes"
+    timeout: 15000
+- assertVisible: "Edit trade"
+- tapOn:
+    text: "1"
+    index: 1   # quantity and price both hold "1"; the second one is the price
+- eraseText: 10
+- inputText: "2.00"
+- pressKey: Enter   # submit closes the keyboard; hideKeyboard can send Back and close the modal
+- assertVisible: "2.00"
+- tapOn: "Save changes"
+- extendedWaitUntil:
+    visible: "1 × ৳2.00"
+    timeout: 60000
+- scrollUntilVisible:
+    element:
+      text: ${NOTE}
+    direction: DOWN
+    timeout: 20000
+- takeScreenshot: trades-04-edited
+# Delete
+- scrollUntilVisible:   # the trade list sits below the taller primary/secondary buttons
+    element:
+      text: ${NOTE}
+    direction: DOWN
+    timeout: 20000
+- tapOn: ${NOTE}
+- extendedWaitUntil:
+    visible: "Delete trade"
+    timeout: 15000
+- tapOn: "Delete trade"
+- extendedWaitUntil:
+    visible: "Delete this trade\\?"
+    timeout: 5000
+- takeScreenshot: trades-05-delete-confirm
+- tapOn: "Delete|DELETE"
+- extendedWaitUntil:
+    visible: "My trades"
+    timeout: 60000
+- extendedWaitUntil:
+    notVisible: ${NOTE}
+    timeout: 30000
+- assertNotVisible: "1 × ৳2.00"
+- assertVisible: "WALTONHIL"
+- takeScreenshot: trades-06-deleted

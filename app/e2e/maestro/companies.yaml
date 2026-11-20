@@ -1,0 +1,54 @@
+appId: host.exp.exponent
+name: companies
+env:
+  BASE: exp://192.168.10.206:8081/--
+---
+- stopApp
+- openLink: ${BASE}/companies
+- extendedWaitUntil:
+    visible: "Search companies"
+    timeout: 90000
+- assertVisible: "\\d+ compan(y|ies)"
+# Filter chips
+- tapOn: "Worth researching"
+- assertVisible:
+    text: "Worth researching"
+    selected: true
+- assertVisible: ".*· Passes every quality check and has no fraud flag\\."
+- tapOn: "No strong signal"
+- assertVisible:
+    text: "No strong signal"
+    selected: true
+- takeScreenshot: companies-01-filter-chip
+- tapOn: "All"
+- assertVisible:
+    text: "All"
+    selected: true
+# Sort chips
+- tapOn: "A–Z"
+- assertVisible:
+    text: "A–Z"
+    selected: true
+- takeScreenshot: companies-02-sort-az
+- tapOn: "Top gainers"
+- assertVisible:
+    text: "Top gainers"
+    selected: true
+- tapOn: "Best score"
+- assertVisible:
+    text: "Best score"
+    selected: true
+# Search
+- tapOn: "Search companies"
+- inputText: "GP"
+- hideKeyboard
+- extendedWaitUntil:
+    visible: "Grameenphone.*"
+    timeout: 10000
+- takeScreenshot: companies-03-search-gp
+- tapOn: "Grameenphone.*"
+- extendedWaitUntil:
+    visible: "52-week range"
+    timeout: 30000
+- assertVisible: "Save to watchlist|Remove from watchlist"
+- takeScreenshot: companies-04-gp-opened

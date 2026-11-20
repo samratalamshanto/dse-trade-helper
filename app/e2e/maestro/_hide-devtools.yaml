@@ -1,0 +1,14 @@
+# Expo Go draws a floating "Tools" button over the top-right header corner,
+# on top of the watchlist star. Drag it down out of the way (test-env only).
+appId: host.exp.exponent
+---
+- swipe:
+    start: "90%, 9%"
+    end: "90%, 65%"
+    duration: 1500
+# A drag that lands as a tap opens the Expo dev menu; close it.
+- runFlow:
+    when:
+      visible: "Go home"
+    commands:
+      - tapOn: "Close"
