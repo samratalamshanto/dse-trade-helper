@@ -39,7 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-/data
+/data/*
+# Committed by the daily data Action so the deployed site has company data.
+!/data/companies.json
+!/data/last-session.json
+!/data/scorecard/
 
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/

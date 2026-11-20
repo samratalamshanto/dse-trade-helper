@@ -23,6 +23,8 @@ const nextConfig: NextConfig = {
   turbopack: { root: path.resolve(__dirname) },
   // Dev only: lets http://127.0.0.1:3000 load page scripts (a cached Excalidraw worker owns localhost:3000 in the user's browser).
   allowedDevOrigins: ['127.0.0.1'],
+  // The daily GitHub Action commits data/ (company cache, scorecard); Vercel's disk is read-only and starts empty.
+  outputFileTracingIncludes: { '/*': ['./data/companies.json', './data/last-session.json', './data/scorecard/*.json'] },
   poweredByHeader: false,
   async headers() {
     return [{
