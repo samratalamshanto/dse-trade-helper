@@ -76,11 +76,15 @@ export default function AlertsPage() {
   const companies = data?.rows ?? [];
   const companyCodes = new Set(companies.map((c) => c.code));
   const upperCode = formCode.trim().toUpperCase();
-  const suggestions = formCode.trim().length >= 1
-    ? companies.filter((c) =>
-        c.code.startsWith(upperCode) || c.name.toLowerCase().includes(formCode.trim().toLowerCase())
-      ).slice(0, 6)
-    : [];
+  const lowerInput = formCode.trim().toLowerCase();
+  const suggestions = (() => {
+    if (formCode.trim().length < 1) return [];
+    const exact = companies.filter((c) => c.code === upperCode);
+    const starts = companies.filter((c) => c.code !== upperCode && c.code.startsWith(upperCode)).sort((a, b) => a.code.length - b.code.length || a.code.localeCompare(b.code)); // "G" → GP before GBBPOWER
+    const codeContains = companies.filter((c) => !c.code.startsWith(upperCode) && c.code.includes(upperCode));
+    const nameOnly = companies.filter((c) => !c.code.includes(upperCode) && c.name.toLowerCase().includes(lowerInput));
+    return [...exact, ...starts, ...codeContains, ...nameOnly].slice(0, 8);
+  })();
 
   const calByCode = Object.fromEntries((cal?.upcoming ?? []).map((r) => [r.code, r]));
   const priceByCode = Object.fromEntries(companies.map((c) => [c.code, c.price]));
@@ -369,8 +373,9 @@ export default function AlertsPage() {
                           setHiIdx(-1);
                         }}
                       >
-                        <span className="mono">{c.code}</span>
-                        <span className="small muted">{c.name}</span>
+                        <span className={`mono ${styles.sugCode}`}>{c.code}</span>
+                        <span className={styles.sugName}>{c.name}</span>
+                        {c.price != null && <span className={`mono ${styles.sugPrice}`}>৳{c.price.toFixed(2)}</span>}
                       </button>
                     ))}
                   </div>
@@ -387,6 +392,7 @@ export default function AlertsPage() {
                     min="0.01"
                     step="0.01"
                     value={formTarget}
+                    placeholder={companyCodes.has(upperCode) && priceByCode[upperCode] != null ? String(priceByCode[upperCode]) : undefined}
                     style={{ width: 120 }}
                     onChange={(e) => { setFormTarget(e.target.value); setFormErrors({}); }}
                     aria-describedby={formErrors.target ? 'err-target' : undefined}
@@ -420,7 +426,37 @@ export default function AlertsPage() {
                 {formErrors.form && <span className={styles.fieldErr} role="alert">{formErrors.form}</span>}
               </div>
             </div>
+            {/* Quick-fill chips for ±% targets */}
+            {(formType === 'price_below' || formType === 'price_above') && companyCodes.has(upperCode) && priceByCode[upperCode] != null && (() => {
+              const price = priceByCode[upperCode]!;
+              const pcts = formType === 'price_below' ? [-5, -10, -15] : [5, 10, 20];
+              return (
+                <div className={styles.chips}>
+                  {pcts.map((pct) => {
+                    const val = Math.round(price * (1 + pct / 100) * 100) / 100;
+                    return (
+                      <button key={pct} type="button" className={`btn ${styles.chipBtn}`}
+                        onClick={() => setFormTarget(val.toFixed(2))}
+                      >
+                        {pct > 0 ? '+' : ''}{pct}% · ৳{val.toFixed(2)}
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </form>
+          {/* Price info line — shown when a valid company code is entered */}
+          {companyCodes.has(upperCode) && (() => {
+            const co = companies.find((c) => c.code === upperCode);
+            if (!co) return null;
+            const price = priceByCode[upperCode];
+            const priceStr = price != null ? `৳${price.toFixed(2)}` : 'no price yet';
+            const rangeStr = co.weekLow52 != null && co.weekHigh52 != null
+              ? ` · 52-week ৳${co.weekLow52.toFixed(2)} – ৳${co.weekHigh52.toFixed(2)}`
+              : '';
+            return <div className={styles.priceInfo}>{upperCode} now {priceStr}{rangeStr}</div>;
+          })()}
         </div>
       </section>
 

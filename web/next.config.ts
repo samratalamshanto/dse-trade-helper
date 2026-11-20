@@ -11,7 +11,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' blob: data:",
   "font-src 'self'",
-  "connect-src 'self'",
+  `connect-src 'self'${isDev ? ` http://127.0.0.1:${process.env.NEXT_PUBLIC_DEV_KEY_PORT ?? 3011}` : ''}`, // dev: lib/dev-key.ts
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

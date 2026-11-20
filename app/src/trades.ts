@@ -1,8 +1,8 @@
-import type { Trade, TradeInput } from '../../web/lib/trades.ts';
+import type { Account, Trade, TradeInput } from '../../web/lib/trades.ts';
 import { ApiError, getJson, type RequestOptions } from './api.ts';
 import type { HoldingCheck, LimitSettings, Limits } from './checks.ts';
 
-export type { Trade, TradeInput };
+export type { Account, Trade, TradeInput };
 
 export interface HoldingRow {
   code: string;
@@ -18,7 +18,7 @@ export interface HoldingRow {
   check?: HoldingCheck | null;
 }
 
-export interface TradesResponse { trades: Trade[]; holdings: HoldingRow[]; warnings: string[]; badRows: number[]; settings?: LimitSettings }
+export interface TradesResponse { account?: Account; trades: Trade[]; holdings: HoldingRow[]; warnings: string[]; badRows: number[]; settings?: LimitSettings }
 export interface ImportResult { date: string; added: TradeInput[]; skipped: TradeInput[]; errors: string[]; saved: boolean }
 export interface PickedFile { uri: string; name: string; file?: Blob }
 
@@ -43,6 +43,8 @@ async function call<T>(path: string, options: RequestOptions = {}): Promise<T> {
 const sendJson = <T>(method: string, path: string, body: unknown) => call<T>(path, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
 export const loadTrades = (path: string) => call<TradesResponse>(path);
+
+export const tradesPath = (account: Account) => (account === 'paper' ? '/api/trades?account=paper' : '/api/trades');
 
 export const saveTrade = (id: string | null, input: TradeInput) =>
   id ? sendJson<Trade>('PUT', `/api/trades/${encodeURIComponent(id)}`, input) : sendJson<Trade>('POST', '/api/trades', input);

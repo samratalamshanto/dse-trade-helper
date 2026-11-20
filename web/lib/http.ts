@@ -2,6 +2,7 @@ import { NotFoundError } from './store.ts';
 import { UpstreamError } from './dse.ts';
 
 import { CODE_RE } from './dhaka.ts';
+import { TradeInputError } from './trades-service.ts';
 
 export function codeParam(raw: string): string | null {
   let code: string;
@@ -16,6 +17,7 @@ export async function respond(label: string, work: () => Promise<unknown>): Prom
   try {
     return json(200, await work());
   } catch (e) {
+    if (e instanceof TradeInputError) return json(400, { error: e.message });
     if (e instanceof NotFoundError) return json(404, { error: 'No company with that trade code on DSE.' });
     if (e instanceof UpstreamError) {
       console.error(`api ${label} failed: DSE is not available`, e);

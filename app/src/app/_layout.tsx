@@ -26,6 +26,7 @@ function RootStack() {
         <Stack.Screen name="trade" options={{ title: 'Trade', presentation: 'modal' }} />
         <Stack.Screen name="limits" options={{ title: 'My limits', presentation: 'modal' }} />
         <Stack.Screen name="trades-import" options={{ title: 'Import broker Excel', presentation: 'modal' }} />
+        <Stack.Screen name="plan-edit" options={{ title: 'Buy plan', presentation: 'modal' }} />
       </Stack>
     </>
   );

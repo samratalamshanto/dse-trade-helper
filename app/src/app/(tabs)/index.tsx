@@ -2,11 +2,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Link, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import type { CompaniesResponse, CompanyRow, DashboardResponse, Mover } from '../../api.ts';
 import { changeColor, fmtDate, fmtNum, fmtPct, fmtSigned, fmtTakaSigned, SIGNAL, SIGNAL_ORDER } from '../../format.ts';
 import { changedCodes, parseStoredChecks } from '../../checks.ts';
 import { catchableDividends } from '../../list.ts';
+import { isOpenPlan, loadPlans, parseBudget, type PicksResponse, picksPath, type PlansResponse, STATUS_LOOK } from '../../plans.ts';
 import { holdingTotals, loadTrades, type TradesResponse } from '../../trades.ts';
 import { CheckPill, Chip, CompanyLine, DividendLine, SectionTitle, SignalPill, Sparkline, Status } from '../../ui.tsx';
 import { useApi } from '../../useApi.ts';
@@ -16,6 +17,9 @@ import { useTheme } from '../../useTheme.tsx';
 const SHORTLIST_PREVIEW = 5;
 const DIVIDENDS_PREVIEW = 5;
 const CHECKS_KEY = 'holdingChecks';
+const PICKS_KEY = 'picksBudget';
+const PICKS_PREVIEW = 5;
+const PLANS_PREVIEW = 3;
 
 // Compares today's labels with the last saved ones, then saves today's labels.
 function useChangedChecks(data: TradesResponse | null, today: string | undefined): string[] {
@@ -65,6 +69,84 @@ function HoldingsToday({ data, changed }: { data: TradesResponse; changed: strin
         ))}
       </Pressable>
     </Link>
+  );
+}
+
+function PlansToday({ data }: { data: PlansResponse }) {
+  const { s } = useTheme();
+  const open = data.plans.filter(isOpenPlan);
+  if (!open.length) return null;
+  return (
+    <Link href="/plans" asChild>
+      <Pressable style={s.card} accessibilityRole="button" accessibilityHint="Opens your buy plans">
+        <SectionTitle icon="bookmark-outline" title="Your buy plans" />
+        {open.slice(0, PLANS_PREVIEW).map((p) => (
+          <View key={p.id} style={{ gap: 4 }}>
+            <View style={[s.sectionRow, { flexWrap: 'wrap' }]}>
+              <Text style={[s.code, { minWidth: 72 }]}>{p.code}</Text>
+              <CheckPill label={STATUS_LOOK[p.live.status].label} tone={STATUS_LOOK[p.live.status].tone} />
+            </View>
+            <Text style={s.muted} numberOfLines={2}>{p.live.text}</Text>
+          </View>
+        ))}
+        {open.length > PLANS_PREVIEW && <Text style={s.link}>See all {open.length}</Text>}
+      </Pressable>
+    </Link>
+  );
+}
+
+// The budget is remembered on the phone; a storage failure only loses that convenience.
+function TodaysPicks() {
+  const { colors, s } = useTheme();
+  const [raw, setRaw] = useState('');
+  const [budget, setBudget] = useState<number | null>(null);
+  useEffect(() => {
+    AsyncStorage.getItem(PICKS_KEY)
+      .then((v) => { const b = parseBudget(v ?? ''); if (b != null) { setBudget(b); setRaw(String(b)); } })
+      .catch((e: unknown) => console.warn('picks budget read failed', e));
+  }, []);
+  const commit = () => {
+    const b = parseBudget(raw);
+    setBudget(b);
+    (b == null ? AsyncStorage.removeItem(PICKS_KEY) : AsyncStorage.setItem(PICKS_KEY, String(b)))
+      .catch((e: unknown) => console.warn('picks budget save failed', e));
+  };
+  const { data, error } = useApi<PicksResponse>(picksPath(budget));
+  return (
+    <View style={{ gap: 10 }}>
+      <SectionTitle icon="sparkles-outline" title="Today's picks" />
+      <Text style={s.muted}>Worth researching, no fraud flag, low in its 1-year range or under its 20-day average, not sliding.</Text>
+      <TextInput
+        accessibilityLabel="Budget in taka for today's picks"
+        style={[s.searchBox, s.input, { flex: 0 }]}
+        value={raw}
+        onChangeText={setRaw}
+        onEndEditing={commit}
+        onSubmitEditing={commit}
+        keyboardType="decimal-pad"
+        placeholder="Budget in ৳ (optional)"
+        placeholderTextColor={colors.muted}
+      />
+      <View style={[s.card, { padding: 0, gap: 0 }]}>
+        {error && !data && <Text style={[s.muted, { padding: 16, color: colors.warn }]}>{error}</Text>}
+        {data && !data.picks.length && <Text style={[s.muted, { padding: 16 }]}>No company fits today{budget != null ? ' within this budget' : ''}.</Text>}
+        {data?.picks.slice(0, PICKS_PREVIEW).map((p) => (
+          <Link key={p.code} href={`/c/${encodeURIComponent(p.code)}`} asChild>
+            <Pressable style={s.row} accessibilityHint={`Opens ${p.name}`}>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={s.code}>{p.code}</Text>
+                <Text style={s.muted} numberOfLines={1}>{p.name}</Text>
+              </View>
+              <View style={{ alignItems: 'flex-end', gap: 2 }}>
+                <Text style={s.price}>৳{fmtNum(p.price)}</Text>
+                {p.shares != null && p.cost != null && <Text style={s.muted}>{p.shares} for ৳{fmtNum(p.cost)}</Text>}
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.muted} style={{ alignSelf: 'center', marginLeft: 8 }} />
+            </Pressable>
+          </Link>
+        ))}
+      </View>
+    </View>
   );
 }
 
@@ -193,22 +275,28 @@ export default function Home() {
   const watched = (companies.data?.rows ?? []).filter((r) => codes.includes(r.code));
   // Any trades error (no key, not set up, offline) hides the card; useApi already logs it with console.warn.
   const trades = useApi<TradesResponse>('/api/trades', loadTrades);
+  // Any plans error (no key, not set up, offline) hides the card as well.
+  const plans = useApi<PlansResponse>('/api/plans', loadPlans);
+  const reloadPlans = plans.reload;
   const reloadTrades = trades.reload;
   const firstFocus = useRef(true);
   // Tabs stay mounted: refresh the holdings card when the user comes back from Trades, but not on the first focus.
   useFocusEffect(useCallback(() => {
     if (firstFocus.current) { firstFocus.current = false; return; }
     reloadTrades();
-  }, [reloadTrades]));
+    reloadPlans();
+  }, [reloadTrades, reloadPlans]));
   const changed = useChangedChecks(trades.data, data?.today);
   return (
     <Status loading={loading && !data} error={data ? null : error} onRetry={reload}>
-      <ScrollView style={s.screen} contentContainerStyle={s.pad} refreshControl={<RefreshControl refreshing={loading} onRefresh={() => { reload(); trades.reload(); }} tintColor={colors.link} />}>
+      <ScrollView keyboardShouldPersistTaps="handled" style={s.screen} contentContainerStyle={s.pad} refreshControl={<RefreshControl refreshing={loading} onRefresh={() => { reload(); trades.reload(); plans.reload(); }} tintColor={colors.link} />}>
         {data && (
           <>
             {trades.data && <HoldingsToday data={trades.data} changed={changed} />}
+            {plans.data && !plans.error && <PlansToday data={plans.data} />}
             <MarketCard data={data} />
             <WatchlistToday rows={watched} />
+            <TodaysPicks />
             <Movers data={data} />
             <SignalCounts data={data} />
             <DividendsSoon data={data} />

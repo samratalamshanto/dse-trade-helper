@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useApi } from '@/components/AppProvider';
 import { fmt } from '@/components/format';
-import { call, CheckBadge, readKey, type TradesList } from '@/components/trades-client';
+import { call, CheckBadge, ensureKey, type TradesList } from '@/components/trades-client';
 import { dhakaToday } from '@/lib/dhaka';
 import type { CompanyRow } from '@/lib/service';
 import type { MarketSession } from '@/lib/dse';
@@ -36,16 +36,14 @@ export function HoldingsToday() {
   const { data: companies } = useApi<Companies>(list ? '/api/companies' : null);
 
   useEffect(() => {
-    const key = readKey();
-    if (!key) return;
     let active = true;
-    call<TradesList>(key, '/api/trades').then((l) => {
+    void ensureKey().then((key) => key ? call<TradesList>(key, '/api/trades').then((l) => {
       if (!active) return;
       const labels = Object.fromEntries(l.holdings.flatMap((h) => (h.check ? [[h.code, h.check.label]] : [])));
       setBefore(previousLabels());
       saveLabels(labels);
       setList(l);
-    }, (e: unknown) => console.warn('dashboard: holdings hidden, /api/trades failed', e));
+    }, (e: unknown) => console.warn('dashboard: holdings hidden, /api/trades failed', e)) : undefined);
     return () => { active = false; };
   }, []);
 

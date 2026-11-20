@@ -16,11 +16,13 @@ const NAV: { group: string; items: { href: string; label: string; icon: IconName
     { href: '/compare', label: 'Compare', icon: 'columns' },
     { href: '/dividends', label: 'Dividend calendar', icon: 'calendar' },
     { href: '/fraud', label: 'Fraud alerts', icon: 'high' },
+    { href: '/scorecard', label: 'Signal scorecard', icon: 'research' },
   ] },
   { group: 'MINE', items: [
     { href: '/watchlist', label: 'Watchlist', icon: 'star' },
     { href: '/portfolio', label: 'Portfolio', icon: 'wallet' },
     { href: '/trades', label: 'My trades', icon: 'trend' },
+    { href: '/plans', label: 'Buy plans', icon: 'target' },
     { href: '/alerts', label: 'Alerts', icon: 'bell' },
   ] },
   { group: 'HELP', items: [

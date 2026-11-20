@@ -1,15 +1,16 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Tabs, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import { router, Tabs, useLocalSearchParams } from 'expo-router';
+import { useRef, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import Svg, { Path, Text as SvgText } from 'react-native-svg';
 import type { Question } from '../../../../../web/lib/types.ts';
 import type { CompanyResponse } from '../../../api.ts';
 import { pieSlices, RANGES, type Range, seriesChange, sliceSeries } from '../../../chart.ts';
 import { answerColor, changeColor, fmtNum, fmtPct, SIGNAL, TONE } from '../../../format.ts';
+import { afterBuyLine, type BuyPlan, dividendLine, fetchBuyPlan, formFromBuyPlan, HAS_TRADES_KEY, oddsSentence, planQuery, type PlanMode, splitLine, TREND_TONE } from '../../../plans.ts';
 import { SERIES } from '../../../theme.ts';
 import { financialTrends, type TrendKey } from '../../../trends.ts';
-import { Button, Chip, ScoreBar, SectionTitle, SignalPill, Sparkline, Status } from '../../../ui.tsx';
+import { Button, CheckPill, Chip, ScoreBar, SectionTitle, SignalPill, Sparkline, Status } from '../../../ui.tsx';
 import { useApi } from '../../../useApi.ts';
 import { useWatchlist } from '../../../watchlist.ts';
 import { useTheme } from '../../../useTheme.tsx';
@@ -178,6 +179,112 @@ function ShareHolding({ c }: { c: CompanyData }) {
   );
 }
 
+const REASONS_PREVIEW = 3;
+
+function PlanResult({ plan }: { plan: BuyPlan }) {
+  const { colors, s } = useTheme();
+  const [all, setAll] = useState(false);
+  const reasons = all ? plan.reasons : plan.reasons.slice(0, REASONS_PREVIEW);
+  const odds = oddsSentence(plan);
+  const dividend = dividendLine(plan);
+  const after = HAS_TRADES_KEY ? afterBuyLine(plan) : null;
+  const pos = plan.position52 == null ? null : Math.max(0, Math.min(100, plan.position52 * 100));
+  return (
+    <View style={{ gap: 10 }} accessibilityLiveRegion="polite">
+      <CheckPill label={plan.label} tone={plan.tone} />
+      <Text style={[s.text, { fontWeight: '700' }]}>{splitLine(plan)}</Text>
+      {reasons.map((r, i) => <Text key={i} style={s.text}>• {r}</Text>)}
+      {plan.reasons.length > REASONS_PREVIEW && (
+        <Pressable onPress={() => setAll((a) => !a)} accessibilityRole="button" style={{ minHeight: 48, justifyContent: 'center' }}>
+          <Text style={s.link}>{all ? 'Show less' : `Show more (${plan.reasons.length - REASONS_PREVIEW})`}</Text>
+        </Pressable>
+      )}
+      {plan.warnings.map((w) => (
+        <View key={w} style={{ flexDirection: 'row', gap: 8 }}>
+          <Ionicons name="warning-outline" size={16} color={colors.warn} style={{ marginTop: 3 }} />
+          <Text style={[s.text, { flex: 1, color: colors.warn }]}>{w}</Text>
+        </View>
+      ))}
+      <Text style={[s.text, { fontWeight: '700' }]}>Where today stands</Text>
+      {pos != null && (
+        <View style={{ gap: 4 }} accessibilityLabel={`${Math.round(pos)}% of the way from the 1-year low to the high`}>
+          <View style={s.barTrack}>
+            <View style={{ position: 'absolute', left: `${pos}%`, marginLeft: -4, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.text }} />
+          </View>
+          <View style={[s.sectionRow, { justifyContent: 'space-between' }]}>
+            <Text style={s.muted}>1-year low</Text>
+            <Text style={s.muted}>1-year high</Text>
+          </View>
+        </View>
+      )}
+      <View style={[s.sectionRow, { flexWrap: 'wrap' }]}>
+        {plan.trend && <CheckPill label={`Trend: ${plan.trend}`} tone={TREND_TONE[plan.trend]} />}
+        {plan.vsSma20Pct != null && plan.sma20 != null && (
+          <Text style={s.muted}>{fmtNum(Math.abs(plan.vsSma20Pct), 1)}% {plan.vsSma20Pct < 0 ? 'below' : 'above'} the 20-day average ৳{fmtNum(plan.sma20)}</Text>
+        )}
+      </View>
+      {odds && (
+        <>
+          <Text style={[s.text, { fontWeight: '700' }]}>What usually happened</Text>
+          <Text style={s.text}>{odds}</Text>
+        </>
+      )}
+      {dividend && <Text style={s.text}>{dividend}</Text>}
+      {after && <Text style={s.text}>{after}</Text>}
+      <Text style={[s.muted, { fontSize: 12 }]}>History and fixed rules, not a forecast — a learning aid, not investment advice.</Text>
+      <Button variant="primary" label="Save as plan" icon="bookmark-outline" onPress={() => router.push({ pathname: '/plan-edit', params: formFromBuyPlan(plan) })} />
+    </View>
+  );
+}
+
+function PlanCard({ code }: { code: string }) {
+  const { colors, s } = useTheme();
+  const [mode, setMode] = useState<PlanMode>('qty');
+  const [raw, setRaw] = useState('');
+  const [plan, setPlan] = useState<BuyPlan | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const req = useRef(0);
+  // Any change of mode or input makes an in-flight answer stale.
+  const reset = () => { req.current++; setPlan(null); setError(null); setBusy(false); };
+  const check = () => {
+    const q = planQuery(mode, raw);
+    if (!q.ok) { setError(q.error); return; }
+    const id = ++req.current;
+    setBusy(true);
+    setError(null);
+    fetchBuyPlan(code, q.query)
+      .then((p) => { if (id === req.current) setPlan(p); })
+      .catch((e: unknown) => {
+        console.warn('buy plan failed', e);
+        if (id === req.current) setError(e instanceof Error ? e.message : 'Unexpected error');
+      })
+      .finally(() => { if (id === req.current) setBusy(false); });
+  };
+  return (
+    <View style={s.card}>
+      <SectionTitle icon="calculator-outline" title="Plan a buy" action={{ label: 'My plans', href: '/plans' }} />
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <Chip label="Shares" active={mode === 'qty'} onPress={() => { setMode('qty'); reset(); }} />
+        <Chip label="Budget (৳)" active={mode === 'budget'} onPress={() => { setMode('budget'); reset(); }} />
+      </View>
+      <TextInput
+        accessibilityLabel={mode === 'qty' ? 'Number of shares' : 'Budget in taka'}
+        style={[s.searchBox, s.input, { flex: 0 }]}
+        value={raw}
+        onChangeText={(t) => { setRaw(t); reset(); }}
+        onSubmitEditing={check}
+        keyboardType={mode === 'qty' ? 'number-pad' : 'decimal-pad'}
+        placeholder={mode === 'qty' ? '100' : '20000'}
+        placeholderTextColor={colors.muted}
+      />
+      <Button variant={plan ? 'secondary' : 'primary'} label="Check" onPress={check} loading={busy} />
+      {error && <Text style={[s.text, { color: colors.down }]} accessibilityLiveRegion="polite">{error}</Text>}
+      {plan && <PlanResult plan={plan} />}
+    </View>
+  );
+}
+
 // Net profit comes from DSE in ৳ million; ÷ 10 gives crore.
 const TREND_UNIT: Record<TrendKey, (v: number) => string> = {
   profit: (v) => `৳${fmtNum(v / 10, 0)} cr`,
@@ -236,7 +343,7 @@ export default function Company() {
     <>
       <Tabs.Screen options={{ title: code, headerRight: star }} />
       <Status loading={loading && !data} error={data ? null : error} onRetry={reload}>
-        <ScrollView style={s.screen} contentContainerStyle={s.pad} refreshControl={<RefreshControl refreshing={loading} onRefresh={reload} tintColor={colors.link} />}>
+        <ScrollView keyboardShouldPersistTaps="handled" style={s.screen} contentContainerStyle={s.pad} refreshControl={<RefreshControl refreshing={loading} onRefresh={reload} tintColor={colors.link} />}>
           {data && (
             <>
               <View style={s.card}>
@@ -265,6 +372,8 @@ export default function Company() {
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' }}>
                 {data.questions.map((q) => <AnswerTile key={q.q} q={q} />)}
               </View>
+
+              <PlanCard key={code} code={code} />
 
               <PriceChart data={data} />
 

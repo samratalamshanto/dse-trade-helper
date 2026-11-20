@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { Line } from 'react-chartjs-2';
 import { ChartBox, useChartColors } from '@/components/charts';
 import { ShareholdingDonut } from '@/components/company/SafetyOwners';
+import { BuyPlanner } from '@/components/planner/BuyPlanner';
 import { Tr } from '@/components/Tr';
 import { useLang } from '@/components/i18n';
 import { fmt, moneyPerDay, sectorName, tone } from '@/components/format';
@@ -113,7 +114,8 @@ export function Overview({ d }: { d: CompanyDetail }) {
   const m = d.analysis.metrics, c = d.company, sp = c.sharePattern.at(-1);
   return (
     <>
-      <KeyFacts d={d} />
+      <BuyPlanner key={c.code} code={c.code} bar={<RangeBar52 c={c} />} />
+      <div style={{ marginTop: 14 }}><KeyFacts d={d} /></div>
       <div className="grid g4" style={{ marginTop: 14 }}>
         <Metric label="P/E" value={fmt(m.pe, 1)} hint="Price ÷ yearly profit per share. Lower can mean cheaper." />
         <Metric label="Sector P/E" value={fmt(d.sectorPe, 1)} hint="Median P/E of profitable companies in the same sector." />

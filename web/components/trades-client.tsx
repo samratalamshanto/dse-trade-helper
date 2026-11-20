@@ -10,6 +10,18 @@ export interface TradesList { trades: Trade[]; holdings: Valued[]; warnings: str
 export const readKey = () => { try { return localStorage.getItem(KEY_STORE) ?? ''; } catch { return ''; } };
 export const storeKey = (k: string) => { try { if (k) localStorage.setItem(KEY_STORE, k); else localStorage.removeItem(KEY_STORE); } catch (e) { console.warn('trades key not saved in this browser', e); } };
 
+// On the owner's own machine the dev server hands the key over (lib/dev-key.ts); one shared request per page load.
+let autoKey: Promise<string> | undefined;
+export function ensureKey(): Promise<string> {
+  const k = readKey();
+  if (k || process.env.NODE_ENV !== 'development' || !['localhost', '127.0.0.1'].includes(location.hostname)) return Promise.resolve(k);
+  autoKey ??= fetch(`http://127.0.0.1:${process.env.NEXT_PUBLIC_DEV_KEY_PORT ?? 3011}/trades-key`, { cache: 'no-store' })
+    .then((r) => (r.ok ? (r.json() as Promise<{ key?: string }>) : Promise.reject(new Error(`dev key server answered ${r.status}`))))
+    .then(({ key = '' }) => { storeKey(key); return key; })
+    .catch((e: unknown) => { console.warn('trades key not filled in automatically; use the key box', e); return ''; });
+  return autoKey;
+}
+
 export async function call<T>(key: string, path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(path, { ...init, headers: { ...(init.headers ?? {}), 'x-trades-key': key } });
   const body = (await res.json().catch(() => ({}))) as T & { error?: string };

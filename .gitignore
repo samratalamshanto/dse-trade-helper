@@ -14,3 +14,6 @@ dse-trader-*.json
 *google-key*.json
 # Expo template agent settings, not project code.
 app/.claude/
+
+# Release APKs — large binaries, not committed.
+apk/

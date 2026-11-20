@@ -6,20 +6,21 @@
   position: absolute;
   top: 100%;
   left: 0;
-  right: 0;
+  min-width: 340px;
+  max-width: 92vw;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 10px;
   margin-top: 4px;
   z-index: 10;
   max-height: 220px;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   box-shadow: 0 4px 12px rgba(0, 0, 0, .1);
 }
 
 .suggests button {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   gap: 8px;
   width: 100%;
@@ -32,6 +33,47 @@
   font: inherit;
   font-size: 14px;
   text-align: left;
+}
+
+.sugCode {
+  flex: none;
+  font-weight: 700;
+}
+
+.sugName {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.sugPrice {
+  flex: none;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.priceInfo {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--muted);
+  padding: 6px 0 2px;
+  border-top: 1px solid var(--border);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.chips .chipBtn {
+  font-size: 12px;
+  min-height: 32px;
+  padding: 4px 10px;
 }
 
 .suggests button:hover,

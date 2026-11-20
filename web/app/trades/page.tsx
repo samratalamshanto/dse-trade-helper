@@ -1,18 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { fmt, fmtDate } from '@/components/format';
 import { dhakaToday } from '@/lib/dhaka';
 import { Icon } from '@/components/ui';
-import { call, CheckBadge, readKey, storeKey, type TradesList as List, type Valued } from '@/components/trades-client';
+import TelegramTestButton from '@/components/TelegramTestButton';
+import { call, CheckBadge, ensureKey, storeKey, type TradesList as List, type Valued } from '@/components/trades-client';
 import type { LimitSettings } from '@/lib/positions';
-import type { Trade, TradeInput } from '@/lib/trades';
+import type { Account, Trade, TradeInput } from '@/lib/trades';
 import css from './trades.module.css';
 
 interface ImportResult { date: string; added: TradeInput[]; skipped: TradeInput[]; errors: string[]; saved: boolean }
 
-const blank = (): Record<keyof TradeInput, string> => ({ date: dhakaToday(), code: '', side: 'BUY', quantity: '', price: '', commission: '', note: '' });
+const blank = (): Record<Exclude<keyof TradeInput, 'account'>, string> => ({ date: dhakaToday(), code: '', side: 'BUY', quantity: '', price: '', commission: '', note: '' });
 function tone(x: number | null): string {
   if (x == null || x === 0) return '';
   return x > 0 ? css.up : css.down;
@@ -112,19 +113,26 @@ export default function TradesPage() {
   const [preview, setPreview] = useState<{ file: File; result: ImportResult } | null>(null);
   const [importDate, setImportDate] = useState('');
   const [openReasons, setOpenReasons] = useState<string | null>(null);
+  const [account, setAccount] = useState<Account>('real');
+  const paper = account === 'paper';
 
-  const load = useCallback(async (k: string) => {
+  const loadSeq = useRef(0);
+  const load = useCallback(async (k: string, acc: Account = 'real') => {
+    const seq = ++loadSeq.current;
     setBusy(true);
-    try { setData(await call<List>(k, '/api/trades')); setError(null); } catch (e) {
+    try {
+      const list = await call<List>(k, acc === 'paper' ? '/api/trades?account=paper' : '/api/trades');
+      // A slower answer for the other account must never replace the list now shown (Practice could show real trades).
+      if (seq === loadSeq.current) { setData(list); setError(null); }
+    } catch (e) {
+      if (seq !== loadSeq.current) return;
       setError(e instanceof Error ? e.message : 'Could not load trades.');
       if ((e as { status?: number }).status === 401) { storeKey(''); setKey(''); }
-    } finally { setBusy(false); }
+    } finally { if (seq === loadSeq.current) setBusy(false); }
   }, []);
 
   useEffect(() => {
-    const k = readKey();
-    if (!k) return;
-    queueMicrotask(() => { setKey(k); void load(k); });
+    void ensureKey().then((k) => { if (k) { setKey(k); void load(k); } });
   }, [load]);
 
   const unlock = (e: FormEvent) => { e.preventDefault(); storeKey(keyDraft.trim()); setKey(keyDraft.trim()); void load(keyDraft.trim()); };
@@ -133,15 +141,32 @@ export default function TradesPage() {
     e.preventDefault();
     setBusy(true);
     try {
-      await call(key, editing ? `/api/trades/${editing}` : '/api/trades', { method: editing ? 'PUT' : 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(form) });
-      setForm(blank()); setEditing(null); await load(key);
+      await call(key, editing ? `/api/trades/${editing}` : '/api/trades', { method: editing ? 'PUT' : 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...form, account }) });
+      setForm(blank()); setEditing(null); await load(key, account);
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not save the trade.'); setBusy(false); }
   };
 
   const remove = async (t: Trade) => {
     if (!window.confirm(`Delete ${t.side} ${t.quantity} ${t.code} on ${fmtDate(t.date)}?`)) return;
     setBusy(true);
-    try { await call(key, `/api/trades/${t.id}`, { method: 'DELETE' }); await load(key); } catch (err) { setError(err instanceof Error ? err.message : 'Could not delete.'); setBusy(false); }
+    try { await call(key, `/api/trades/${t.id}`, { method: 'DELETE' }); await load(key, account); } catch (err) { setError(err instanceof Error ? err.message : 'Could not delete.'); setBusy(false); }
+  };
+
+  const switchTo = (acc: Account) => {
+    if (acc === account) return;
+    setAccount(acc); setData(null); setEditing(null); setForm(blank()); setPreview(null);
+    void load(key, acc);
+  };
+
+  // Uses the normal delete path one trade at a time; the list holds only practice trades, so real rows are never touched.
+  const resetPractice = async () => {
+    const paperTrades = (data?.trades ?? []).filter((t) => t.account === 'paper');
+    if (!paper || !paperTrades.length || !window.confirm(`Delete all ${paperTrades.length} practice trades? Real trades are not touched.`)) return;
+    setBusy(true);
+    try {
+      for (const t of paperTrades) await call(key, `/api/trades/${t.id}`, { method: 'DELETE' });
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not reset the practice account.'); }
+    await load(key, 'paper');
   };
 
   const upload = async (file: File, saveIt: boolean) => {
@@ -173,18 +198,28 @@ export default function TradesPage() {
     );
   }
 
-  const set = (k: keyof TradeInput) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const set = (k: keyof ReturnType<typeof blank>) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   return (
     <>
       <h1>My trades</h1>
       <p className="muted">Saved in your Google Sheet (tab “trades”). You can also open and edit the sheet yourself; reload here after.</p>
+      <div className={`${css.actions} ${css.switch}`} role="group" aria-label="Account">
+        <button type="button" className={`btn${paper ? '' : ` ${css.on}`}`} aria-pressed={!paper} disabled={busy} onClick={() => switchTo('real')}>Real</button>
+        <button type="button" className={`btn${paper ? ` ${css.on} ${css.onPractice}` : ''}`} aria-pressed={paper} disabled={busy} onClick={() => switchTo('paper')}>Practice</button>
+      </div>
+      {paper ? (
+        <div className={`note warn ${css.banner}`} role="status">
+          <b>PRACTICE — not real money.</b> Try buys, sells and plans here to learn; these trades are kept apart from your real ones and never count in your real holdings.
+        </div>
+      ) : null}
+      <div className={paper ? css.practice : undefined}>
       {error ? <div className="note bad" role="alert">{error}</div> : null}
       {data?.warnings.map((w) => <div key={w} className="note warn">{w}</div>)}
       {data?.badRows.length ? <div className="note warn">Rows {data.badRows.join(', ')} in the sheet could not be read; fix them in the sheet.</div> : null}
       {data ? <Summary holdings={data.holdings} /> : <p className="muted">{busy ? 'Loading…' : ''}</p>}
 
-      <div className={`panel ${css.section}`}>
+      {paper ? null : <div className={`panel ${css.section}`}>
         <h2 className="h3">Import from your broker (Excel order summary)</h2>
         <p className="muted">Pick the day’s <b>order_summary_….xlsx</b>. You see what will be added first; trades already in the sheet are skipped.</p>
         <div className={css.form}>
@@ -206,10 +241,10 @@ export default function TradesPage() {
             )}
           </div>
         ) : null}
-      </div>
+      </div>}
 
       <form className={`panel ${css.section}`} onSubmit={save}>
-        <h2 className="h3">{editing ? 'Edit trade' : 'Add a trade'}</h2>
+        <h2 className="h3">{editing ? 'Edit trade' : 'Add a trade'}{paper ? ' (practice)' : ''}</h2>
         <div className={css.form}>
           <label>Date<input type="date" value={form.date} max={dhakaToday()} onChange={set('date')} required /></label>
           <label>Code<input value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))} placeholder="GP" required /></label>
@@ -219,7 +254,7 @@ export default function TradesPage() {
           <label>Commission ৳<input inputMode="decimal" value={form.commission} onChange={set('commission')} /></label>
           <label>Note<input value={form.note} onChange={set('note')} maxLength={200} /></label>
           <div className={css.actions}>
-            <button className="btn primary" type="submit" disabled={busy}>{editing ? 'Save changes' : 'Add trade'}</button>
+            <button className="btn primary" type="submit" disabled={busy}>{editing ? 'Save changes' : paper ? 'Add practice trade' : 'Add trade'}</button>
             {editing ? <button className="link-btn" type="button" onClick={() => { setEditing(null); setForm(blank()); }}>Cancel</button> : null}
           </div>
         </div>
@@ -244,11 +279,15 @@ export default function TradesPage() {
               ) : <span className="muted">—</span>}</td></tr>
           ))}</tbody></table></div>
       ) : null}
-      {data?.settings ? <LimitsPanel key={JSON.stringify(data.settings)} settings={data.settings} held={data.holdings.filter((h) => h.shares > 0).map((h) => h.code)}
-        onSave={async (s) => { await call(key, '/api/trades/settings', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(s) }); await load(key); }} /> : null}
+      {!paper && data?.settings ? <LimitsPanel key={JSON.stringify(data.settings)} settings={data.settings} held={data.holdings.filter((h) => h.shares > 0).map((h) => h.code)}
+        onSave={async (s) => { await call(key, '/api/trades/settings', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(s) }); await load(key, account); }} /> : null}
+      <div className={`panel ${css.section}`}>
+        <p className="small muted">Phone alerts via Telegram — setup: web/docs/telegram-setup.md</p>
+        <TelegramTestButton />
+      </div>
 
       <div className={`panel table-wrap ${css.section}`}><h2 className="h3">All trades</h2>
-        {data && !data.trades.length ? <p className="muted">No trades yet. Import your broker file or add one above.</p> : null}
+        {data && !data.trades.length ? <p className="muted">{paper ? 'No practice trades yet. Add one above to try it out.' : 'No trades yet. Import your broker file or add one above.'}</p> : null}
         {data?.trades.length ? (
           <table className="cards"><thead><tr><th>Date</th><th>Trade</th><th className="n">Price</th><th className="n">Amount</th><th>Note</th><th /></tr></thead>
             <tbody>{data.trades.map((t) => (
@@ -260,6 +299,8 @@ export default function TradesPage() {
                 </td></tr>
             ))}</tbody></table>
         ) : null}
+        {paper && data?.trades.length ? <div className={`${css.actions} ${css.section}`}><button className="link-btn danger" type="button" disabled={busy} onClick={() => void resetPractice()}>Reset practice account</button></div> : null}
+      </div>
       </div>
     </>
   );

@@ -1,11 +1,13 @@
 import { CODE_RE, dhakaToday } from './dhaka.ts';
 
-export const TRADE_COLUMNS = ['id', 'date', 'code', 'side', 'quantity', 'price', 'commission', 'note', 'source', 'created_at'] as const;
+export const TRADE_COLUMNS = ['id', 'date', 'code', 'side', 'quantity', 'price', 'commission', 'note', 'source', 'created_at', 'account'] as const;
 export const MAX_QUANTITY = 10_000_000;
 export const MAX_PRICE = 1_000_000;
 export const NOTE_MAX = 200;
 
 export type Side = 'BUY' | 'SELL';
+// 'paper' is the practice account; an empty sheet cell (rows from before the column existed) is 'real'.
+export type Account = 'real' | 'paper';
 
 export interface TradeInput {
   date: string;
@@ -15,6 +17,7 @@ export interface TradeInput {
   price: number;
   commission: number | null;
   note: string;
+  account?: Account;
 }
 
 export interface Trade extends TradeInput {
@@ -56,7 +59,9 @@ export function validateTrade(input: unknown, today = dhakaToday()): Result<Trad
   const commissionRaw = t.commission;
   const commission = commissionRaw == null || commissionRaw === '' ? null : parseAmount(commissionRaw);
   if (commissionRaw != null && commissionRaw !== '' && commission == null) return { ok: false, error: 'Commission must be an amount in taka, or empty.' };
-  return { ok: true, value: { date, code, side, quantity, price, commission, note: cleanNote(t.note) } };
+  const account = t.account == null || t.account === '' ? 'real' : t.account;
+  if (account !== 'real' && account !== 'paper') return { ok: false, error: 'Account must be real or paper.' };
+  return { ok: true, value: { date, code, side, quantity, price, commission, note: cleanNote(t.note), account } };
 }
 
 export const dedupeKey = (t: Pick<TradeInput, 'date' | 'code' | 'side' | 'quantity' | 'price'>) => `${t.date}|${t.code}|${t.side}|${t.quantity}|${t.price.toFixed(4)}`;
@@ -75,19 +80,20 @@ export function splitNew(incoming: readonly TradeInput[], existing: readonly Tra
 }
 
 export function toRow(t: Trade): string[] {
-  return [t.id, t.date, t.code, t.side, String(t.quantity), String(t.price), t.commission == null ? '' : String(t.commission), t.note, t.source, t.createdAt];
+  return [t.id, t.date, t.code, t.side, String(t.quantity), String(t.price), t.commission == null ? '' : String(t.commission), t.note, t.source, t.createdAt, t.account ?? 'real'];
 }
 
-export function fromRows(rows: string[][]): { trades: (Trade & { row: number })[]; badRows: number[] } {
+// Only one account's trades are returned (real by default); bad rows are reported whatever their account.
+export function fromRows(rows: string[][], account: Account | 'all' = 'real'): { trades: (Trade & { row: number })[]; badRows: number[] } {
   const trades: (Trade & { row: number })[] = [];
   const badRows: number[] = [];
   rows.forEach((r, i) => {
     const row = i + 2;
     if (!r.some((c) => c?.trim())) return;
-    const [id, date, code, side, quantity, price, commission, note, source, createdAt] = r.map((c) => c ?? '');
-    const v = validateTrade({ date, code, side, quantity, price, commission, note }, '9999-12-31');
+    const [id, date, code, side, quantity, price, commission, note, source, createdAt, acc] = r.map((c) => c ?? '');
+    const v = validateTrade({ date, code, side, quantity, price, commission, note, account: acc?.trim().toLowerCase() }, '9999-12-31');
     if (!id || !v.ok) badRows.push(row);
-    else trades.push({ ...v.value, id, source, createdAt, row });
+    else if (account === 'all' || v.value.account === account) trades.push({ ...v.value, id, source, createdAt, row });
   });
   return { trades, badRows };
 }

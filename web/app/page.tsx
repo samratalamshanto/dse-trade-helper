@@ -12,6 +12,7 @@ import { CompanyCard } from '@/components/CompanyCard';
 import { isTooLate, LastBuy } from '@/components/LastBuy';
 import { HoldingsToday } from '@/components/HoldingsToday';
 import { MyStocks } from '@/components/MyStocks';
+import { PlansMini, TodaysPicks } from '@/components/planner/DashboardCards';
 import { Tr } from '@/components/Tr';
 import { fmt, fmtDate, marketState, pctNum, sectorName, signed, tone } from '@/components/format';
 import { FraudPill, Icon, Info, SIGNALS, type FraudLevel, type IconName, type Signal } from '@/components/ui';
@@ -132,6 +133,7 @@ export default function DashboardPage() {
       <h1 className="sr-title">{t('DSE dashboard')}</h1>
       <HoldingsToday />
       <MyStocks />
+      <PlansMini />
       <StartGuide />
       <section className="panel market" aria-label={t('Market')}>
         {d.live ? null : <p className="small muted session-note">{t('Showing the last session')}, <b>{fmtDate(d.showingDate)}</b>. {t("Today's figures appear when trading starts.")}</p>}
@@ -165,6 +167,7 @@ export default function DashboardPage() {
         <Link className="panel card quick-card" href="/learn"><Icon name="help" /><div><div className="small muted">{t('New here?')}</div><div className="stat">{t('How it works')}</div><div className="small muted">{t('signals in plain words')}</div></div></Link>
       </div>
       <TrustCard />
+      <TodaysPicks />
 
       <h2>{t(liveNow ? "Today's important things" : 'Important things from the last session')}</h2>
       <div className="grid g3">

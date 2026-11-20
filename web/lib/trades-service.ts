@@ -4,7 +4,7 @@ import { livePrices } from './dse.ts';
 import { checkPosition, parseSettings, settingsFromRows, settingsToRows, type LimitSettings } from './positions.ts';
 import { companyDetail } from './service.ts';
 import { appendRows, deleteRow, readRows, readSettingsRows, SheetsError, writeRow, writeSettingsRows } from './sheets.ts';
-import { dateFromFileName, fromRows, holdingsFrom, parseOrderSummary, splitNew, toRow, type Trade, type TradeInput, validateTrade } from './trades.ts';
+import { dateFromFileName, fromRows, holdingsFrom, parseOrderSummary, splitNew, toRow, type Account, type Trade, type TradeInput, validateTrade } from './trades.ts';
 import { readFirstSheet } from './xlsx.ts';
 
 export class TradeInputError extends Error {}
@@ -19,12 +19,12 @@ const serial = <T>(work: () => Promise<T>): Promise<T> => {
 
 const stamp = (input: TradeInput, source: string): Trade => ({ ...input, id: randomUUID(), source, createdAt: new Date().toISOString() });
 
-async function current() {
-  return fromRows(await readRows());
+async function current(account: Account | 'all' = 'real') {
+  return fromRows(await readRows(), account);
 }
 
-export async function listTrades() {
-  const { trades, badRows } = await current();
+export async function listTrades(account: Account = 'real') {
+  const { trades, badRows } = await current(account);
   const { holdings, warnings } = holdingsFrom(trades);
   // Limits are read beside the prices; a settings-tab failure falls back to the defaults instead of failing the list.
   const limitsOrDefaults = readLimits().catch((e: unknown) => { console.warn('trades: limits unavailable, using defaults', e); return settingsFromRows([]); });
@@ -50,8 +50,8 @@ export async function listTrades() {
     }, limits, today);
     return { ...h, limits, check };
   }));
-  const sorted = [...trades].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)).map((t) => ({ id: t.id, date: t.date, code: t.code, side: t.side, quantity: t.quantity, price: t.price, commission: t.commission, note: t.note, source: t.source, createdAt: t.createdAt }));
-  return { trades: sorted, holdings: checkedHoldings, warnings, badRows, settings };
+  const sorted = [...trades].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)).map((t) => ({ id: t.id, date: t.date, code: t.code, side: t.side, quantity: t.quantity, price: t.price, commission: t.commission, note: t.note, source: t.source, createdAt: t.createdAt, account: t.account }));
+  return { account, trades: sorted, holdings: checkedHoldings, warnings, badRows, settings };
 }
 
 function checked(input: unknown): TradeInput {
@@ -67,14 +67,15 @@ export const addTrade = (input: unknown) => serial(async () => {
 });
 
 async function rowOf(id: string) {
-  const found = (await current()).trades.find((t) => t.id === id);
+  const found = (await current('all')).trades.find((t) => t.id === id);
   if (!found) throw new SheetsError('That trade no longer exists. Reload the list.', 404);
   return found;
 }
 
 export const updateTrade = (id: string, input: unknown) => serial(async () => {
-  const value = checked(input);
   const old = await rowOf(id);
+  // An edit that does not name the account keeps the trade in its own account.
+  const value = checked(input && typeof input === 'object' && !('account' in input) ? { ...input, account: old.account } : input);
   const trade: Trade = { ...value, id, source: old.source, createdAt: old.createdAt };
   await writeRow(old.row, toRow(trade));
   return trade;
@@ -89,6 +90,7 @@ export interface ImportResult { date: string; added: TradeInput[]; skipped: Trad
 export const importOrderSummary = (data: Uint8Array, fileName: string, dateOverride: string | null, save: boolean) => serial(async (): Promise<ImportResult> => {
   const date = dateOverride || dateFromFileName(fileName);
   if (!date) throw new TradeInputError('The trade date could not be read from the file name. Pick the date and upload again.');
+  // Broker files are real trades: parseOrderSummary never sets an account, so validateTrade makes each one 'real'.
   const { trades, errors } = parseOrderSummary(readFirstSheet(data), date);
   const { added, skipped } = splitNew(trades, (await current()).trades);
   if (save && added.length) await appendRows(added.map((t) => toRow(stamp(t, 'broker-xlsx'))));

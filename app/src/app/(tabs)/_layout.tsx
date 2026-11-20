@@ -43,6 +43,7 @@ export default function TabLayout() {
       <Tabs.Screen name="learn" options={tab('More', 'settings-outline', 'Settings and help')} />
       <Tabs.Screen name="c/[code]" options={detail('Company')} />
       <Tabs.Screen name="dividends" options={detail('Dividends you can still catch')} />
+      <Tabs.Screen name="plans" options={detail('My buy plans')} />
     </Tabs>
   );
 }

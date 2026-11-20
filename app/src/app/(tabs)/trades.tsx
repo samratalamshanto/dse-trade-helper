@@ -3,7 +3,8 @@ import { Link, useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { Pressable, SectionList, Text, View } from 'react-native';
 import { changeColor, fmtDate, fmtNum, fmtPct, fmtTakaSigned } from '../../format.ts';
-import { groupByDate, holdingTotals, loadTrades, type HoldingRow, type Trade, type TradesResponse } from '../../trades.ts';
+import { groupByDate, holdingTotals, loadTrades, tradesPath, type Account, type HoldingRow, type Trade, type TradesResponse } from '../../trades.ts';
+import { AccountSwitch, PracticeBanner } from '../trade.tsx';
 import { Button, CheckPill, Status } from '../../ui.tsx';
 import { useApi } from '../../useApi.ts';
 import { useTheme } from '../../useTheme.tsx';
@@ -71,7 +72,7 @@ function HoldingLine({ h }: { h: HoldingRow }) {
 function TradeLine({ t }: { t: Trade }) {
   const { colors, s } = useTheme();
   const side = colors[SIDE_TONE[t.side]];
-  const params = { id: t.id, date: t.date, code: t.code, side: t.side, quantity: String(t.quantity), price: String(t.price), commission: t.commission == null ? '' : String(t.commission), note: t.note };
+  const params = { id: t.id, account: t.account ?? 'real', date: t.date, code: t.code, side: t.side, quantity: String(t.quantity), price: String(t.price), commission: t.commission == null ? '' : String(t.commission), note: t.note };
   return (
     <Link href={{ pathname: '/trade', params }} asChild>
       <Pressable style={s.row} accessibilityHint="Opens the trade to edit or delete it">
@@ -94,17 +95,22 @@ function TradeLine({ t }: { t: Trade }) {
   );
 }
 
-function Header({ data }: { data: TradesResponse }) {
+function Header({ data, account, onAccount }: { data: TradesResponse; account: Account; onAccount: (a: Account) => void }) {
   const { colors, s } = useTheme();
+  const paper = account === 'paper';
   return (
     <View style={[s.pad, { paddingBottom: 0 }]}>
+      <AccountSwitch value={account} onChange={onAccount} />
+      {paper && <PracticeBanner />}
       <View style={{ flexDirection: 'row', gap: 10 }}>
-        <Link href="/trade" asChild>
-          <Button variant="primary" icon="add" label="Add trade" style={{ flex: 1 }} />
+        <Link href={{ pathname: '/trade', params: { account } }} asChild>
+          <Button variant="primary" icon="add" label={paper ? 'Add practice trade' : 'Add trade'} style={{ flex: 1 }} />
         </Link>
-        <Link href="/trades-import" asChild>
-          <Button icon="document-attach-outline" label="Import broker Excel" style={{ flex: 1 }} />
-        </Link>
+        {!paper && (
+          <Link href="/trades-import" asChild>
+            <Button icon="document-attach-outline" label="Import broker Excel" style={{ flex: 1 }} />
+          </Link>
+        )}
       </View>
       {data.trades.length > 0 && <Summary data={data} />}
       {data.warnings.map((w) => <Text key={w} style={[s.muted, { color: colors.warn }]}>⚠ {w}</Text>)}
@@ -128,7 +134,8 @@ function Header({ data }: { data: TradesResponse }) {
 
 export default function Trades() {
   const { colors, s } = useTheme();
-  const { data, error, loading, reload } = useApi<TradesResponse>('/api/trades', loadTrades);
+  const [account, setAccount] = useState<Account>('real');
+  const { data, error, loading, reload } = useApi<TradesResponse>(tradesPath(account), loadTrades);
   // Reload when coming back from the add, edit or import screen; the first focus is the initial load.
   const firstFocus = useRef(true);
   useFocusEffect(useCallback(() => {
@@ -136,7 +143,10 @@ export default function Trades() {
     else reload();
   }, [reload]));
 
+  // While a list loads or fails the switch stays on screen, so a failing account can be left.
   return (
+    <View style={s.screen}>
+    {!data && <View style={[s.pad, { paddingBottom: 0 }]}><AccountSwitch value={account} onChange={setAccount} /></View>}
     <Status loading={loading && !data} error={data ? null : error} onRetry={reload}>
       {data && (
         <SectionList
@@ -147,17 +157,18 @@ export default function Trades() {
           renderSectionHeader={({ section }) => <Text style={[s.muted, { backgroundColor: colors.bg, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 4, fontWeight: '700' }]}>{fmtDate(section.title)} {section.title.slice(0, 4)}</Text>}
           refreshing={loading}
           onRefresh={reload}
-          ListHeaderComponent={<Header data={data} />}
+          ListHeaderComponent={<Header data={data} account={account} onAccount={setAccount} />}
           ListFooterComponent={error ? <Text style={[s.muted, { color: colors.warn, padding: 16 }]}>Showing older data: {error}</Text> : <View style={{ height: 32 }} />}
           ListEmptyComponent={
             <View style={[s.center, { paddingTop: 48 }]}>
               <Ionicons name="swap-horizontal-outline" size={56} color={colors.muted} />
-              <Text style={s.title}>No trades yet</Text>
-              <Text style={[s.muted, { textAlign: 'center' }]}>Add a trade by hand or import the order summary Excel from your broker.</Text>
+              <Text style={s.title}>{account === 'paper' ? 'No practice trades yet' : 'No trades yet'}</Text>
+              <Text style={[s.muted, { textAlign: 'center' }]}>{account === 'paper' ? 'Add a practice trade to try buying and selling without money.' : 'Add a trade by hand or import the order summary Excel from your broker.'}</Text>
             </View>
           }
         />
       )}
     </Status>
+    </View>
   );
 }

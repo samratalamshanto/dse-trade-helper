@@ -4,7 +4,6 @@ import { TRADE_COLUMNS } from './trades.ts';
 
 export const TAB = 'trades';
 const lastCol = (columns: readonly string[]) => String.fromCharCode(64 + columns.length);
-const LAST_COL = lastCol(TRADE_COLUMNS);
 const SHEETS_TIMEOUT_MS = 10_000;
 const RETRY_DELAY_MS = 400;
 
@@ -24,7 +23,8 @@ const API = 'https://sheets.googleapis.com/v4/spreadsheets/';
 
 
 export class SheetsError extends Error {
-  constructor(message: string, readonly status = 502, options?: ErrorOptions) { super(message, options); }
+  readonly status: number;
+  constructor(message: string, status = 502, options?: ErrorOptions) { super(message, options); this.status = status; }
 }
 
 interface ServiceAccount { client_email: string; private_key: string }
@@ -123,31 +123,35 @@ export async function writeSettingsRows(rows: string[][]): Promise<void> {
 }
 
 // Another device or a hand edit in the sheet can move rows; refuse to touch a row whose id changed.
-async function confirmRow(sheetRow: number, id: string): Promise<void> {
-  const res = await call<{ values?: string[][] }>(`/values/${TAB}!A${sheetRow}`);
+export interface TabSpec { title: string; columns: readonly string[] }
+const TRADES: TabSpec = { title: TAB, columns: TRADE_COLUMNS };
+
+async function confirmRow(tab: TabSpec, sheetRow: number, id: string): Promise<void> {
+  const res = await call<{ values?: string[][] }>(`/values/${tab.title}!A${sheetRow}`);
   if (res.values?.[0]?.[0] !== id) throw new SheetsError('The sheet changed while you were editing. Reload and try again.', 409);
 }
 
-export async function readRows(): Promise<string[][]> {
-  await ensureTab();
-  const res = await call<{ values?: string[][] }>(`/values/${TAB}!A2:${LAST_COL}`);
+export async function readRows(tab: TabSpec = TRADES): Promise<string[][]> {
+  await ensureTab(tab.title, tab.columns);
+  const res = await call<{ values?: string[][] }>(`/values/${tab.title}!A2:${lastCol(tab.columns)}`);
   return res.values ?? [];
 }
 
-export async function appendRows(rows: string[][]): Promise<void> {
+export async function appendRows(rows: string[][], tab: TabSpec = TRADES): Promise<void> {
   if (!rows.length) return;
-  await ensureTab();
-  await call(`/values/${TAB}!A:${LAST_COL}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, { method: 'POST', body: { values: rows } });
+  await ensureTab(tab.title, tab.columns);
+  await call(`/values/${tab.title}!A:${lastCol(tab.columns)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, { method: 'POST', body: { values: rows } });
 }
 
-export async function writeRow(sheetRow: number, row: string[]): Promise<void> {
-  await ensureTab();
-  await confirmRow(sheetRow, row[0]);
-  await call(`/values/${TAB}!A${sheetRow}:${LAST_COL}${sheetRow}?valueInputOption=RAW`, { method: 'PUT', body: { values: [row] } });
+export async function writeRow(sheetRow: number, row: string[], tab: TabSpec = TRADES): Promise<void> {
+  await ensureTab(tab.title, tab.columns);
+  await confirmRow(tab, sheetRow, row[0]);
+  const col = lastCol(tab.columns);
+  await call(`/values/${tab.title}!A${sheetRow}:${col}${sheetRow}?valueInputOption=RAW`, { method: 'PUT', body: { values: [row] } });
 }
 
-export async function deleteRow(sheetRow: number, id: string): Promise<void> {
-  const sheetId = await ensureTab();
-  await confirmRow(sheetRow, id);
+export async function deleteRow(sheetRow: number, id: string, tab: TabSpec = TRADES): Promise<void> {
+  const sheetId = await ensureTab(tab.title, tab.columns);
+  await confirmRow(tab, sheetRow, id);
   await call(':batchUpdate', { method: 'POST', body: { requests: [{ deleteDimension: { range: { sheetId, dimension: 'ROWS', startIndex: sheetRow - 1, endIndex: sheetRow } } }] } });
 }

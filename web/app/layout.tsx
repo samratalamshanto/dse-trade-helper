@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { IBM_Plex_Sans, JetBrains_Mono } from 'next/font/google';
+import localFont from 'next/font/local';
 import { AppProvider } from '@/components/AppProvider';
 import { LangProvider } from '@/components/i18n';
 import { Sidebar } from '@/components/Sidebar';
@@ -7,8 +7,25 @@ import { Topbar } from '@/components/Topbar';
 import { AlertsWatcher } from '@/components/AlertsWatcher';
 import './globals.css';
 
-const sans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-sans' });
-const mono = JetBrains_Mono({ subsets: ['latin'], weight: ['500', '600'], variable: '--font-mono' });
+// Self-hosted (SIL OFL fonts) so pages never depend on a slow download from Google at build or dev time.
+const sans = localFont({
+  src: [
+    { path: './fonts/ibm-plex-sans-400.woff2', weight: '400', style: 'normal' },
+    { path: './fonts/ibm-plex-sans-500.woff2', weight: '500', style: 'normal' },
+    { path: './fonts/ibm-plex-sans-600.woff2', weight: '600', style: 'normal' },
+    { path: './fonts/ibm-plex-sans-700.woff2', weight: '700', style: 'normal' },
+  ],
+  variable: '--font-sans',
+  display: 'swap',
+});
+const mono = localFont({
+  src: [
+    { path: './fonts/jetbrains-mono-500.woff2', weight: '500', style: 'normal' },
+    { path: './fonts/jetbrains-mono-600.woff2', weight: '600', style: 'normal' },
+  ],
+  variable: '--font-mono',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'DSE Trade Helper',

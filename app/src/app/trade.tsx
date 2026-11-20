@@ -2,12 +2,40 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { type ReactNode, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { dhakaToday } from '../../../web/lib/dhaka.ts';
-import { validateTrade } from '../../../web/lib/trades.ts';
+import { type Account, validateTrade } from '../../../web/lib/trades.ts';
 import { Button } from '../ui.tsx';
 import { deleteTrade, saveTrade } from '../trades.ts';
 import { useTheme } from '../useTheme.tsx';
 
-type Params = { id?: string; date?: string; code?: string; side?: string; quantity?: string; price?: string; commission?: string; note?: string };
+type Params = { id?: string; account?: string; date?: string; code?: string; side?: string; quantity?: string; price?: string; commission?: string; note?: string };
+
+// Real | Practice segmented control, shared with the Trades tab.
+export function AccountSwitch({ value, onChange }: { value: Account; onChange: (a: Account) => void }) {
+  const { colors, s } = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', gap: 10 }} accessibilityLabel="Account">
+      {([['real', 'Real'], ['paper', 'Practice']] as const).map(([acc, label]) => {
+        const active = value === acc;
+        const color = acc === 'paper' ? colors.warn : colors.link;
+        return (
+          <Pressable key={acc} onPress={() => onChange(acc)} style={[s.button, { flex: 1, borderColor: active ? color : colors.outline, backgroundColor: active ? color + '22' : undefined }]} accessibilityRole="button" accessibilityState={{ selected: active }}>
+            <Text style={{ color: active ? color : colors.text, fontWeight: '700' }}>{label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+export function PracticeBanner() {
+  const { colors, s } = useTheme();
+  return (
+    <View style={[s.card, { borderColor: colors.warn, borderWidth: 2, borderStyle: 'dashed', backgroundColor: colors.warn + '1a' }]} accessibilityRole="alert">
+      <Text style={{ color: colors.warn, fontWeight: '800' }}>PRACTICE — not real money</Text>
+      <Text style={s.text}>Try buys and sells here to learn. Practice trades are kept apart and never count in your real holdings.</Text>
+    </View>
+  );
+}
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   const { s } = useTheme();
@@ -28,6 +56,7 @@ export default function TradeForm() {
     date: p.date ?? dhakaToday(), code: p.code ?? '', side: p.side === 'SELL' ? 'SELL' : 'BUY',
     quantity: p.quantity ?? '', price: p.price ?? '', commission: p.commission ?? '', note: p.note ?? '',
   });
+  const [account, setAccount] = useState<Account>(p.account === 'paper' ? 'paper' : 'real');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const set = (key: keyof typeof form) => (value: string) => setForm((f) => ({ ...f, [key]: value }));
@@ -45,7 +74,7 @@ export default function TradeForm() {
   };
 
   const submit = () => {
-    const v = validateTrade(form);
+    const v = validateTrade({ ...form, account });
     if (!v.ok) { setError(v.error); return; }
     run(() => saveTrade(id, v.value));
   };
@@ -62,6 +91,9 @@ export default function TradeForm() {
     <KeyboardAvoidingView behavior="padding" style={s.screen}>
       <Stack.Screen options={{ title: id ? 'Edit trade' : 'Add trade' }} />
       <ScrollView contentContainerStyle={s.pad} keyboardShouldPersistTaps="handled">
+        {/* An existing trade stays in its account; only a new trade picks one. */}
+        {!id && <AccountSwitch value={account} onChange={setAccount} />}
+        {account === 'paper' && <PracticeBanner />}
         <Field label="Date (YYYY-MM-DD)">
           <TextInput accessibilityLabel="Trade date" style={inputStyle} value={form.date} onChangeText={set('date')} placeholder="2026-11-19" placeholderTextColor={colors.muted} autoCorrect={false} maxLength={10} />
         </Field>
@@ -92,7 +124,7 @@ export default function TradeForm() {
           <TextInput accessibilityLabel="Note" style={inputStyle} value={form.note} onChangeText={set('note')} maxLength={200} placeholderTextColor={colors.muted} />
         </Field>
         {error && <Text style={[s.text, { color: colors.down }]} accessibilityLiveRegion="polite">{error}</Text>}
-        <Button variant="primary" label={id ? 'Save changes' : 'Save trade'} onPress={submit} loading={busy} />
+        <Button variant="primary" label={id ? 'Save changes' : account === 'paper' ? 'Save practice trade' : 'Save trade'} onPress={submit} loading={busy} />
         {id && (
           <Button variant="danger" label="Delete trade" onPress={remove} disabled={busy} />
         )}

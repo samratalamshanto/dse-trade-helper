@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { strToU8, zipSync } from 'fflate';
-import { dateFromFileName, dedupeKey, fromRows, holdingsFrom, parseOrderSummary, splitNew, toRow, validateTrade, type Trade } from '../lib/trades.ts';
+import { dateFromFileName, dedupeKey, fromRows, holdingsFrom, parseOrderSummary, splitNew, toRow, TRADE_COLUMNS, validateTrade, type Trade } from '../lib/trades.ts';
 import { readFirstSheet, XlsxError } from '../lib/xlsx.ts';
 
 const HEADER = ['BO Code', 'Trade Code', 'Cat', '#Buy', '#Sell', '#Orders', 'BSentQty', 'SSentQty', 'TSentQty', 'AvgPrice', 'BAvgPrice', 'SAvgPrice', 'BExecQty', 'SExecQty', 'BRemQty', 'SRemQty', 'TExecQty', 'NExecQty', 'BExecVal', 'SExecVal', 'TExecVal', 'NExecVal'];
@@ -68,7 +68,7 @@ test('trade checks reject bad input with a plain reason', () => {
   const ok = { date: '2026-11-19', code: 'gp', side: 'buy', quantity: '2', price: '226.70', commission: '', note: '=HYPERLINK("x")' };
   const v = validateTrade(ok, '2026-11-20');
   assert.ok(v.ok);
-  if (v.ok) assert.deepEqual(v.value, { date: '2026-11-19', code: 'GP', side: 'BUY', quantity: 2, price: 226.7, commission: null, note: 'HYPERLINK("x")' });
+  if (v.ok) assert.deepEqual(v.value, { date: '2026-11-19', code: 'GP', side: 'BUY', quantity: 2, price: 226.7, commission: null, note: 'HYPERLINK("x")', account: 'real' });
   const bad: [Record<string, unknown>, RegExp][] = [
     [{ ...ok, date: '2026-02-30' }, /real date/],
     [{ ...ok, date: '2026-11-21' }, /future/],
@@ -80,6 +80,7 @@ test('trade checks reject bad input with a plain reason', () => {
     [{ ...ok, price: '-5' }, /positive/],
     [{ ...ok, price: '1e3' }, /positive/],
     [{ ...ok, commission: 'free' }, /Commission/],
+    [{ ...ok, account: 'demo' }, /real or paper/],
   ];
   for (const [input, msg] of bad) {
     const r = validateTrade(input, '2026-11-20');
@@ -88,7 +89,7 @@ test('trade checks reject bad input with a plain reason', () => {
   assert.ok(!validateTrade(null).ok);
 });
 
-const trade = (over: Partial<Trade>): Trade => ({ id: 'x', date: '2026-11-19', code: 'GP', side: 'BUY', quantity: 1, price: 100, commission: null, note: '', source: 'manual', createdAt: '2026-11-19T10:00:00Z', ...over });
+const trade = (over: Partial<Trade>): Trade => ({ id: 'x', date: '2026-11-19', code: 'GP', side: 'BUY', quantity: 1, price: 100, commission: null, note: '', source: 'manual', createdAt: '2026-11-19T10:00:00Z', account: 'real', ...over });
 
 test('holdings use average cost; a sell books realised profit and keeps the average of the rest', () => {
   const { holdings, warnings } = holdingsFrom([
@@ -154,4 +155,40 @@ test('negative amounts are never accepted, so a negative commission cannot infla
   const r = validateTrade({ ...base, commission: -10 }, '2026-11-20');
   assert.ok(!r.ok && /Commission/.test(r.error));
   assert.ok(!validateTrade({ ...base, price: -5 }, '2026-11-20').ok);
+});
+
+test('account: missing or empty is real, paper is kept, and the column is written last', () => {
+  const base = { date: '2026-11-19', code: 'GP', side: 'BUY', quantity: 1, price: 100 };
+  const acc = (x: unknown) => { const v = validateTrade({ ...base, account: x }, '2026-11-20'); return v.ok ? v.value.account : v.error; };
+  assert.deepEqual([acc(undefined), acc(''), acc('real'), acc('paper')], ['real', 'real', 'real', 'paper']);
+  assert.deepEqual(toRow(trade({ account: 'paper' })).slice(-1), ['paper']);
+  assert.equal(TRADE_COLUMNS.at(-1), 'account');
+});
+
+test('old 10-column rows and rows with an empty account cell read as real trades', () => {
+  const old = ['id1', '2026-11-19', 'WALTONHIL', 'BUY', '1', '330', '', '', 'broker-xlsx', '2026-11-19T10:00:00Z'];
+  const { trades, badRows } = fromRows([old, [...old.slice(0, 9), 'x', '']]);
+  assert.deepEqual(badRows, []);
+  assert.deepEqual(trades.map((t) => [t.code, t.account]), [['WALTONHIL', 'real'], ['WALTONHIL', 'real']]);
+});
+
+test('fromRows returns one account at a time (real by default); an unknown account cell is a bad row', () => {
+  const rows = [toRow(trade({ id: 'r', code: 'GP' })), toRow(trade({ id: 'p', code: 'BXPHARMA', account: 'paper' })), [...toRow(trade({ id: 'z' })).slice(0, 10), 'demo']];
+  assert.deepEqual(fromRows(rows).trades.map((t) => t.id), ['r']);
+  assert.deepEqual(fromRows(rows, 'paper').trades.map((t) => t.id), ['p']);
+  assert.deepEqual(fromRows(rows, 'all').trades.map((t) => t.id), ['r', 'p']);
+  assert.deepEqual(fromRows(rows, 'paper').badRows, [4]);
+});
+
+test('holdings are kept per account: practice buys never change real holdings', () => {
+  const rows = [toRow(trade({ id: 'r', quantity: 1, price: 226.9 })), toRow(trade({ id: 'p', quantity: 50, price: 200, account: 'paper' }))];
+  const real = holdingsFrom(fromRows(rows).trades).holdings;
+  const paper = holdingsFrom(fromRows(rows, 'paper').trades).holdings;
+  assert.deepEqual(real.map((h) => [h.code, h.shares, h.avgCost]), [['GP', 1, 226.9]]);
+  assert.deepEqual(paper.map((h) => [h.code, h.shares, h.avgCost]), [['GP', 50, 200]]);
+});
+
+test('broker imports are always real trades', () => {
+  const { trades } = parseOrderSummary(readFirstSheet(sample()), '2026-11-19');
+  assert.ok(trades.length > 0 && trades.every((t) => t.account === 'real'));
 });

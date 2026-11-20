@@ -16,6 +16,9 @@ function authorised(request: Request): Response | null {
   return null;
 }
 
+// For public endpoints that add private details only when the caller proves the trades key.
+export const hasTradesKey = (request: Request): boolean => authorised(request) === null;
+
 export async function tradesRoute(request: Request, label: string, work: () => Promise<unknown>): Promise<Response> {
   const denied = authorised(request);
   if (denied) return denied;

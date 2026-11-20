@@ -35,6 +35,14 @@ test.describe('/trades (API mocked)', () => {
   });
   test.use({ allowedConsole: [/status of 40[01]/] });
 
+  test('localhost: key from the dev key server opens the list without the key box', async ({ page }) => {
+    await page.route('http://127.0.0.1:3011/trades-key', (r) => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ key: KEY }) }));
+    await page.route('**/api/trades**', (r) => json(r, r.request().headers()['x-trades-key'] === KEY ? 200 : 401, LIST));
+    await page.goto('/trades');
+    await expect(page.getByRole('heading', { name: 'All trades' })).toBeVisible();
+    await expect(page.getByLabel('Trades key')).toHaveCount(0);
+  });
+
   test('list: holdings and trades table, sell amount = qty*price - fee', async ({ page }) => {
     await page.route('**/api/trades**', (r) => json(r, 200, LIST));
     await unlock(page);
@@ -72,7 +80,7 @@ test.describe('/trades (API mocked)', () => {
     const req = page.waitForRequest((q) => q.method() === 'POST' && q.url().endsWith('/api/trades'));
     await page.getByRole('button', { name: 'Add trade' }).click();
     expect((await req).headers()['x-trades-key']).toBe(KEY);
-    expect(posted).toEqual({ date: '2026-03-02', code: 'GP', side: 'SELL', quantity: '10', price: '281.5', commission: '5', note: 'e2e' });
+    expect(posted).toEqual({ date: '2026-03-02', code: 'GP', side: 'SELL', quantity: '10', price: '281.5', commission: '5', note: 'e2e', account: 'real' });
   });
 
   test('holding check: coloured badge with its reasons (tap to expand on phones)', async ({ page }, info) => {
@@ -127,6 +135,94 @@ test.describe('/trades (API mocked)', () => {
     await file.setInputFiles({ name: 'export.xlsx', mimeType: 'application/octet-stream', buffer: Buffer.from('x') });
     await expect(page.getByRole('alert').filter({ hasText: /trade date could not be read/ })).toBeVisible();
     await expect(page.getByText('0 to add, 0 already in the sheet.')).toHaveCount(0);
+  });
+
+  test('practice account: banner, own list, no import, adds as paper, reset deletes only practice trades', async ({ page }) => {
+    const PAPER = { ...LIST, account: 'paper', holdings: [], settings: LIST.settings,
+      trades: [{ id: 'p1', date: '2026-11-19', code: 'BXPHARMA', side: 'BUY', quantity: 5, price: 120, commission: null, note: '', source: 'manual', createdAt: '', account: 'paper' }] };
+    const gets: string[] = [];
+    const deleted: string[] = [];
+    let posted: unknown;
+    await page.route((u) => u.pathname.startsWith('/api/trades'), (r) => {
+      const req = r.request();
+      const url = new URL(req.url());
+      if (req.method() === 'DELETE') { deleted.push(url.pathname.split('/').pop()!); return json(r, 200, { deleted: true }); }
+      if (req.method() === 'POST') { posted = req.postDataJSON(); return json(r, 201, {}); }
+      gets.push(url.search);
+      return json(r, 200, url.searchParams.get('account') === 'paper' ? PAPER : LIST);
+    });
+    await unlock(page);
+    await expect(page.getByRole('button', { name: 'Real', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByText('PRACTICE — not real money.')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Practice', exact: true }).click();
+    await expect(page.getByText('PRACTICE — not real money.')).toBeVisible();
+    expect(gets).toEqual(['', '?account=paper']);
+    const trades = page.locator('.panel').filter({ has: page.getByRole('heading', { name: 'All trades' }) });
+    await expect(trades.locator('tbody tr')).toHaveCount(1);
+    await expect(trades).toContainText('BXPHARMA');
+    await expect(page.getByRole('heading', { name: /Import from your broker/ })).toHaveCount(0);
+
+    await page.getByLabel('Code').fill('gp');
+    await page.getByLabel('Quantity').fill('2');
+    await page.getByLabel('Price ৳').fill('226.9');
+    await page.getByRole('button', { name: 'Add practice trade' }).click();
+    await expect.poll(() => posted).toMatchObject({ code: 'GP', quantity: '2', account: 'paper' });
+
+    page.once('dialog', (d) => { expect(d.message()).toContain('Real trades are not touched'); void d.accept(); });
+    await page.getByRole('button', { name: 'Reset practice account' }).click();
+    await expect.poll(() => deleted).toEqual(['p1']);
+  });
+
+  test('a slow real-account answer arriving after Practice is chosen never replaces the practice list', async ({ page }) => {
+    const PAPER = { ...LIST, account: 'paper', holdings: [],
+      trades: [{ id: 'p1', date: '2026-11-19', code: 'BXPHARMA', side: 'BUY', quantity: 5, price: 120, commission: null, note: '', source: 'manual', createdAt: '', account: 'paper' }] };
+    let realCalls = 0;
+    await page.route((u) => u.pathname.startsWith('/api/trades'), async (r) => {
+      const paper = new URL(r.request().url()).searchParams.get('account') === 'paper';
+      // The second real load (after unlock) is held back until after the practice answer.
+      if (!paper && ++realCalls === 2) await new Promise((res) => setTimeout(res, 1500));
+      return json(r, 200, paper ? PAPER : { ...LIST, account: 'real' });
+    });
+    await unlock(page);
+    await page.getByRole('button', { name: 'Practice', exact: true }).click();
+    await page.getByRole('button', { name: 'Real', exact: true }).click();
+    await page.getByRole('button', { name: 'Practice', exact: true }).click();
+    await page.waitForTimeout(2000);
+    const trades = page.locator('.panel').filter({ has: page.getByRole('heading', { name: 'All trades' }) });
+    await expect(trades.locator('tbody tr')).toHaveCount(1);
+    await expect(trades).toContainText('BXPHARMA');
+    await expect(page.getByRole('heading', { name: /My limits/ })).toHaveCount(0);
+  });
+
+  test('while a trade is being saved, Real/Practice cannot be switched, so the reload cannot land on the other account', async ({ page }) => {
+    let release!: () => void;
+    const held = new Promise<void>((res) => { release = res; });
+    await page.route((u) => u.pathname.startsWith('/api/trades'), async (r) => {
+      if (r.request().method() === 'POST') { await held; return json(r, 201, {}); }
+      return json(r, 200, { ...LIST, account: 'real' });
+    });
+    await unlock(page);
+    await page.getByLabel('Code').fill('gp');
+    await page.getByLabel('Quantity').fill('2');
+    await page.getByLabel('Price ৳').fill('226.9');
+    await page.getByRole('button', { name: 'Add trade' }).click();
+    await expect(page.getByRole('button', { name: 'Practice', exact: true })).toBeDisabled();
+    release();
+    await expect(page.getByRole('button', { name: 'Practice', exact: true })).toBeEnabled();
+  });
+
+  test('telegram test button: shown after unlock, posts with the key and shows the result', async ({ page }) => {
+    await page.route('**/api/trades**', (r) => json(r, 200, LIST));
+    await page.route('**/api/notify/test', (r) => json(r, 200, { sent: true }));
+    await page.goto('/trades');
+    await expect(page.getByRole('button', { name: 'Send test to Telegram' })).toHaveCount(0);
+    await page.getByLabel('Trades key').fill(KEY);
+    await page.getByRole('button', { name: 'Open my trades' }).click();
+    await expect(page.getByText('Phone alerts via Telegram — setup: web/docs/telegram-setup.md')).toBeVisible();
+    const req = page.waitForRequest((q) => q.method() === 'POST' && q.url().endsWith('/api/notify/test'));
+    await page.getByRole('button', { name: 'Send test to Telegram' }).click();
+    expect((await req).headers()['x-trades-key']).toBe(KEY);
+    await expect(page.getByRole('status').filter({ hasText: 'Sent — check Telegram.' })).toBeVisible();
   });
 });
 
