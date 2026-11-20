@@ -167,7 +167,7 @@ export async function runNotifier(now = new Date()): Promise<{ sent: number; pen
   try {
     input = await gather(dhakaClock(now), state.budget);
   } catch (e) {
-    writeState({ ...state, lastError: { at: now.toISOString(), text: 'Could not read your plans or holdings. The next check runs in 5 minutes.' } });
+    writeState({ ...state, lastError: { at: now.toISOString(), text: 'Could not read your plans or holdings. The next check tries again.' } });
     throw e;
   }
   const { due, held } = decide(input, state);
@@ -193,6 +193,8 @@ let running = false;
 export function startNotifier(): void {
   if (timers.dseNotifier) return;
   if (!telegramEnabled()) { console.warn(`notify: ${OFF_TEXT}`); return; }
+  // Set on the laptop once .github/workflows/notify.yml sends the alerts, so the same alert is not sent twice.
+  if (process.env.TELEGRAM_SCHEDULE === 'github') { console.warn('notify: the GitHub Action sends the alerts; this server only answers the test button'); return; }
   timers.dseNotifier = setInterval(() => {
     if (running || !inMarketWindow(dhakaClock(Date.now()))) return;
     running = true;

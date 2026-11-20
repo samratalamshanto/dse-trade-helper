@@ -68,3 +68,18 @@ If the page shows "Telegram refused the message … chat not found", check the c
 ## Turn alerts off
 
 Delete the two lines from `web/.env.local` and restart the server. To stop the bot for good, send `/deletebot` to @BotFather.
+
+## Alerts when the laptop is off (GitHub Action)
+
+`.github/workflows/notify.yml` runs the same check every 15 minutes, 09:30–15:00 Dhaka time, Sunday to Thursday. GitHub may start a run a few minutes late.
+
+1. On GitHub open the repository → **Settings → Secrets and variables → Actions → New repository secret**.
+2. Add four secrets:
+   - `TELEGRAM_BOT_TOKEN` — the bot token (use a new one after `/revoke` if the old one was ever shared).
+   - `TELEGRAM_CHAT_ID` — your chat id.
+   - `GOOGLE_SHEET_ID` — the id from the sheet address.
+   - `GOOGLE_SERVICE_ACCOUNT_JSON` — the whole content of the Google key JSON file.
+3. Open **Actions → Telegram alerts → Run workflow** once. Outside market hours the log says "outside market hours"; that is a pass.
+4. Stop the laptop's own checks so you do not get each alert twice: add `TELEGRAM_SCHEDULE=github` to `web/.env.local` and restart the server (`stop-dse.sh`, then `start-dse.sh`). The **Send test to Telegram** button keeps working.
+
+If GitHub drops the saved "already sent" list (after 7 days with no runs, or a manual cache delete), the next run can repeat one alert per holding that is already at Review or Take profit. It happens once.

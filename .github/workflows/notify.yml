@@ -1,0 +1,46 @@
+name: Telegram alerts
+
+on:
+  schedule:
+    - cron: '*/15 3-8 * * 0-4' # 09:00-14:45 Dhaka, Sunday to Thursday; the script skips minutes outside 09:30-15:00
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: telegram-alerts
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      # The sent-alert list survives between runs in the Actions cache, so each alert goes out once.
+      - uses: actions/cache/restore@v4
+        with:
+          path: web/data/notify-state.json
+          key: notify-state-${{ github.run_id }}
+          restore-keys: notify-state-
+      - run: node scripts/notify-once.ts
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+      - uses: actions/cache/save@v4
+        if: always() && hashFiles('web/data/notify-state.json') != ''
+        with:
+          path: web/data/notify-state.json
+          key: notify-state-${{ github.run_id }}
