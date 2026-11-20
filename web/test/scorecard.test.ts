@@ -92,3 +92,30 @@ test('snapshot is due Sunday to Thursday from 14:45 Dhaka time', () => {
   assert.equal(snapshotDue(at('2026-11-21T10:00:00Z')), false); // Sat
   assert.equal(snapshotDue(at('2026-11-22T09:00:00Z')), true); // Sun 15:00
 });
+
+test('laptop dev reads scorecard days from its own cache and the committed data/ folder, one per date', async () => {
+  const fs = await import('node:fs');
+  const os = await import('node:os');
+  const path = await import('node:path');
+  const { readAll } = await import('../lib/scorecard-store.ts');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'scorecard-'));
+  const day = (date: string, dsex: number) => JSON.stringify({ date, dsex, calls: [] });
+  fs.mkdirSync(path.join(tmp, 'data', 'scorecard'), { recursive: true });
+  fs.mkdirSync(path.join(tmp, '.cache-data', 'scorecard'), { recursive: true });
+  fs.writeFileSync(path.join(tmp, 'data', 'scorecard', '2026-11-19.json'), day('2026-11-19', 5500));
+  fs.writeFileSync(path.join(tmp, 'data', 'scorecard', '2026-11-20.json'), day('2026-11-20', 5600));
+  fs.writeFileSync(path.join(tmp, '.cache-data', 'scorecard', '2026-11-20.json'), day('2026-11-20', 5601));
+  const cwd = process.cwd();
+  const env = process.env.NODE_ENV;
+  try {
+    process.chdir(tmp);
+    (process.env as Record<string, string>).NODE_ENV = 'development';
+    const all = readAll();
+    assert.deepEqual(all.map((s) => [s.date, s.dsex]), [['2026-11-19', 5500], ['2026-11-20', 5601]]);
+  } finally {
+    process.chdir(cwd);
+    if (env === undefined) delete (process.env as Record<string, string | undefined>).NODE_ENV;
+    else (process.env as Record<string, string>).NODE_ENV = env;
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});

@@ -40,6 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 /data/*
+/.cache-data
 # Committed by the daily data Action so the deployed site has company data.
 !/data/companies.json
 !/data/last-session.json

@@ -1,29 +1,33 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { dashboard, listCompanies } from './service.ts';
-import { allCompanies } from './store.ts';
+import { allCompanies, ownDir, SHARED_DIR } from './store.ts';
 import { scorecard, snapshotDue, validSnapshot, type DaySnapshot } from './scorecard.ts';
 
-// shortcut: local JSON files under web/data/scorecard; on Vercel the disk does not persist, so the hosted site moves this to a GitHub Action + Blob.
-const dir = () => path.join(process.cwd(), 'data', 'scorecard');
+// Written to this process's own folder (store.ownDir); read from it and the committed data/scorecard.
+const dir = () => path.join(process.cwd(), ownDir(), 'scorecard');
+const readDirs = () => [...new Set([dir(), path.join(process.cwd(), SHARED_DIR, 'scorecard')])];
 const FILE_RE = /^\d{4}-\d{2}-\d{2}\.json$/;
 const CHECK_EVERY_MS = 10 * 60_000;
 
 export function readAll(): DaySnapshot[] {
-  let names: string[];
-  try { names = fs.readdirSync(dir()).filter((n) => FILE_RE.test(n)); } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') console.warn('scorecard folder unreadable', e);
-    return [];
+  const byDate = new Map<string, DaySnapshot>();
+  for (const folder of readDirs()) {
+    let names: string[];
+    try { names = fs.readdirSync(folder).filter((n) => FILE_RE.test(n)); } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== 'ENOENT') console.warn('scorecard folder unreadable', e);
+      continue;
+    }
+    for (const name of names) {
+      if (byDate.has(name.slice(0, 10))) continue;
+      try {
+        const s = validSnapshot(JSON.parse(fs.readFileSync(path.join(folder, name), 'utf8')));
+        if (s && s.date + '.json' === name) byDate.set(s.date, s);
+        else console.warn(`scorecard file ${name} skipped: not a valid snapshot`, new Error('invalid snapshot'));
+      } catch (e) { console.warn(`scorecard file ${name} skipped`, e); }
+    }
   }
-  const out: DaySnapshot[] = [];
-  for (const name of names) {
-    try {
-      const s = validSnapshot(JSON.parse(fs.readFileSync(path.join(dir(), name), 'utf8')));
-      if (s && s.date + '.json' === name) out.push(s);
-      else console.warn(`scorecard file ${name} skipped: not a valid snapshot`, new Error('invalid snapshot'));
-    } catch (e) { console.warn(`scorecard file ${name} skipped`, e); }
-  }
-  return out.sort((a, b) => a.date.localeCompare(b.date));
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
 function save(s: DaySnapshot): string {
@@ -44,7 +48,7 @@ export async function takeSnapshot(): Promise<{ date: string; taken: boolean; ca
   const snap = validSnapshot({ date: d.showingDate, dsex, calls: [] });
   if (!snap) throw new Error(`no session date or DSEX value to snapshot (date ${d.showingDate}, DSEX ${dsex})`);
   const file = path.join(dir(), snap.date + '.json');
-  if (fs.existsSync(file)) return { date: snap.date, taken: false, calls: readAll().find((s) => s.date === snap.date)?.calls.length ?? 0, file: path.relative(process.cwd(), file) };
+  if (readDirs().some((d) => fs.existsSync(path.join(d, snap.date + '.json')))) return { date: snap.date, taken: false, calls: readAll().find((s) => s.date === snap.date)?.calls.length ?? 0, file: path.relative(process.cwd(), file) };
   const { rows } = await listCompanies();
   const full = validSnapshot({ ...snap, calls: rows.map((r) => ({ code: r.code, signal: r.signal, score: r.score, fraud: r.fraud, price: r.price })) }) as DaySnapshot;
   return { date: full.date, taken: true, calls: full.calls.length, file: path.relative(process.cwd(), save(full)) };
