@@ -8,8 +8,10 @@ import type { Company, DividendStatus } from '../lib/types.ts';
 
 const NOW = new Date('2026-11-19');
 
+// Points 1.5 calendar days apart (about the DSE rate with weekends and holidays), ending on NOW: 260 points span ~13 months.
+const pointDate = (back: number) => new Date(NOW.getTime() - Math.round(back * 1.5) * 86_400_000).toISOString().slice(0, 10);
 function series(days: number, start: number, end: number, volume = 100_000): Array<{ date: string; price: number; volume: number }> {
-  return Array.from({ length: days }, (_, i) => ({ date: `d${i}`, price: start + ((end - start) * i) / (days - 1), volume }));
+  return Array.from({ length: days }, (_, i) => ({ date: pointDate(days - 1 - i), price: start + ((end - start) * i) / (days - 1), volume }));
 }
 
 function company(overrides: Partial<Company> = {}): Company {
@@ -84,9 +86,13 @@ test('missing data never throws and gives no signal', () => {
   assert.ok(['neutral', 'caution', 'avoid'].includes(a.signal));
 });
 
-test('sector median uses only profitable companies', () => {
-  const m = sectorMedians([company({ price: 100 }), company({ code: 'B', price: 50 }), company({ code: 'L', years: [{ year: 2025, eps: -2 }] })]);
-  assert.strictEqual(m.Pharma, 7.5);
+test('sector median uses only profitable companies, and needs 3 of them', () => {
+  const m = sectorMedians([company({ price: 100 }), company({ code: 'B', price: 50 }), company({ code: 'C', price: 120 }), company({ code: 'L', years: [{ year: 2025, eps: -2 }] })]);
+  assert.strictEqual(m.Pharma, 10);
+  const two = sectorMedians([company({ price: 100 }), company({ code: 'B', price: 50 }), company({ code: 'L', years: [{ year: 2025, eps: -2 }] })]);
+  assert.strictEqual(two.Pharma, null);
+  assert.ok(!analyze(company(), two.Pharma, NOW).reasons.some((r) => r.text.includes('sector median')));
+  assert.deepStrictEqual(Object.keys(sectorMedians([company({ sector: '—' }), company({ code: 'B', sector: '' })])), []);
   assert.strictEqual(median([3, 1, 2]), 2);
 });
 
@@ -328,4 +334,148 @@ test('L11: a price series shorter than a year gives no 1-year change and so no 1
   assert.strictEqual(metrics(young, NOW).change1y, null);
   assert.ok(!analyze(young, 15, NOW).fraud.flags.some((f) => f.detail.includes('1 year')));
   assert.notStrictEqual(metrics(company({ years: flat, series: series(260, 140, 409), price: 409 }), NOW).change1y, null);
+});
+
+// --- fresh-eyes fixes (2026-11-21) ---
+import { declaredText, dividendRecord, hasSector } from '../lib/analysis.ts';
+import { dividendStatus, paymentState } from '../lib/announcements.ts';
+import { TREND_KIND, bonusFactor, trendChange } from '../lib/financial-trends.ts';
+
+test('1-year change is last close vs the last close on or before 365 days back, not the oldest stored row', () => {
+  // 260 points 1.5 days apart: the oldest row is ~388 days back; the 1-year base is the row 244 points back.
+  const s = series(260, 100, 200);
+  const base = s.find((p) => p.date <= new Date(NOW.getTime() - 365 * 86_400_000).toISOString().slice(0, 10) && s[s.indexOf(p) + 1].date > new Date(NOW.getTime() - 365 * 86_400_000).toISOString().slice(0, 10))!;
+  const m = metrics(company({ series: s, price: 200 }), NOW);
+  assert.strictEqual(m.change1y, Math.round(((200 - base.price) / base.price) * 1000) / 10);
+  assert.notStrictEqual(m.change1y, 100, 'closes[0] would give +100%');
+});
+
+test('one headline P/E with its EPS basis; DSE P/Es kept with labels (SQURPHARMA)', () => {
+  const c = company({ price: 209.7, yearEnd: 'June', peLatest: { audited: 7.76, unaudited: 5.98 },
+    events: { declarations: [{ announced: '2026-10-27', cashPct: 130, eps: 31.24, periodEnd: '2026-06-30', recordDate: '2026-11-16', agmDate: '2026-12-15' }] } });
+  const m = metrics(c, NOW);
+  assert.strictEqual(round2(m.pe!), 6.71);
+  assert.strictEqual(m.peBasis, 'FY Jun-2026 audited (announced)');
+  assert.strictEqual(m.peEpsYear, 2026);
+  assert.deepStrictEqual(m.peOthers.map((x) => x.value), [7.76, 5.98]);
+  assert.strictEqual(metrics(company({ yearEnd: 'December' }), NOW).peBasis, 'FY Dec-2025 audited');
+  assert.strictEqual(metrics(company({ years: [{ year: 2025, eps: -1, pe: null }] }), NOW).peBasis, null);
+});
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+test('EPS growth uses bonus-adjusted EPS (BATBC 2018 ৳166.87 before two 200% bonus issues)', () => {
+  const years = [[2018, 166.87], [2019, 51.37], [2020, 60.48], [2021, 27.72], [2022, 33.1]].map(([year, eps]) => ({ year, eps, pe: 15, nav: null, profit: null, dividend: null }));
+  const dividends = [{ year: 2018, cash: 500, stock: 200 }, { year: 2019, cash: 400, stock: 0 }, { year: 2020, cash: 600, stock: 200 }, { year: 2021, cash: 275, stock: 0 }, { year: 2022, cash: 200, stock: 0 }];
+  const f = bonusFactor(dividends, 2022);
+  assert.deepStrictEqual([f(2018), f(2019), f(2020), f(2021)], [9, 3, 3, 1]);
+  const m = metrics(company({ years, dividends }), NOW);
+  // 166.87 / 9 = 18.54 → 33.10 over 4 years: +15.6% a year, not −33%.
+  assert.strictEqual(m.epsCagr, 15.6);
+  assert.deepStrictEqual([m.growthFrom, m.growthYears], [2018, 4]);
+  const t = trendSeries(years, dividends, 10);
+  assert.strictEqual(round2(t.eps[0].value), 18.54);
+  assert.strictEqual(Math.round(trendChange(t.eps)!.value * 10) / 10, m.epsCagr, 'the Financials card and the metric agree');
+  assert.ok(analyze(company({ years, dividends }), 15, NOW).history.some((h) => h.includes('15.6% a year over 4 years (since 2018)')));
+});
+
+test('ratios report a plain change, not a CAGR; the kind is exported per card', () => {
+  assert.deepStrictEqual(TREND_KIND, { profit: 'cagr', eps: 'cagr', nav: 'cagr', roe: 'pp', payout: 'pp', pe: 'diff', pb: 'diff' });
+  const roe = [2021, 2022, 2023, 2024, 2025, 2026].map((year, i) => ({ year, value: 10 + i }));
+  assert.deepStrictEqual(trendChange(roe, 'pp'), { kind: 'pp', value: 4, years: 4, from: 2022, to: 2026 });
+  assert.strictEqual(trendChange([{ year: 2025, value: 3 }], 'pp'), null);
+});
+
+test('usual P/E: median of the last 5, skipping P/E over 100 and EPS under 5% of the latest (ROBI)', () => {
+  const years = [[2021, 0.34, 100.5], [2022, 0.35, 86], [2023, 0.61, 48.96], [2024, 1.34, 21.09], [2025, 1.79, 15.76]].map(([year, eps, pe]) => ({ year, eps, pe, nav: null, profit: null, dividend: null }));
+  assert.strictEqual(metrics(company({ years, price: 29.6 }), NOW).avgPastPe, 35);
+  const tiny = [[2021, 0.05, 60], [2022, 2, 10], [2023, 2, 12], [2024, 2, 14], [2025, 2, 11]].map(([year, eps, pe]) => ({ year, eps, pe, nav: null, profit: null, dividend: null }));
+  assert.strictEqual(metrics(company({ years: tiny, price: 22 }), NOW).avgPastPe, 11.5, '0.05 < 5% of 2: skipped');
+});
+
+test('usual P/E is the same in metrics and the price position when a loss year sits in the last 5', () => {
+  const pe: Record<number, number | null> = { 2019: 7, 2020: 8, 2021: 9, 2022: 10, 2023: null, 2024: 11, 2025: 12 };
+  const years = [2019, 2020, 2021, 2022, 2023, 2024, 2025].map((year) => ({ year, eps: year === 2023 ? -1 : 5, pe: pe[year], nav: null, profit: null, dividend: null }));
+  const c = company({ years, price: 50 });
+  const m = metrics(c, NOW);
+  assert.deepStrictEqual([m.avgPastPe, pricePosition(c, m).usualPe], [10.5, 10.5], '2021, 2022, 2024, 2025: 2020 is older than newest − 5');
+});
+
+test('cheap on its own P/E but dear on book value gives one verdict naming both (GP)', () => {
+  const years = [2021, 2022, 2023, 2024, 2025].map((year, i) => ({ year, eps: 26 - i, pe: 14, nav: null, profit: null, dividend: null }));
+  const c = company({ years, price: 220, nav: 40 });
+  const a = analyze(c, 15, NOW);
+  const q = fourQuestions(c, a, pricePosition(c, metrics(c, NOW)), null)[1];
+  assert.ok(/P\/E .* against its usual .*but P\/B 5\.5 is above 5/.test(q.text), q.text);
+  assert.ok(a.history.some((h) => h.includes('cheaper than its own history, but at 5.5× book value')), a.history.join(' | '));
+});
+
+test('a share with no trades in 52 weeks gets no range verdict and no price band (SAVAREFR)', () => {
+  const s = series(260, 215.5, 215.5).map((p) => ({ ...p, volume: 0, trades: 0 }));
+  const years = [2021, 2022, 2023].map((year) => ({ year, eps: -4, pe: null, nav: null, profit: null, dividend: null }));
+  const c = company({ series: s, price: 215.5, years });
+  const m = metrics(c, NOW);
+  assert.deepStrictEqual([m.illiquid, m.lastTradeDate, m.change1y], [true, null, null]);
+  const a = analyze(c, 15, NOW);
+  assert.ok(!a.history.some((h) => h.includes('52-week range') || h.includes('52-week low') || h.includes('52-week high')));
+  assert.strictEqual(fourQuestions(c, a, pricePosition(c, m), null)[1].label, 'No trades in 52 weeks');
+  const two = company({ years: [2024, 2025].map((year) => ({ year, eps: 5, pe: 12, nav: null, profit: null, dividend: null })) });
+  assert.strictEqual(pricePosition(two, metrics(two, NOW)).price, null, 'two year-end prices are not a range');
+  assert.notStrictEqual(pricePosition(company(), metrics(company(), NOW)).price, null);
+});
+
+test('12-month yield counts one final per fiscal year: a late-paid older final is left out with a note (BXPHARMA)', () => {
+  const declarations = [
+    { announced: '2026-10-29', cashPct: 60, recordDate: '2026-11-19', periodEnd: '2026-06-30' },
+    { announced: '2026-06-24', cashPct: 47.5, recordDate: '2026-08-02', periodEnd: '2025-06-30' },
+    { announced: '2024-10-29', cashPct: 40, recordDate: '2024-11-25', periodEnd: '2024-06-30' },
+  ];
+  const y = currentYield(company({ events: { declarations } }), 149.4, new Date('2026-11-21'));
+  assert.deepStrictEqual([y.cash, y.value], [6, 4.02], 'not 10.75 / 7.2%');
+  assert.strictEqual(y.note, 'Left out ৳4.8 FY2025 final: an older or repeated final paid in the same 12 months');
+  assert.strictEqual(metrics(company({ events: { declarations }, price: 149.4 }), new Date('2026-11-21')).yieldNote, y.note);
+  // An interim of the newer fiscal year still counts beside its final.
+  const withInterim = [{ announced: '2026-03-01', cashPct: 20, interim: true, recordDate: '2026-03-20', periodEnd: '2026-06-30' }, ...declarations];
+  assert.strictEqual(currentYield(company({ events: { declarations: withInterim } }), 149.4, new Date('2026-11-21')).cash, 8);
+  const one = currentYield(company({ events: { declarations: [declarations[0]] } }), 149.4, new Date('2026-11-21'));
+  assert.deepStrictEqual([one.cash, one.note], [6, null]);
+  const bonusNewest = [{ announced: '2026-10-29', cashPct: 0, stockPct: 10, recordDate: '2026-11-19', periodEnd: '2026-06-30' }, declarations[1]];
+  assert.strictEqual(currentYield(company({ events: { declarations: bonusNewest } }), 149.4, new Date('2026-11-21')).cash, 4.75, 'a bonus-only newest final does not drop the cash paid');
+});
+
+test('payment state: "no payment notice" after AGM + 45 days; a declared, unpaid dividend is reported (BATBC, SQURPHARMA)', () => {
+  const batbc = { announced: '2026-03-03', cashPct: 30, recordDate: '2026-04-01', agmDate: '2026-04-30', paidOn: null };
+  assert.strictEqual(paymentState(batbc, '2026-11-21'), 'no-notice');
+  assert.strictEqual(paymentState(batbc, '2026-05-20'), 'pending');
+  assert.strictEqual(paymentState({ ...batbc, paidOn: '2026-05-25' }, '2026-11-21'), 'paid');
+  assert.strictEqual(paymentState({ announced: '2023-10-29', noDividend: true, recordDate: '2023-11-21' }, '2026-11-21'), 'none');
+  assert.strictEqual(paymentState({ announced: '2026-03-03', stockPct: 10, recordDate: '2026-04-01' }, '2026-11-21'), 'none', 'bonus shares only: no cash to pay');
+  assert.strictEqual(paymentState({ announced: '2026-03-03', cashPct: 0, stockPct: 10, recordDate: '2026-04-01' }, '2026-05-01'), 'none');
+  const sq = { announced: '2026-10-27', cashPct: 130, recordDate: '2026-11-16', agmDate: '2026-12-15', paidOn: null, periodEnd: '2026-06-30' };
+  const st = dividendStatus({ declarations: [sq] }, new Date('2026-11-21T06:00:00Z'));
+  assert.strictEqual(st.unpaid?.cashPct, 130);
+  assert.strictEqual(declaredText(st.unpaid!, 10), '৳13 a share declared, payment after the 15 Dec 2026 AGM.');
+  const c = company({ events: { declarations: [sq] } });
+  const q = fourQuestions(c, analyze(c, 15, NOW), null, st)[3];
+  assert.ok(q.text.startsWith('৳13 a share declared, payment after the 15 Dec 2026 AGM.'), q.text);
+});
+
+test('one dividend table: newest declared years added, announced total checked against DSE (SQURPHARMA, BATBC)', () => {
+  const c = company({
+    dividends: [{ year: 2025, cash: 120, stock: 0, yieldPct: 5.74 }, { year: 2024, cash: 300, stock: 12.5, yieldPct: 8.16, rights: '1R:2' }],
+    events: { declarations: [
+      { announced: '2026-10-27', cashPct: 130, eps: 31.24, periodEnd: '2026-06-30', recordDate: '2026-11-16' },
+      { announced: '2025-02-06', cashPct: 150, periodEnd: '2024-12-31', recordDate: '2025-02-26' },
+    ] },
+  });
+  const rows = dividendRecord(c, NOW);
+  assert.deepStrictEqual(rows.map((r) => [r.year, r.cashPct, r.declared]), [[2026, 130, true], [2025, 120, false], [2024, 300, false]]);
+  assert.strictEqual(rows[0].cashPerShare, 13);
+  assert.strictEqual(rows[2].stockPct, 12.5, 'bonus keeps its decimals');
+  assert.strictEqual(rows[2].rights, '1R:2');
+  assert.ok(rows[2].note?.includes('150%') && rows[2].note.includes('300%'));
+  assert.strictEqual(rows[1].note, null);
+});
+
+test('an empty or "—" sector is not a sector', () => {
+  assert.deepStrictEqual(['', '—', ' ', null, 'Bank'].map(hasSector), [false, false, false, false, true]);
 });

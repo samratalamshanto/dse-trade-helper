@@ -51,7 +51,8 @@ test('A7/A8 BNIPLC: +224% price on +14.8% EPS is a pump and not worth researchin
   assert.ok(a.fraud.flags.some((f) => f.title === 'Price pump' && f.detail.includes('P/E rose')));
   const check = a.checks.find((x) => x.label === 'Price not stretched')!;
   assert.strictEqual(check.ok, false);
-  assert.ok(check.detail.includes('limit 27'), check.detail);
+  // Usual P/E is the median of the last 5 (14.03), not the mean pulled up by 2021's 42: limit 1.5 × 14 = 21.
+  assert.ok(check.detail.includes('limit 21'), check.detail);
 });
 
 test('A8: a price rise matched by the same EPS rise is not a pump', () => {

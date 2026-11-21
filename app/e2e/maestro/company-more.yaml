@@ -1,0 +1,72 @@
+appId: host.exp.exponent
+name: company-more
+env:
+  BASE: exp://192.168.10.206:8081/--
+---
+- stopApp
+- openLink: ${BASE}/c/BRACBANK
+- extendedWaitUntil:
+    visible: "52-week range"
+    timeout: 90000
+- runFlow: _hide-devtools.yaml
+- scrollUntilVisible:
+    element: "(Today's trading|Last session).*"
+    direction: DOWN
+- assertVisible: "Previous close"
+- takeScreenshot: more-01-last-session
+- scrollUntilVisible:
+    element: "Since 1 Jan"
+    direction: DOWN
+- takeScreenshot: more-02-history-summary
+- scrollUntilVisible:
+    element: "When it rose and fell"
+    direction: DOWN
+    centerElement: true
+- tapOn: "5%"
+- assertVisible: { text: "5%", selected: true }
+- tapOn: "10%"
+- assertVisible: { text: "10%", selected: true }
+- takeScreenshot: more-03-rises-falls
+- scrollUntilVisible:
+    element: "Month by month"
+    direction: DOWN
+- takeScreenshot: more-04-months
+- scrollUntilVisible:
+    element: "Show every day.*"
+    direction: DOWN
+- tapOn: "Show every day.*"
+- assertVisible: "Hide every day"
+- takeScreenshot: more-05-every-day
+- tapOn: "Hide every day"
+- scrollUntilVisible:
+    element: "Quarterly results \\(unaudited\\)"
+    direction: DOWN
+    timeout: 90000
+- takeScreenshot: more-06-quarterly
+- scrollUntilVisible:
+    element: "All yearly figures from DSE"
+    direction: DOWN
+- tapOn: "Show .* yearly figures"
+- takeScreenshot: more-07-yearly
+- scrollUntilVisible:
+    element: "Dividend history \\(DSE\\)"
+    direction: DOWN
+    timeout: 60000
+- takeScreenshot: more-08-dividends
+- scrollUntilVisible:
+    element: "Show all details from DSE"
+    direction: DOWN
+    timeout: 60000
+- tapOn: "Show all details from DSE"
+- scrollUntilVisible:
+    element: "ISIN"
+    direction: DOWN
+- takeScreenshot: more-09-details
+- openLink: ${BASE}/c/SAVAREFR
+- extendedWaitUntil:
+    visible: "52-week range|No trades.*"
+    timeout: 90000
+- scrollUntilVisible:
+    element: "No trades in 52 weeks.*"
+    direction: DOWN
+- takeScreenshot: more-10-illiquid

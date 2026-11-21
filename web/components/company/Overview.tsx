@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import { Line } from 'react-chartjs-2';
-import { ChartBox, useChartColors } from '@/components/charts';
+import { ChartBox, dateTicks, useChartColors } from '@/components/charts';
 import { ShareholdingDonut } from '@/components/company/SafetyOwners';
 import { BuyPlanner } from '@/components/planner/BuyPlanner';
 import { Tr } from '@/components/Tr';
@@ -14,12 +14,22 @@ import type { CompanyDetail } from '@/lib/service';
 type Company = CompanyDetail['company'];
 
 const CRORE = 1e7;
-const RANGES = [['1W', 7], ['1M', 30], ['3M', 91], ['6M', 182], ['1Y', 366]] as const;
+const RANGES = [['1W', 7], ['1M', 30], ['3M', 91], ['6M', 182], ['1Y', 365]] as const;
 type Range = (typeof RANGES)[number][0];
+const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+// Plain-language tooltips shared by the Overview and Company details tabs.
+export const HINTS = {
+  freeFloat: 'Free float: the share of all shares that ordinary investors can trade. Shares held by sponsors and the government are not counted.',
+  freeFloatCap: 'Free-float market cap: price × the shares that are free to trade. It shows how much of the company the market can really buy.',
+  peAudited: 'Audited P/E: price ÷ EPS of the last audited (checked) full year.',
+  peUnaudited: 'P/E from latest results: price ÷ EPS from the newest quarterly results. These are not yet audited, so they can change.',
+};
 const TONE_ICON: Record<string, [IconName, string]> = { good: ['check', 't-good'], warn: ['info', 't-warn'], bad: ['cross', 't-bad'], neutral: ['neutral', 't-neutral'] };
 
 export const crore = (v: number | null | undefined, d = 0) => (v == null || !Number.isFinite(v) ? '—' : '৳' + fmt(v / CRORE, d) + ' cr');
 export const taka = (v: number | null | undefined) => (v == null || !Number.isFinite(v) ? '—' : '৳' + fmt(v));
+// Marker centre stays 9px (its radius) inside the track, so it is never cut off at 0% or 100%.
+export const markerLeft = (pct: number) => `clamp(9px, ${pct}%, calc(100% - 9px))`;
 const peLatest = (c: Company) => (c.peLatest && typeof c.peLatest === 'object' ? c.peLatest as { audited?: number | null; unaudited?: number | null } : null);
 
 // Only a plain domain or an http(s) address becomes a link; anything else is shown as text.
@@ -36,7 +46,7 @@ export function RangeBar52({ c, compact = false }: { c: Company; compact?: boole
   return (
     <div className={compact ? 'range52 compact' : 'range52'}>
       {compact ? <div className="small muted"><Tr text="52-week range" /></div> : null}
-      <div className="range neutral" role="img" aria-label={`52-week low ৳${fmt(lo)}, high ৳${fmt(hi)}, price ৳${fmt(p)}`}><i style={{ left: at + '%' }} /></div>
+      <div className="range neutral" role="img" aria-label={`52-week low ৳${fmt(lo)}, high ৳${fmt(hi)}, price ৳${fmt(p)}`}><i style={{ left: markerLeft(at) }} /></div>
       <div className="range-labels mono"><span>৳{fmt(lo)}</span><span>৳{fmt(hi)}</span></div>
     </div>
   );
@@ -53,13 +63,13 @@ export function HeaderStats({ d }: { d: CompanyDetail }) {
   );
 }
 
-export function Fact({ label, children }: { label: string; children: ReactNode }) {
-  return <div className="fact"><div className="k"><Tr text={label} /></div><div className="v">{children}</div></div>;
+export function Fact({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  return <div className="fact"><div className="k"><Tr text={label} />{hint ? <> <Info text={hint} /></> : null}</div><div className="v">{children}</div></div>;
 }
 
 function KeyFacts({ d }: { d: CompanyDetail }) {
   const c = d.company, m = d.analysis.metrics, pl = peLatest(c), href = websiteHref(c.website);
-  const face = c.faceValue || 10;
+  const face = c.faceValue || 10, det = c.details ?? {};
   const shares = c.paidUpCapital != null ? c.paidUpCapital / face : null;
   return (
     <div className="panel"><h3><Tr text="Key facts" /></h3>
@@ -69,12 +79,14 @@ function KeyFacts({ d }: { d: CompanyDetail }) {
         <Fact label="Listed">{c.listingYear ?? '—'}</Fact>
         <Fact label="NAV per share">{taka(c.nav)}</Fact>
         <Fact label="EPS (last year)">{taka(m.epsNow)}</Fact>
-        <Fact label="P/E (audited)">{fmt(pl?.audited ?? m.pe, 1)}</Fact>
-        <Fact label="P/E (latest results)">{fmt(pl?.unaudited, 1)}</Fact>
+        <Fact label="P/E (audited)" hint={HINTS.peAudited}>{fmt(pl?.audited ?? m.pe, 1)}</Fact>
+        <Fact label="P/E (latest results)" hint={HINTS.peUnaudited}>{fmt(pl?.unaudited, 1)}</Fact>
         <Fact label="12-month cash yield">{m.latestYield != null ? fmt(m.latestYield, 2) + '%' : '—'}</Fact>
         <Fact label="Shares outstanding">{shares != null ? fmt(shares / CRORE, 2) + ' cr' : '—'}</Fact>
         <Fact label="Paid-up capital">{crore(c.paidUpCapital)}</Fact>
         <Fact label="Market cap">{crore(c.marketCap)}</Fact>
+        <Fact label="Free float" hint={HINTS.freeFloat}>{num(det.freeFloat) != null ? fmt(num(det.freeFloat), 2) + '%' : '—'}</Fact>
+        <Fact label="Free-float market cap" hint={HINTS.freeFloatCap}>{crore(num(det.freeFloatMarketCap), 1)}</Fact>
         <Fact label="Website">{href ? <a href={href} target="_blank" rel="noopener noreferrer">{c.website} ↗</a> : (c.website || '—')}</Fact>
       </div>
     </div>
@@ -86,7 +98,7 @@ function PriceChart({ c }: { c: Company }) {
   const { t } = useLang();
   const [range, setRange] = useState<Range>(() => (typeof window !== 'undefined' && matchMedia('(max-width: 640px)').matches ? '1M' : '1Y'));
   if (!c.series.length) return <p className="muted"><Tr text="No price history from DSE yet." /></p>;
-  const days = RANGES.find(([k]) => k === range)?.[1] ?? 366;
+  const days = RANGES.find(([k]) => k === range)?.[1] ?? 365;
   const from = new Date(Date.parse(c.series.at(-1)!.date + 'T00:00:00Z') - days * 86_400_000).toISOString().slice(0, 10);
   const pts = c.series.filter((x) => x.date >= from);
   const first = pts[0]?.price, last = pts.at(-1)?.price;
@@ -104,19 +116,20 @@ function PriceChart({ c }: { c: Company }) {
       {colors ? (
         <ChartBox label={`Daily closing price, ${range}`}>
           <Line data={{ labels: pts.map((x) => x.date), datasets: [{ label: 'Close', data: pts.map((x) => x.price), borderColor: line, backgroundColor: line + '22', fill: true, pointRadius: 0, pointHoverRadius: 5, pointHoverBackgroundColor: line, borderWidth: 2, tension: 0.2 }] }}
-            options={{ maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { displayColors: false, callbacks: { label: (ctx) => 'Close ৳' + fmt(ctx.parsed.y) } } }, scales: { x: { ticks: { maxTicksLimit: 6 } } } }} />
+            options={{ maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { displayColors: false, callbacks: { label: (ctx) => 'Close ৳' + fmt(ctx.parsed.y) } } }, scales: { x: { ticks: dateTicks } } }} />
         </ChartBox>) : null}
     </>
   );
 }
 
 function TodayPanel({ d }: { d: CompanyDetail }) {
-  const x = d.today;
+  const x = d.today as (CompanyDetail['today'] & { sessionDate?: string | null }) | null;
   if (!x) return null;
+  const day = x.sessionDate ? new Date(x.sessionDate + 'T00:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }) : null;
   const change = x.close != null && x.prevClose != null ? x.close - x.prevClose : null;
   const pct = change != null && x.prevClose ? (change / x.prevClose) * 100 : null;
   return (
-    <div className="panel"><h3><Tr text="Today's trading" /> <span className="small muted">{x.live ? <Tr text="live" /> : <Tr text="saved copy from last session" />}</span></h3>
+    <div className="panel"><h3>{x.live ? <><Tr text="Today's trading" /> · <Tr text="live" /></> : <><Tr text="Last session" />{day ? ' · ' + day : ''}</>}</h3>
       <div className="facts">
         <Fact label="Open">{taka(x.open)}</Fact>
         <Fact label="High">{taka(x.high)}</Fact>
@@ -125,7 +138,7 @@ function TodayPanel({ d }: { d: CompanyDetail }) {
         <Fact label="Previous close">{taka(x.prevClose)}</Fact>
         <Fact label="Change"><span className={tone(change)}>{change != null ? `${change >= 0 ? '+' : '−'}৳${fmt(Math.abs(change))} (${signed(pct, 2)})` : '—'}</span></Fact>
         <Fact label="Volume (shares)">{fmt(x.volume, 0)}</Fact>
-        <Fact label="Value">{x.valueMn != null ? '৳' + fmt(x.valueMn) + ' mn' : '—'}</Fact>
+        <Fact label="Value traded">{x.valueMn != null ? crore(x.valueMn * 1e6, 2) : '—'}</Fact>
         <Fact label="Trades">{fmt(x.trades, 0)}</Fact>
       </div>
     </div>
@@ -142,7 +155,7 @@ export function Overview({ d }: { d: CompanyDetail }) {
       <div className="grid g4" style={{ marginTop: 14 }}>
         <Metric label="P/E" value={fmt(m.pe, 1)} hint="Price ÷ yearly profit per share. Lower can mean cheaper." />
         <Metric label="Sector P/E" value={fmt(d.sectorPe, 1)} hint="Median P/E of profitable companies in the same sector." />
-        <Metric label="12-month cash yield" value={m.latestYield != null ? fmt(m.latestYield, 2) + '%' : '—'} hint={"Cash dividends of the last 12 months ÷ today's price. " + (m.yieldBasis || 'No cash dividend in the last 12 months.')} />
+        <Metric label="12-month cash yield" value={m.latestYield != null ? fmt(m.latestYield, 2) + '%' : '—'} hint={"Cash dividends of the last 12 months ÷ today's price. " + (m.yieldBasis || 'No cash dividend in the last 12 months.') + (m.yieldNote ? ' ' + m.yieldNote + '.' : '')} />
         <Metric label="Traded a day" value={moneyPerDay(m.avgDailyValue)} hint="Average value traded per day, last 20 days. Higher = easier to sell." />
       </div>
       <div className="panel" style={{ marginTop: 14 }}><h3><Tr text="Price" /> <Info text="Tap or hover the line to see the price on each day." /></h3><PriceChart c={c} /></div>

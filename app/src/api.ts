@@ -1,6 +1,7 @@
-import type { PriceHistory } from '../../web/lib/price-history.ts';
+import type { MonthRow, PriceHistory, Swing } from '../../web/lib/price-history.ts';
 import type { TodayTrading } from '../../web/lib/service.ts';
 import type { Analysis, Dividend, InterimFinancials, PeTrendPoint, Question, SeriesPoint, SharePattern, YearRow } from '../../web/lib/types.ts';
+import type { ExDate } from './details.ts';
 
 export const FETCH_TIMEOUT_MS = 20_000;
 
@@ -84,6 +85,20 @@ export interface DashboardResponse {
 
 export interface DividendsResponse { today: string; upcoming: DividendSoon[] }
 
+// Newer company-API fields are optional, so an older server still renders.
+export type PriceHistoryView = Omit<PriceHistory, 'months'> & {
+  months: (MonthRow & { partial?: boolean })[];
+  exDates?: ExDate[];
+  sinceJan?: number | null;
+  swingsSmall?: Swing[];
+  noTradeDays?: number | null;
+  illiquid?: boolean;
+  lastTradeDate?: string | null;
+};
+export type TodayView = TodayTrading & { sessionDate?: string | null };
+// paid: false = declared but not paid yet.
+export type DividendView = Dividend & { paid?: boolean | null };
+
 export interface CompanyResponse {
   company: {
     code: string;
@@ -109,7 +124,7 @@ export interface CompanyResponse {
     agmDate?: string | null;
     operationalStatus?: string | null;
     loanStatus?: { shortTerm?: number | null; longTerm?: number | null } | null;
-    dividends?: Dividend[];
+    dividends?: DividendView[];
     interim?: InterimFinancials | null;
     peTrend?: PeTrendPoint[];
     details?: Record<string, unknown>;
@@ -119,6 +134,7 @@ export interface CompanyResponse {
   sectorPe: number | null;
   session: Session | null;
   position: { verdict: { label: string; tone: string; text: string } | null } | null;
-  today?: TodayTrading | null;
-  priceHistory?: PriceHistory | null;
+  today?: TodayView | null;
+  priceHistory?: PriceHistoryView | null;
+  dividendRecord?: { year: number; cashPct: number | null; stockPct: number | null; rights: string | null; yieldPct: number | null; declared?: boolean }[];
 }

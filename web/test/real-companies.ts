@@ -34,7 +34,7 @@ function realSeries([first, m3, m1, last, volume]: [number, number, number, numb
   return Array.from({ length: n }, (_, i) => {
     const k = at.findIndex((a, j) => i >= a && i <= at[j + 1]);
     const price = px[k] + ((px[k + 1] - px[k]) * (i - at[k])) / (at[k + 1] - at[k]);
-    return { date: `d${i}`, price: Math.round(price * 100) / 100, volume };
+    return { date: new Date(Date.UTC(2026, 10, 19) - Math.round((n - 1 - i) * 1.5) * 86_400_000).toISOString().slice(0, 10), price: Math.round(price * 100) / 100, volume };
   });
 }
 

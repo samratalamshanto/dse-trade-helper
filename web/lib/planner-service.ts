@@ -46,7 +46,7 @@ export async function buyPlanFor(code: string, params: URLSearchParams, withHold
     code, quantity, price, series: d.company.series ?? [], weekLow52: d.company.weekLow52 ?? null, weekHigh52: d.company.weekHigh52 ?? null,
     signal: d.analysis.signal, fraud: d.analysis.fraud.level, zone: d.position.zone, faceValue: d.company.faceValue ?? null,
     dividend: up ? { lastBuyDate: up.lastBuyDate ?? null, cashPct: up.cashPct ?? null } : null, agmDate: up?.agmDate ?? null,
-    avgDailyValue: d.analysis.metrics.avgDailyValue, holding, today: dhakaToday(),
+    avgDailyValue: d.analysis.metrics.avgDailyValue, holding, today: dhakaToday(), illiquid: d.analysis.metrics.illiquid,
   });
 }
 

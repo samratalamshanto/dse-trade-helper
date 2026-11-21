@@ -145,10 +145,14 @@ export interface Reason {
 export interface Metrics {
   announcedEps: { year: number; eps: number; pe: null; announced: string } | null;
   growthFrom: number | null;
+  // Span in years of epsCagr (bonus-adjusted EPS, last 5 yearly results).
+  growthYears: number | null;
   interim: { value: number; label: string; period: string | null } | null;
   interimLoss: boolean;
   latestYield: number | null;
   yieldBasis: string;
+  // Set when a late-paid older (or repeated) final was left out of the 12-month yield.
+  yieldNote: string | null;
   reportedYear: number | null;
   changeToday: number | null;
   epsNow: number | null;
@@ -159,6 +163,10 @@ export interface Metrics {
   epsFellTwice: boolean;
   epsCagr: number | null;
   pe: number | null;
+  // The EPS behind the headline P/E, e.g. 'FY Jun-2026 audited (announced)'; peOthers are DSE's own P/Es, labelled.
+  peBasis: string | null;
+  peEpsYear: number | null;
+  peOthers: Array<{ label: string; value: number }>;
   pb: number | null;
   avgPastPe: number | null;
   change1m: number | null;
@@ -173,6 +181,9 @@ export interface Metrics {
   dividendYears: number;
   latestYear: number | null;
   priceNow: number | null;
+  // No trade in the 365-day window; lastTradeDate is the newest day with a trade in the stored series.
+  illiquid: boolean;
+  lastTradeDate: string | null;
 }
 
 export interface Analysis {
@@ -245,6 +256,22 @@ export interface DividendStatus {
   regular: boolean;
   today: string;
   skippedLast: boolean;
+  // Newest dividend whose record date has passed with no payment notice yet, until AGM + 45 days.
+  unpaid: Declaration | null;
+}
+
+export interface DividendRecordRow {
+  year: number;
+  cashPct: number | null;
+  cashPerShare: number | null;
+  stockPct: number | null;
+  rights: string | null;
+  payout: number | null;
+  yieldPct: number | null;
+  // A year DSE's yearly record does not list yet, taken from the board's declaration.
+  declared: boolean;
+  announcedCashPct: number | null;
+  note: string | null;
 }
 
 export interface Question {

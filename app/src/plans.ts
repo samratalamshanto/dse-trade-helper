@@ -89,7 +89,8 @@ export function dividendLine(p: BuyPlan): string | null {
 export function afterBuyLine(p: BuyPlan): string | null {
   const a = p.afterBuy;
   if (!a) return null;
-  return `After this buy: ${a.shares} shares at an average of ${taka(a.avgCost)}${a.weightPct != null ? `, ${a.weightPct.toFixed(0)}% of your holdings` : ''}.`;
+  const fills = p.later > 0 && p.alertPrice != null ? ', if the alert price fills' : '';
+  return `After this buy${fills}: ${a.shares} shares at an average of ${taka(a.avgCost)}${a.weightPct != null ? `, ${a.weightPct.toFixed(0)}% of your holdings` : ''}.`;
 }
 
 export const TREND_TONE: Record<NonNullable<BuyPlan['trend']>, CheckTone> = { rising: 'good', falling: 'bad', sideways: 'neutral' };

@@ -6,7 +6,7 @@ test.describe('/c/GP full DSE data', () => {
   const tab = (page: import('@playwright/test').Page, n: string) => page.getByRole('tab', { name: n });
 
   test("overview shows today's open, high, low, volume and trades", async ({ page }) => {
-    const panel = page.locator('.panel', { has: page.getByRole('heading', { name: /Today's trading/ }) });
+    const panel = page.locator('.panel', { has: page.getByRole('heading', { name: /Today's trading|Last session/ }) });
     await expect(panel).toBeVisible();
     for (const k of ['Open', 'High', 'Low', 'Volume (shares)', 'Trades']) await expect(panel.getByText(k, { exact: true })).toBeVisible();
     await expect(panel).toContainText(/৳\s?\d/);
@@ -19,9 +19,13 @@ test.describe('/c/GP full DSE data', () => {
       await expect(page.getByRole('heading', { name: h })).toBeVisible();
     }
     await expect(page.getByRole('img').filter({ has: page.locator('canvas') }).or(page.locator('canvas[aria-label]')).first()).toBeVisible();
-    const days = page.locator('details', { has: page.getByText(/Every trading day/) });
+    const days = page.locator('details', { has: page.getByText(/every trading day/) });
+    await expect(days.locator('summary')).toHaveText(/^Show every trading day/);
     await days.locator('summary').click();
+    await expect(days.locator('summary')).toHaveText(/^Hide every trading day/);
     expect(await days.locator('tbody tr').count()).toBeGreaterThan(200);
+    // Close and Change come right after Date, so they are on screen on a phone.
+    await expect(days.locator('thead th')).toHaveText(['Date', 'Close', 'Change', 'Open', 'High', 'Low', 'Volume', 'Trades'], { ignoreCase: true });
   });
 
   test('company details tab shows ISIN, free float and other DSE fields', async ({ page }) => {
@@ -29,16 +33,32 @@ test.describe('/c/GP full DSE data', () => {
     await expect(page.getByText('BD0001GP0004')).toBeVisible();
     await expect(page.getByText(/Free float/i).first()).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Company secretary' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Other fields from DSE' })).toBeVisible();
-    for (const a of await page.getByRole('tabpanel').locator('a[href]').all()) expect(await a.getAttribute('href')).toMatch(/^https?:\/\//);
+    await expect(page.getByRole('heading', { name: 'Contact' })).toBeVisible();
+    await expect(page.getByText(/Advanced: raw DSE fields/)).toBeVisible();
+    await expect(page.getByText('prevClose')).toBeHidden();
+    const links = await page.getByRole('tabpanel').locator('a[href]').all();
+    expect(links.length).toBeGreaterThan(0);
+    for (const a of links) expect(await a.getAttribute('href')).toMatch(/^(https?:\/\/\S+|tel:\+?\d{5,}|mailto:[\w.+-]+@[\w-]+(\.[\w-]+)+)$/);
+  });
+
+  test('company details: phone and email are tappable', async ({ page }) => {
+    await tab(page, 'Company details').click();
+    const panel = page.getByRole('tabpanel');
+    await expect(panel.locator('a[href^="tel:"]').first()).toBeVisible();
+    await expect(panel.locator('a[href^="mailto:"]').first()).toBeVisible();
   });
 
   test('financials, dividends and valuation show the extra DSE tables', async ({ page }) => {
     await tab(page, '5-year financials').click();
-    await expect(page.getByRole('heading', { name: 'All yearly figures from DSE' })).toBeVisible();
+    const all = page.locator('details', { has: page.getByText('All yearly figures from DSE (advanced)') });
+    await all.locator('summary').click();
+    const fields = await all.locator('tbody tr td:first-child').allTextContents();
+    expect(new Set(fields).size).toBe(fields.length);
+    const yearsHead = (await all.locator('thead th').allTextContents()).slice(1).map(Number);
+    expect(yearsHead[0]).toBe(Math.max(...yearsHead));
     await expect(page.getByRole('heading', { name: /All quarterly figures from DSE/ })).toBeVisible();
     await tab(page, 'Dividends').click();
-    await expect(page.getByRole('heading', { name: 'DSE dividend history' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Dividend record by year' })).toBeVisible();
     await expect(page.locator('th', { hasText: 'Rights' }).first()).toBeVisible();
     await tab(page, 'Cheap or expensive').click();
     await expect(page.getByRole('heading', { name: 'P/E over the last 30 trading days' })).toBeVisible();

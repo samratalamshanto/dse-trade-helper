@@ -9,8 +9,10 @@ env:
     visible: "DSEX index"
     timeout: 90000
 - assertVisible: "Market (open|closed)|● Market open"
-- assertVisible: ".*companies checked"
 - takeScreenshot: home-01-market
+- scrollUntilVisible:
+    element: ".*companies checked"
+    direction: DOWN
 # Movers: switch gainers -> losers -> gainers
 - scrollUntilVisible:
     element: "Top losers"
@@ -54,7 +56,8 @@ env:
     visible: "Search companies"
     timeout: 15000
 - tapOn: ".*Home"
-- extendedWaitUntil:
-    visible: "DSEX index"
-    timeout: 15000
+- scrollUntilVisible:
+    element: "DSEX index"
+    direction: UP
+    timeout: 30000
 - takeScreenshot: home-04-tabs-back-home

@@ -1,7 +1,8 @@
 'use client';
 
 import { Line } from 'react-chartjs-2';
-import { ChartBox, useChartColors } from '@/components/charts';
+import { ChartBox, dateTicks, useChartColors } from '@/components/charts';
+import { markerLeft } from '@/components/company/Overview';
 import { fmt, signed, tone } from '@/components/format';
 import { Tr } from '@/components/Tr';
 import type { CompanyDetail } from '@/lib/service';
@@ -15,7 +16,7 @@ function RangeBar({ title, band, unit, hint }: { title: string; band: Band; unit
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}><b>{title}</b><span className="mono">{unit(band.now)}</span></div>
-      <div className="range" role="img" aria-label={`${title}: ${pos}% of the way from low to high`}><i style={{ left: `${pos}%` }} /></div>
+      <div className="range" role="img" aria-label={`${title}: ${pos}% of the way from low to high`}><i style={{ left: markerLeft(pos) }} /></div>
       <div className="range-labels mono"><span>Low {unit(band.low)}</span><span>Avg {unit(band.avg)}</span><span>High {unit(band.high)}</span></div>
       <p className="why">{hint}</p>
     </div>
@@ -34,7 +35,7 @@ function PeTrend({ points }: { points: NonNullable<CompanyDetail['company']['peT
           <Line data={{ labels: points.map((x) => x.date), datasets: [
             { label: 'P/E (audited)', data: points.map((x) => x.audited ?? null), borderColor: colors['--accent'], pointRadius: 0, pointHoverRadius: 5, borderWidth: 2, tension: 0.2 },
             { label: 'P/E (latest results)', data: points.map((x) => x.unaudited ?? null), borderColor: colors['--warn'], borderDash: [5, 4], pointRadius: 0, pointHoverRadius: 5, borderWidth: 2, tension: 0.2 },
-          ] }} options={{ maintainAspectRatio: false, plugins: { tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label} ${fmt(ctx.parsed.y, 2)}` } } }, scales: { x: { ticks: { maxTicksLimit: 6 } } } }} />
+          ] }} options={{ maintainAspectRatio: false, plugins: { tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label} ${fmt(ctx.parsed.y, 2)}` } } }, scales: { x: { ticks: dateTicks } } }} />
         </ChartBox>) : null}
       <p className="why"><Tr text="Audited = price ÷ EPS of the last audited year. Latest results = price ÷ EPS from the latest unaudited quarters. Source: DSE." /></p>
     </div>

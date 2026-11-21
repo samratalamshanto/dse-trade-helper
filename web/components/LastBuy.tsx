@@ -1,5 +1,6 @@
 import { dhakaToday, fmtDate } from '@/components/format';
 import { Tr } from '@/components/Tr';
+import { Info } from '@/components/ui';
 import { tradingDaysBetween } from '@/lib/dhaka';
 
 type BuyDates = { lastBuyDate?: string | null; lastBuyEstimated?: boolean };
@@ -22,7 +23,7 @@ export function LastBuy({ r }: { r: BuyDates }) {
     <>
       <span className={`mono${late ? ' muted' : ''}`}>{fmtDate(r.lastBuyDate)}</span>
       {r.lastBuyEstimated ? <> <span className="small muted" title="DSE has not posted its spot-market notice yet. This is the trading day before the record date."><Tr text="est." /></span></> : null}
-      {late ? <> <span className="pill s-neutral"><Tr text="too late" /></span></> : <> <DaysLeft r={r} /></>}
+      {late ? <> <span className="pill s-neutral"><Tr text="too late" /></span> <Info text="Too late: the last day to buy has passed, so buying now does not get this dividend." /></> : <> <DaysLeft r={r} /></>}
     </>
   );
 }

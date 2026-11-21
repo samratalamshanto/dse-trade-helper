@@ -15,7 +15,7 @@ fs.mkdirSync(path.join(dir, 'data'));
 const stored = (code: 'GP' | 'HWAWELLTEX', extra: object = {}) => ({ ...real(code), version: 3, fetchedAt: Date.now(), ...extra });
 const copies = Object.fromEntries(Array.from({ length: 25 }, (_, i) => [`GP${i}`, { ...stored('GP'), code: `GP${i}` }]));
 fs.writeFileSync(path.join(dir, 'data', 'companies.json'), JSON.stringify({
-  HWAWELLTEX: stored('HWAWELLTEX'), GP: stored('GP', { loanStatus: { shortTerm: 7000, longTerm: '$undefined' } }), ...copies,
+  HWAWELLTEX: stored('HWAWELLTEX', { sector: '—' }), GP: stored('GP', { loanStatus: { shortTerm: 7000, longTerm: '$undefined' } }), ...copies,
 }));
 process.chdir(dir);
 
@@ -71,6 +71,11 @@ test('A17/A16/A19: the list row and the company page agree for the same stored c
   const d = await companyDetail('HWAWELLTEX', false);
   assert.deepStrictEqual([d.analysis.signal, d.analysis.score, d.company.pe, d.company.dividendYield], [row.signal, row.score, row.pe, row.dividendYield]);
   assert.strictEqual(row.stale, true);
+  // The stored page had no sector ("—"); both take it from the live snapshot row.
+  assert.deepStrictEqual([row.sector, d.company.sector], ['Textile', 'Textile']);
+  // The snapshot still carries Thursday's ltp, but the market is closed: not live, and the session date says which day.
+  assert.deepStrictEqual([d.today?.live, d.today?.sessionDate], [false, '2026-11-19']);
+  assert.ok(Array.isArray(d.priceHistory?.exDates) && Array.isArray(d.dividendRecord));
   const gp = await companyDetail('GP', false);
   assert.deepStrictEqual(gp.company.loanStatus, { shortTerm: 7000, longTerm: null });
 });

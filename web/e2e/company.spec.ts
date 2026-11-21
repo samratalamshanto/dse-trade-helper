@@ -8,7 +8,8 @@ test.describe('/c/GP', () => {
     await expect(page.getByRole('img', { name: /52-week low ৳.*high ৳.*price ৳/ }).first()).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Key facts' })).toBeVisible();
     await expect(page.getByText('NAV per share').first()).toBeVisible();
-    await expect(page.getByLabel('Overview').getByText('Market cap')).toBeVisible();
+    await expect(page.getByLabel('Overview').getByText('Market cap', { exact: true })).toBeVisible();
+    await expect(page.getByLabel('Overview').getByText(/^Free float/)).toBeVisible();
   });
 
   test('price range buttons switch', async ({ page }) => {
@@ -39,6 +40,30 @@ test.describe('/c/GP', () => {
     await expect(page.locator('.trend-grid .kpi')).toHaveCount(7);
     await expect(page.locator('.trend-grid').getByText(/^Net profit/)).toBeVisible();
     await expect(page.locator('.trend-grid').getByText(/^Return on equity \(ROE\)/)).toBeVisible();
+  });
+
+  test('tab strip: one row, scrolls, active tab stays visible', async ({ page }) => {
+    const strip = page.getByRole('tablist', { name: 'Company details' });
+    const box = await strip.boundingBox();
+    expect(box!.height).toBeLessThan(70);
+    const last = page.getByRole('tab', { name: 'Company details' });
+    await last.click();
+    await expect(last).toHaveAttribute('aria-selected', 'true');
+    await expect(last).toBeInViewport();
+    const s = await strip.evaluate((el) => ({ w: el.scrollWidth, c: el.clientWidth, left: el.scrollLeft }));
+    if (s.w > s.c) expect(s.left).toBeGreaterThan(0);
+    await last.press('Home');
+    await expect(page.getByRole('tab', { name: 'Overview' })).toBeFocused();
+    await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  test('no horizontal page overflow on any tab', async ({ page }) => {
+    for (const t of await page.getByRole('tab').all()) {
+      await t.click();
+      await expect(t).toHaveAttribute('aria-selected', 'true');
+      const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(over, `overflow on tab ${await t.textContent()}`).toBeLessThanOrEqual(0);
+    }
   });
 
   // Chrome logs the 404 document itself as a console error; that is the expected outcome here.

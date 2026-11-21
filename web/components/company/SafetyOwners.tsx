@@ -28,7 +28,8 @@ export function Safety({ a }: { a: CompanyDetail['analysis'] }) {
 
 const GROUPS = [['sponsor', 'Sponsors'], ['institution', 'Institutions'], ['foreign', 'Foreign'], ['government', 'Government'], ['public', 'Public']] as const;
 const GROUP_COLORS: (keyof Colors)[] = ['--accent', '--up', '--warn', '--muted', '--down'];
-const loanText = (v: number | null | undefined) => (v == null ? 'none reported' : '৳' + fmt(v, 1) + ' mn');
+// DSE reports loans in ৳ mn; shown in crore (÷10) like every other amount on the page.
+const loanText = (v: number | null | undefined) => (v == null ? 'none reported' : '৳' + fmt(v / 10, 2) + ' cr');
 
 // Latest shareholding split; shared by the Overview and Owners tabs.
 export function ShareholdingDonut({ sp, height = 240 }: { sp: SharePattern | undefined; height?: number }) {
@@ -36,8 +37,8 @@ export function ShareholdingDonut({ sp, height = 240 }: { sp: SharePattern | und
   if (!colors || !sp) return null;
   return (
     <ChartBox height={height} label={'Shareholding: ' + GROUPS.map(([k, l]) => `${l} ${fmt(sp[k] as number | null, 1)}%`).join(', ')}>
-      <Doughnut data={{ labels: GROUPS.map(([, l]) => l), datasets: [{ data: GROUPS.map(([k]) => (sp[k] as number | null) || 0), backgroundColor: GROUP_COLORS.map((k) => colors[k]), borderColor: colors['--panel'], borderWidth: 2 }] }}
-        options={{ maintainAspectRatio: false, cutout: '58%', interaction: { mode: 'nearest', intersect: true }, plugins: { legend: { position: 'right' }, tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${fmt(ctx.parsed, 1)}%` } } } }} />
+      <Doughnut data={{ labels: GROUPS.map(([k, l]) => `${l} ${fmt(sp[k] as number | null, 1)}%`), datasets: [{ data: GROUPS.map(([k]) => (sp[k] as number | null) || 0), backgroundColor: GROUP_COLORS.map((k) => colors[k]), borderColor: colors['--panel'], borderWidth: 2 }] }}
+        options={{ maintainAspectRatio: false, cutout: '58%', interaction: { mode: 'nearest', intersect: true }, plugins: { legend: { position: 'right' }, tooltip: { callbacks: { label: (ctx) => ctx.label } } } }} />
     </ChartBox>
   );
 }
@@ -58,7 +59,7 @@ export function Owners({ c }: { c: CompanyDetail['company'] }) {
             <ChartBox label="Sponsor holding by report date">
               <Line data={{ labels: c.sharePattern.map((x) => (x.date || '').replace(' (year ended)', '')), datasets: [{ label: 'Sponsors', data: c.sharePattern.map((x) => x.sponsor), borderColor: colors['--accent'], backgroundColor: colors['--accent'], pointRadius: 4, tension: 0 }] }}
                 options={{ maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { displayColors: false, callbacks: { label: (ctx) => 'Sponsors ' + fmt(ctx.parsed.y, 2) + '%' } } },
-                  scales: { y: { suggestedMin: Math.max(0, Math.min(...sponsors) - 5), suggestedMax: Math.min(100, Math.max(...sponsors) + 5), ticks: { callback: (v) => v + '%' } } } }} />
+                  scales: { y: { min: 0, max: 100, ticks: { callback: (v) => v + '%' } } } }} />
             </ChartBox>) : null}
           <p className="why">A falling line means the owners are selling.</p></div>
       </div>

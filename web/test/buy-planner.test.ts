@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { afterBuying, moveFrequency, planBuy, position52, sma, todaysPicks, toTick, trendOf, type PlannerInput } from '../lib/buy-planner.ts';
+import { afterBuying, BROKER_COMMISSION_PCT, moveFrequency, planBuy, position52, sma, todaysPicks, toTick, trendOf, type PlannerInput } from '../lib/buy-planner.ts';
 
 const day = (i: number) => new Date(Date.UTC(2026, 0, 1) + i * 86_400_000).toISOString().slice(0, 10);
 const series = (prices: number[]) => prices.map((price, i) => ({ date: day(i), price }));
@@ -75,8 +75,11 @@ test('when a dip was more common than a rise it splits half now, half on an aler
 
 test('after-buy average and concentration use your holding', () => {
   assert.deepEqual(afterBuying({ shares: 10, avgCost: 120, portfolioValue: 1000 }, 10, 100), { shares: 20, avgCost: 110, weightPct: 100 });
+  // A mid-range split: 5 now at ৳100, 5 later at the ৳98 alert, so the new shares average ৳99 and the holding ৳109.50.
   const p = plan({ holding: { shares: 10, avgCost: 120, portfolioValue: 1200 } });
-  assert.equal(p.afterBuy?.avgCost, 110);
+  assert.equal(p.action, 'split');
+  assert.equal(p.avgPrice, 99);
+  assert.equal(p.afterBuy?.avgCost, 109.5);
   assert.ok(p.warnings.some((w) => /concentrated/.test(w)));
 });
 
@@ -98,4 +101,25 @@ test("today's picks: worth researching, clean, low in range, not sliding, afford
   const out = todaysPicks(rows, 99);
   assert.deepEqual(out.map((p) => [p.code, p.shares]), [['DEAR', 1]]);
   assert.deepEqual(todaysPicks(rows, null).map((p) => p.code), ['DEAR', 'LOW']);
+});
+
+test('with no holdings known the plan shows no share of holdings, and other holdings dilute the weight', () => {
+  assert.equal(plan({}).afterBuy?.weightPct, null);
+  assert.equal(afterBuying(null, 10, 100)?.weightPct, null);
+  // ৳9,000 of other shares + ৳1,000 of this one: 10%, never 100%.
+  assert.equal(afterBuying({ shares: 0, avgCost: 0, portfolioValue: 9000 }, 10, 100)?.weightPct, 10);
+});
+
+test('the plan adds the assumed broker commission on every planned lot', () => {
+  const p = plan({ quantity: 1 });
+  assert.equal(p.commissionPct, BROKER_COMMISSION_PCT);
+  assert.equal(p.commission, 0.4);
+  assert.equal(p.totalWithCommission, 100.4);
+});
+
+test('a share with no trades in 52 weeks is never a buy', () => {
+  const p = plan({ illiquid: true });
+  assert.equal(p.action, 'avoid');
+  assert.equal(p.buyNow, 0);
+  assert.ok(p.warnings.some((w) => /No trades in the last 52 weeks/.test(w)));
 });

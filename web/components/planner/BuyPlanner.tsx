@@ -54,7 +54,9 @@ function Result({ p, bar }: { p: BuyPlan; bar: ReactNode }) {
         </div>
       </div>
       {p.dividend ? <p className="small">{t('Dividend')}: {t('own it at the end of')} {p.dividend.lastBuyDate} ({p.dividend.tradingDaysLeft} {t('trading days left')}){p.dividend.cashPerShare != null ? ` · ৳${fmt(p.dividend.cashPerShare)} ${t('a share')}` : ''}.</p> : null}
-      {p.afterBuy ? <p className="small">{t('After this buy')}: {p.afterBuy.shares} {t('shares at an average')} ৳{fmt(p.afterBuy.avgCost)}{p.afterBuy.weightPct != null ? ` · ${fmt(p.afterBuy.weightPct, 0)}% ${t('of your holdings')}` : ''}.</p> : null}
+      <p className="small">{t('Planned cost')}: <span className="mono">৳{fmt(p.totalWithCommission)}</span> = {p.quantity} {t('shares at an average')} ৳{fmt(p.avgPrice)} + ৳{fmt(p.commission)} {t('broker commission')}
+        <Info text={`Commission is an estimate at ${p.commissionPct}% of the trade value (brokers charge about 0.3–0.5%, levies included). Ask your broker for the exact rate.`} /></p>
+      {p.afterBuy ? <p className="small">{t(p.later > 0 && p.alertPrice != null ? 'After this buy, if the alert price fills' : 'After this buy')}: {p.afterBuy.shares} {t('shares at an average')} ৳{fmt(p.afterBuy.avgCost)}{p.afterBuy.weightPct != null ? ` · ${fmt(p.afterBuy.weightPct, 0)}% ${t('of your holdings')}` : ` · ${t('enter your trades key to see its share of your holdings')}`}.</p> : null}
       <p className="why">{t('Rules on past prices: what happened before, never a forecast. Learning aid, not investment advice.')}</p>
     </div>
   );

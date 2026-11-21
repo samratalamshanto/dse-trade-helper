@@ -298,12 +298,13 @@ const TREND_UNIT: Record<TrendKey, (v: number) => string> = {
 function FinancialTrends({ c }: { c: CompanyData }) {
   const { colors, s } = useTheme();
   const { width } = useWindowDimensions();
-  const trends = financialTrends(c.years ?? [], c.faceValue);
+  const trends = financialTrends(c.years ?? [], c.faceValue, Array.isArray(c.dividends) ? c.dividends : []);
   if (!trends.some((t) => t.points.length)) return null;
   return (
     <>
       <SectionTitle icon="trending-up-outline" title="Financial trends" />
       <Text style={s.muted}>Audited yearly results from DSE. Revenue, assets and cash flow are not published there.</Text>
+      <Text style={[s.muted, { fontSize: 12 }]}>Growth is the average yearly change over the last 5 years; ROE and payout show the change in percentage points.</Text>
       {trends.map((t) => {
         const last = t.points[t.points.length - 1];
         return (
@@ -311,9 +312,11 @@ function FinancialTrends({ c }: { c: CompanyData }) {
             <Text style={[s.muted, { fontSize: 12 }]}>{t.label}{last ? ` · ${last.year}` : ''}</Text>
             <View style={[s.sectionRow, { justifyContent: 'space-between' }]}>
               <Text style={[s.title, { fontSize: 20 }]}>{last ? TREND_UNIT[t.key](last.value) : '—'}</Text>
-              {t.cagr != null && (
-                <View style={[s.pill, { borderColor: changeColor(t.cagr, colors), backgroundColor: changeColor(t.cagr, colors) + '22' }]}>
-                  <Text style={{ color: changeColor(t.cagr, colors), fontWeight: '700', fontSize: 12 }}>{fmtPct(t.cagr)} · {t.span}-year CAGR</Text>
+              {t.change != null && (
+                <View style={[s.pill, { borderColor: changeColor(t.change.value, colors), backgroundColor: changeColor(t.change.value, colors) + '22' }]}>
+                  <Text style={{ color: changeColor(t.change.value, colors), fontWeight: '700', fontSize: 12 }}>
+                    {t.change.kind === 'cagr' ? `${fmtPct(t.change.value)} a year` : `${t.change.value >= 0 ? '+' : '−'}${fmtNum(Math.abs(t.change.value), 1)} pp`} over {t.change.years} years
+                  </Text>
                 </View>
               )}
             </View>
@@ -402,7 +405,7 @@ export default function Company() {
 
               <YearlyFigures years={data.company.years} />
 
-              <DividendHistory dividends={data.company.dividends} />
+              <DividendHistory dividends={data.dividendRecord?.map((r) => ({ year: r.year, cash: r.cashPct, stock: r.stockPct, yieldPct: r.yieldPct, rights: r.rights, paid: r.declared ? false : null })) ?? data.company.dividends} />
 
               <ShareHolding c={data.company} />
 

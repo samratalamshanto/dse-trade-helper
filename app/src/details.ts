@@ -29,42 +29,85 @@ export function detailText(v: unknown): string {
   return String(v);
 }
 
-type Kind = 'text' | 'id' | 'mn' | 'pct' | 'crore' | 'url';
-// Path into details: one key, or a key and a sub-key for nested blocks.
-type Field = [path: string[], label: string, kind?: Kind];
+type Kind = 'text' | 'id' | 'mn' | 'pct' | 'crore' | 'url' | 'tel' | 'mail' | 'rating';
+// Path into details: one key, or a key and a sub-key for nested blocks; hint explains jargon in one line.
+type Field = [path: string[], label: string, kind?: Kind, hint?: string];
+
+const HINT = {
+  isin: 'International code that identifies this share on any market.',
+  oci: 'Gains or losses not counted in profit, such as revaluation of assets.',
+  freeFloat: 'Share of all shares the public can trade (not held by sponsors or government).',
+  restated: 'Recalculated later (for example after a bonus issue), so years compare fairly.',
+};
 
 const GROUPS: { title: string; fields: Field[] }[] = [
-  { title: 'Identifiers', fields: [
-    [['isin'], 'ISIN', 'id'], [['scripCode'], 'Scrip code', 'id'], [['instrumentType'], 'Instrument'], [['board'], 'Board'],
-    [['marketLot'], 'Market lot', 'id'], [['electronicShare'], 'Electronic share'], [['otcStatus'], 'OTC status'], [['creditRating'], 'Credit rating'],
-  ] },
-  { title: 'Capital & float', fields: [
-    [['authorizedCapital'], 'Authorized capital', 'mn'], [['reserveWithoutOci'], 'Reserve (without OCI)', 'mn'],
-    [['otherComprehensiveIncome'], 'Other comprehensive income (OCI)', 'mn'], [['freeFloat'], 'Free float', 'pct'],
-    [['freeFloatMarketCap'], 'Free-float market cap', 'crore'],
-  ] },
   { title: 'Contact', fields: [
     [['description'], 'About'], [['hq'], 'Head office'], [['registeredOffice'], 'Registered office'], [['factoryAddress'], 'Factory'],
-    [['phone'], 'Phone'], [['fax'], 'Fax'], [['email'], 'Email'],
+    [['phone'], 'Phone', 'tel'], [['fax'], 'Fax'], [['email'], 'Email', 'mail'],
+  ] },
+  { title: 'Links', fields: [
+    [['website'], 'Website', 'url'], [['psiUrl'], 'Price-sensitive news', 'url'], [['financialStatementsUrl'], 'Financial statements', 'url'],
+  ] },
+  { title: 'Identifiers', fields: [
+    [['isin'], 'ISIN', 'id', HINT.isin], [['scripCode'], 'Scrip code', 'id'], [['instrumentType'], 'Instrument'], [['board'], 'Board'],
+    [['marketLot'], 'Market lot', 'id'], [['electronicShare'], 'Electronic share'], [['otcStatus'], 'OTC status'], [['creditRating'], 'Credit rating', 'rating'],
+  ] },
+  { title: 'Capital & float', fields: [
+    [['authorizedCapital'], 'Authorized capital', 'mn'], [['reserveWithoutOci'], 'Reserve (without OCI)', 'mn', HINT.oci],
+    [['otherComprehensiveIncome'], 'Other comprehensive income (OCI)', 'mn', HINT.oci], [['freeFloat'], 'Free float', 'pct', HINT.freeFloat],
+    [['freeFloatMarketCap'], 'Free-float market cap', 'crore'],
   ] },
   { title: 'Company secretary', fields: [
-    [['companySecretary', 'name'], 'Name'], [['companySecretary', 'email'], 'Email'],
-    [['companySecretary', 'phone'], 'Phone'], [['companySecretary', 'cell'], 'Mobile'],
+    [['companySecretary', 'name'], 'Name'], [['companySecretary', 'email'], 'Email', 'mail'],
+    [['companySecretary', 'phone'], 'Phone', 'tel'], [['companySecretary', 'cell'], 'Mobile', 'tel'],
   ] },
   { title: 'Status & dates', fields: [
     [['operationalStatus'], 'Operational status'], [['yearEnd'], 'Year end'], [['agmDate'], 'Last AGM'],
     [['loanStatus', 'shortTerm'], 'Short-term loan', 'mn'], [['loanStatus', 'longTerm'], 'Long-term loan', 'mn'],
-  ] },
-  { title: 'Links', fields: [
-    [['website'], 'Website', 'url'], [['psiUrl'], 'Price-sensitive news', 'url'], [['financialStatementsUrl'], 'Financial statements', 'url'],
   ] },
 ];
 
 // The session quote is already shown in "Today's trading".
 const SKIP = new Set(['sessionQuote', ...GROUPS.flatMap((g) => g.fields.map(([path]) => path[0]))]);
 
-export interface DetailRow { label: string; value: string; url: string | null }
-export interface DetailGroup { title: string; rows: DetailRow[] }
+export interface DetailLink { label: string; url: string }
+export interface DetailRow { label: string; value: string; url: string | null; links?: DetailLink[]; hint?: string }
+export interface DetailGroup { title: string; rows: DetailRow[]; advanced?: boolean }
+
+// DSE sends money in ৳ million; 10 million = 1 crore.
+export function crFromMn(mn: number | null | undefined): string {
+  return mn == null || !Number.isFinite(mn) ? '—' : `৳${fmtNum(mn / 10)} cr`;
+}
+
+// Percent figures such as a 12.5% bonus: up to 2 decimals, never rounded to a whole number.
+export function fmtUpTo2(x: number | null | undefined): string {
+  return x == null || !Number.isFinite(x) ? '—' : x.toLocaleString('en-US', { maximumFractionDigits: 2 });
+}
+
+// "02-9882990, +880 1711-000000" -> one tel: link per number; pieces with too few digits are dropped.
+export function phoneLinks(v: unknown): DetailLink[] {
+  if (typeof v !== 'string') return [];
+  return v.split(/[,;]/).flatMap((piece) => {
+    const raw = piece.split(/\b(?:ext|x)\b/i)[0].replace(/[^\d+]/g, ''), digits = raw.replace(/\D/g, '');
+    // Only a + before the first digit is kept: "880+171" is not a valid tel: number.
+    const num = (raw.startsWith('+') ? '+' : '') + digits;
+    return digits.length >= 5 ? [{ label: piece.trim(), url: `tel:${num}` }] : [];
+  });
+}
+
+// No ?, & or other mailto: header characters, so an address cannot prefill cc / body (same rule as the web).
+const EMAIL = /^[\w.+-]+@[\w-]+(\.[\w-]+)+$/;
+const MAILTO = new RegExp(`^mailto:${EMAIL.source.slice(1)}`);
+
+export function emailLinks(v: unknown): DetailLink[] {
+  if (typeof v !== 'string') return [];
+  return v.split(/[\s,;:<>()]+/).filter((e) => EMAIL.test(e)).map((e) => ({ label: e, url: `mailto:${e}` }));
+}
+
+// Only links this app builds itself or plain web addresses are opened.
+export function isSafeLink(url: string): boolean {
+  return isHttpUrl(url) || /^tel:\+?\d+$/.test(url) || MAILTO.test(url);
+}
 
 function pick(d: Record<string, unknown>, path: string[]): unknown {
   let v: unknown = d;
@@ -72,10 +115,13 @@ function pick(d: Record<string, unknown>, path: string[]): unknown {
   return v;
 }
 
+const isEmpty = (v: unknown) => v == null || (typeof v === 'string' && !v.trim());
+
 function formatField(v: unknown, kind: Kind): string {
   const n = typeof v === 'number' && Number.isFinite(v) ? v : null;
   if (kind === 'id') return v == null || v === '' ? '—' : String(v);
-  if (n != null && kind === 'mn') return `৳${fmtNum(n, 1)} mn`;
+  if (kind === 'rating' && isEmpty(v)) return 'Not rated';
+  if (n != null && kind === 'mn') return crFromMn(n);
   if (n != null && kind === 'pct') return `${fmtNum(n)}%`;
   if (n != null && kind === 'crore') return `৳${fmtNum(n / 1e7, 0)} cr`;
   return detailText(v);
@@ -85,13 +131,52 @@ function formatField(v: unknown, kind: Kind): string {
 export function detailGroups(d: Record<string, unknown>): DetailGroup[] {
   const groups = GROUPS.map(({ title, fields }) => ({
     title,
-    rows: fields.map(([path, label, kind = 'text']) => {
+    rows: fields.map(([path, label, kind = 'text', hint]): DetailRow => {
       const v = pick(d, path);
-      return { label, value: formatField(v, kind), url: kind === 'url' && isHttpUrl(v) ? v.trim() : null };
+      const links = kind === 'tel' ? phoneLinks(v) : kind === 'mail' ? emailLinks(v) : [];
+      return {
+        label, value: formatField(v, kind), url: kind === 'url' && isHttpUrl(v) ? v.trim() : null,
+        ...(links.length ? { links } : {}), ...(hint ? { hint } : {}),
+      };
     }),
   }));
-  const other = Object.keys(d).filter((k) => !SKIP.has(k)).map((k) => ({ label: labelFromKey(k), value: detailText(d[k]), url: null }));
-  return other.length ? [...groups, { title: 'Other fields from DSE', rows: other }] : groups;
+  const other = Object.keys(d).filter((k) => !SKIP.has(k)).map((k) => ({ label: labelFromKey(k), value: rawText(d[k]), url: null }));
+  return other.length ? [...groups, { title: 'Advanced: raw DSE fields', rows: other, advanced: true }] : groups;
+}
+
+// Raw fields often carry big numbers as text; give them thousands separators (short ones such as years stay as sent).
+function rawText(v: unknown): string {
+  const n = typeof v === 'string' && /^-?\d+(\.\d+)?$/.test(v.trim()) ? Number(v) : null;
+  return n != null && Math.abs(n) >= 10000 ? detailText(n) : detailText(v);
+}
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+// "2026-11-20" -> "Fri 20 Nov".
+export function fmtWeekday(iso: string | null | undefined): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso ?? '');
+  const day = fmtDate(iso);
+  if (!m || day === '—') return '—';
+  return `${WEEKDAYS[new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))).getUTCDay()]} ${day}`;
+}
+
+// "Today" only while the market is open; otherwise name the session the numbers come from.
+export function todayTitle(t: { live?: boolean; sessionDate?: string | null }): string {
+  if (t.live) return "Today's trading · Live";
+  const day = fmtWeekday(t.sessionDate);
+  return day === '—' ? 'Last session' : `Last session · ${day}`;
+}
+
+export interface ExDate { date: string; recordDate?: string | null; cashPct?: number | null; stockPct?: number | null }
+
+// "Ex-dividend (10% cash) · ex-bonus (12.5% bonus) · record date 24 Nov 2026".
+export function exLabel(e: ExDate): string {
+  const parts = [
+    ...((e.cashPct ?? 0) > 0 ? [`ex-dividend (${fmtUpTo2(e.cashPct)}% cash)`] : []),
+    ...((e.stockPct ?? 0) > 0 ? [`ex-bonus (${fmtUpTo2(e.stockPct)}% bonus)`] : []),
+  ];
+  const text = [parts.length ? parts.join(' · ') : 'ex-date', ...(e.recordDate ? [`record date ${fmtDay(e.recordDate)}`] : [])].join(' · ');
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 // "2025-10-23" -> "23 Oct 2025"; the 52-week window spans two years, so the year matters.
@@ -113,10 +198,11 @@ export function changePct(from: number | null | undefined, to: number | null | u
 
 export interface DayRow { date: string; open: number | null; high: number | null; low: number | null; close: number; changePct: number | null; volume: number }
 
-// Newest day first; each day's change is against the close of the trading day before it.
-export function dailyRows(series: SeriesPoint[]): DayRow[] {
+// The first day's change uses the close just before `from`, even outside the window.
+export function dailyRows(series: SeriesPoint[], from = ''): DayRow[] {
   return series
     .map((p, i) => ({ date: p.date, open: p.open ?? null, high: p.high ?? null, low: p.low ?? null, close: p.price, volume: p.volume, changePct: i ? changePct(series[i - 1].price, p.price) : null }))
+    .filter((r) => r.date >= from)
     .reverse();
 }
 
@@ -148,18 +234,33 @@ const YEAR_LABEL: Record<string, string> = {
   nav: 'NAV per share', navOriginal: 'NAV per share (original)', navRestated: 'NAV per share (restated)', navDiluted: 'NAV per share (diluted)',
   pe: 'P/E', peBasicOriginal: 'P/E basic (original)', peBasicRestated: 'P/E basic (restated)', peDiluted: 'P/E (diluted)',
   peContBasicOriginal: 'P/E continuing ops, basic (original)', peContBasicRestated: 'P/E continuing ops, basic (restated)', peContDiluted: 'P/E continuing ops (diluted)',
-  profit: 'Net profit (৳ mn)', profitForYear: 'Profit for the year (৳ mn)', pco: 'Profit from continuing operations (৳ mn)',
-  comprehensive: 'Total comprehensive income (৳ mn)', oci: 'Other comprehensive income (৳ mn)', reserve: 'Reserve (৳ mn)',
+  profit: 'Net profit (৳ cr)', profitForYear: 'Profit for the year (৳ cr)', pco: 'Profit from continuing operations (৳ cr)',
+  comprehensive: 'Total comprehensive income (৳ cr)', oci: 'Other comprehensive income (OCI, ৳ cr)', reserve: 'Reserve (৳ cr)',
   dividend: 'Dividend (% of face value)', dividendPct: 'Dividend % (as listed)', dividendYield: 'Dividend yield (%)',
 };
 
-const isEmpty = (v: unknown) => v == null || (typeof v === 'string' && !v.trim());
+// Money keys DSE sends in ৳ million; shown in crore.
+const YEAR_MN = new Set(['profit', 'profitForYear', 'pco', 'comprehensive', 'oci', 'reserve']);
+const YEAR_HINT: Record<string, string> = { oci: HINT.oci };
 
-export interface YearField { key: string; label: string; values: { year: number; text: string }[] }
+function yearText(key: string, v: unknown): string {
+  const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() && Number.isFinite(Number(v)) ? Number(v) : null;
+  return YEAR_MN.has(key) && n != null ? fmtNum(n / 10) : detailText(v);
+}
 
-// One entry per yearly field that has a value in at least one year, oldest year first.
+export interface YearField { key: string; label: string; values: { year: number; text: string }[]; hint?: string }
+
+// One entry per yearly field that has a value in at least one year, newest year first; a field whose values repeat an earlier field is dropped.
 export function yearFields(years: YearRow[]): YearField[] {
-  const sorted = [...years].sort((a, b) => a.year - b.year);
+  const sorted = [...years].sort((a, b) => b.year - a.year);
   const keys = [...new Set(sorted.flatMap((y) => Object.keys(y)))].filter((k) => k !== 'year' && sorted.some((y) => !isEmpty(y[k])));
-  return keys.map((key) => ({ key, label: YEAR_LABEL[key] ?? key, values: sorted.map((y) => ({ year: y.year, text: detailText(y[key]) })) }));
+  const seen = new Set<string>();
+  return keys.flatMap((key) => {
+    const values = sorted.map((y) => ({ year: y.year, text: yearText(key, y[key]) }));
+    const sig = values.map((v) => v.text).join('|');
+    if (seen.has(sig)) return [];
+    seen.add(sig);
+    const hint = YEAR_HINT[key] ?? (/restated/i.test(key) ? HINT.restated : undefined);
+    return [{ key, label: YEAR_LABEL[key] ?? key, values, ...(hint ? { hint } : {}) }];
+  });
 }

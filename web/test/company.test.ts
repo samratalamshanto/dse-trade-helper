@@ -36,9 +36,15 @@ test('parser keeps every DSE company field, the extra year fields, rights, all q
 
 const row = (ltp: number): SnapshotRow => ({ code: 'GP', ltp, ycp: 226.8, open: 226.8, high: 227.5, low: 226.3, close: 226.7, volume: 100838, value: 22.87, trades: 867, percent: 0, category: 'A', board: 'PUBLIC', sector: 'Telecom', assetType: 'EQ' });
 
-test('today trading comes from the live snapshot while the market trades', () => {
-  assert.deepStrictEqual(todayTrading(row(226.7), { sessionQuote: quote }),
-    { open: 226.8, high: 227.5, low: 226.3, close: 226.7, prevClose: 226.8, volume: 100838, valueMn: 22.87, trades: 867, live: true });
+const open = { isOpen: true, phase: 'open', tradingDay: true, sessionDate: '2026-11-19', opening: null, today: null, next: null, dataTime: null };
+
+test('today trading comes from the live snapshot, and is live only while the market is open', () => {
+  assert.deepStrictEqual(todayTrading(row(226.7), { sessionQuote: quote }, open),
+    { open: 226.8, high: 227.5, low: 226.3, close: 226.7, prevClose: 226.8, volume: 100838, valueMn: 22.87, trades: 867, live: true, sessionDate: '2026-11-19' });
+  // Saturday: DSE still sends Thursday's ltp, but nothing trades.
+  const closed = todayTrading(row(226.7), { sessionQuote: quote }, { ...open, isOpen: false, phase: 'closed', tradingDay: false });
+  assert.deepStrictEqual([closed?.live, closed?.sessionDate], [false, '2026-11-19']);
+  assert.deepStrictEqual([todayTrading(row(226.7), {}, null, '2026-11-19')?.live, todayTrading(row(226.7), {}, null, '2026-11-19')?.sessionDate], [false, '2026-11-19']);
 });
 
 test('before the first trade (ltp 0) today trading falls back to the saved session quote, and is null with neither', () => {

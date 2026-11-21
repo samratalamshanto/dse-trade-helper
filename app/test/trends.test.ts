@@ -28,6 +28,14 @@ test('financialTrends sorts by year, skips missing inputs and computes ROE and p
   assert.equal(t.payout.cagr, null);
 });
 
+test('EPS is divided by later bonus shares and the change uses the shared 5-year rule', () => {
+  const t = Object.fromEntries(financialTrends(years, 10, [{ year: 2022, stock: 100 }]).map((x) => [x.key, x]));
+  assert.deepEqual(t.eps.points, [{ year: 2021, value: 5 }, { year: 2023, value: 20 }]);
+  assert.equal(t.eps.change?.kind, 'cagr');
+  assert.equal(t.eps.change?.value.toFixed(2), '100.00');
+  assert.equal(t.roe.change?.kind, 'pp');
+});
+
 test('payout is skipped without a face value, and a single year has no CAGR', () => {
   const t = Object.fromEntries(financialTrends([years[0]], null).map((x) => [x.key, x]));
   assert.deepEqual(t.payout.points, []);

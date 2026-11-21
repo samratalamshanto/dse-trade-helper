@@ -5,6 +5,8 @@ const MONTHS: Record<string, number> = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4,
 const RECORD_MATCH_DAYS = 90;
 const PAYOUT_MAX_DAYS = 180;
 const DIRECTOR_WINDOW_DAYS = 180;
+// DSE rules want payment within 30 days of the AGM; after 45 with no notice the payment is not "pending" any more.
+export const PAYMENT_GRACE_DAYS = 45;
 const DAY_MS = 86_400_000;
 const LEAD_CHARS = 120;
 const DATE_LOOKAHEAD = 65;
@@ -134,6 +136,16 @@ const addMonths = (isoDate: string, n: number): string => {
 // A record with neither a cash nor a bonus rate (a parse miss or a notice) is not a dividend.
 export const isEmptyDeclaration = (d: Declaration): boolean => !d.noDividend && d.cashPct == null && d.stockPct == null;
 
+const plusDays = (isoDate: string, n: number): string => new Date(Date.parse(isoDate + 'T00:00:00Z') + n * DAY_MS).toISOString().slice(0, 10);
+
+// paid: a payment notice matched; pending: record date passed, within AGM (else record date) + PAYMENT_GRACE_DAYS;
+// no-notice: past that with no notice found; none: no cash dividend (bonus shares only), or record date still ahead / unknown.
+export function paymentState(d: Declaration, today: string): 'paid' | 'pending' | 'no-notice' | 'none' {
+  if (d.paidOn) return 'paid';
+  if (d.noDividend || !((d.cashPct ?? 0) > 0) || !d.recordDate || d.recordDate >= today) return 'none';
+  return plusDays(d.agmDate || d.recordDate, PAYMENT_GRACE_DAYS) >= today ? 'pending' : 'no-notice';
+}
+
 export function dividendStatus(events?: Events | null, now = new Date()): DividendStatus {
   const today = dhakaToday(now);
   const all = (events?.declarations || []).filter((d) => d.announced && !isEmptyDeclaration(d));
@@ -147,7 +159,8 @@ export function dividendStatus(events?: Events | null, now = new Date()): Divide
   const regular = finals.length >= 2 && Math.abs(days(finals[0].announced!, addMonths(finals[1].announced!, 12))) <= 45;
   const recordToday = decls.find((d) => d.recordDate === today) || null;
   const canStillBuy = !!upcoming && !!upcoming.lastBuyDate && upcoming.lastBuyDate >= today;
-  return { latest, upcoming, recordToday, canStillBuy, nextExpected: next ? next.slice(0, 7) : null, regular, today, skippedLast: !!all[0]?.noDividend };
+  const unpaid = decls.find((d) => paymentState(d, today) === 'pending') || null;
+  return { latest, upcoming, recordToday, canStillBuy, nextExpected: next ? next.slice(0, 7) : null, regular, today, skippedLast: !!all[0]?.noDividend, unpaid };
 }
 
 export function directorActivity(events?: Events | null, now = new Date()): { sells: DirectorTrade[]; buys: DirectorTrade[]; windowDays: number } {

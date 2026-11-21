@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useApi } from '@/components/AppProvider';
 import { ChangeText } from '@/components/CompanyCard';
 import { HeaderStats, Overview, RangeBar52 } from '@/components/company/Overview';
@@ -36,6 +36,12 @@ export function CompanyView({ code }: { code: string }) {
   const [tab, setTab] = useState<Tab>('overview');
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const tablist = useRef<HTMLDivElement>(null);
+  const ready = !!d;
+  // Keep the active tab in view inside the horizontal strip, without scrolling the page.
+  useEffect(() => {
+    const el = tabRefs.current[tab], bar = tablist.current;
+    if (el && bar) bar.scrollTo({ left: el.offsetLeft - (bar.clientWidth - el.offsetWidth) / 2 });
+  }, [tab, ready]);
 
   if (error && !d) {
     const missing = /no company/i.test(error);
@@ -60,10 +66,10 @@ export function CompanyView({ code }: { code: string }) {
     <>
       <div className="panel hero">
         <div className="hero-top">
-          <div><h1>{c.name}</h1><div className="muted mono small">{c.code} · {sectorName(c.sector)} · {t('Category')} {c.category} · {t('Listed')} {c.listingYear}</div>
+          <div className="hero-name"><h1 title={c.name}>{c.name}</h1><div className="muted mono small">{c.code} · {sectorName(c.sector)} · {t('Category')} {c.category} · {t('Listed')} {c.listingYear}</div>
             {CATEGORY_TEXT[c.category] ? <div className={`small ${c.category === 'Z' ? 't-bad' : 'muted'}`}>{t(CATEGORY_TEXT[c.category])}</div> : null}
             <div className="hero-actions"><WatchButton code={c.code} withText /><Link className="btn" href={'/compare?codes=' + encodeURIComponent(c.code)}>{t('Compare with others')}</Link></div></div>
-          <div className="hero-price"><div className="mono" style={{ fontSize: 28, fontWeight: 600 }}>৳{fmt(c.price)}</div><div className="mono small"><ChangeText pct={c.changePct} suffix=" today" /></div>
+          <div className="hero-price"><div className="mono" style={{ fontSize: 28, fontWeight: 600 }}>৳{fmt(c.price)}</div><div className="mono small"><ChangeText pct={c.changePct} suffix={d.today?.live ? ' today' : ' last session'} /></div>
             <div className="small muted">{t('DSE data')}: {d.session?.dataTime || fmtDate(d.session?.sessionDate)} · {t('source')} dse.com.bd</div>
             {d.freshSkipped ? <div className="small t-warn" role="status">{t('DSE is busy, so this is the saved copy. Try Refresh in a minute.')}</div> : null}
             <RangeBar52 c={c} compact /><HeaderStats d={d} /></div>

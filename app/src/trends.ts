@@ -1,8 +1,9 @@
-import type { YearRow } from '../../web/lib/types.ts';
+import { bonusFactor, TREND_KIND, trendChange, type TrendChange } from '../../web/lib/financial-trends.ts';
+import type { Dividend, YearRow } from '../../web/lib/types.ts';
 
 export interface TrendPoint { year: number; value: number }
 export type TrendKey = 'profit' | 'eps' | 'nav' | 'roe' | 'payout';
-export interface Trend { key: TrendKey; label: string; points: TrendPoint[]; cagr: number | null; span: number }
+export interface Trend { key: TrendKey; label: string; points: TrendPoint[]; cagr: number | null; span: number; change: TrendChange | null }
 
 // The API sends some year fields as strings ("280.00"), so every input is read as a number.
 const num = (x: unknown): number | null => {
@@ -19,12 +20,14 @@ export function cagr(first: number, last: number, years: number): number | null 
 const ratio = (top: number | null, bottom: number | null) => (top != null && bottom != null && bottom > 0 ? (top / bottom) * 100 : null);
 
 // Net profit, EPS, NAV/share, ROE (EPS ÷ NAV) and dividend payout (cash per share ÷ EPS); years with missing inputs are skipped.
-export function financialTrends(years: readonly YearRow[], faceValue: number | null | undefined): Trend[] {
+// EPS and NAV are divided by later bonus shares and the change uses the web's one growth rule, so phone and web agree.
+export function financialTrends(years: readonly YearRow[], faceValue: number | null | undefined, dividends: readonly Dividend[] = []): Trend[] {
   const sorted = [...years].sort((a, b) => a.year - b.year);
+  const bonus = bonusFactor(dividends, sorted.at(-1)?.year ?? 0);
   const pick: Record<TrendKey, [string, (y: YearRow) => number | null]> = {
     profit: ['Net profit', (y) => num(y.profit)],
-    eps: ['EPS', (y) => num(y.eps)],
-    nav: ['NAV per share', (y) => num(y.nav)],
+    eps: ['EPS', (y) => { const v = num(y.eps); return v == null ? null : v / bonus(y.year); }],
+    nav: ['NAV per share', (y) => { const v = num(y.nav); return v == null ? null : v / bonus(y.year); }],
     roe: ['Return on equity', (y) => ratio(num(y.eps), num(y.nav))],
     payout: ['Dividend payout', (y) => {
       const pct = num(y.dividend);
@@ -38,6 +41,6 @@ export function financialTrends(years: readonly YearRow[], faceValue: number | n
     const last = points[points.length - 1];
     const span = first && last ? last.year - first.year : 0;
     const isGrowthMetric = key === 'profit' || key === 'eps' || key === 'nav';
-    return { key, label, points, span, cagr: isGrowthMetric && first && last ? cagr(first.value, last.value, span) : null };
+    return { key, label, points, span, cagr: isGrowthMetric && first && last ? cagr(first.value, last.value, span) : null, change: trendChange(points, TREND_KIND[key]) };
   });
 }

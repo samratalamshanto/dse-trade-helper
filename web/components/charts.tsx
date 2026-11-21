@@ -1,6 +1,6 @@
 'use client';
 
-import { Chart as ChartJS, registerables } from 'chart.js';
+import { Chart as ChartJS, registerables, type Scale } from 'chart.js';
 import { cloneElement, useEffect, useState, type ReactElement } from 'react';
 
 ChartJS.register(...registerables);
@@ -40,3 +40,14 @@ export function useChartColors(): Colors | null {
 export function ChartBox({ height = 240, label, children }: { height?: number; label?: string; children: ReactElement<{ 'aria-label'?: string }> }) {
   return <div className="chart-box" style={{ height }}>{label ? cloneElement(children, { 'aria-label': label }) : children}</div>;
 }
+
+// X-axis ticks for ISO-date labels: "22 Oct" when the chart spans under ~4 months, else "Oct '25".
+export const dateTicks = {
+  maxTicksLimit: 6,
+  callback(this: Scale, v: string | number) {
+    const iso = this.getLabelForValue(Number(v));
+    if (!/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso;
+    const d = new Date(iso.slice(0, 10) + 'T00:00:00Z'), span = (this.chart.data.labels?.length ?? 0) > 90;
+    return span ? d.toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' }) + " '" + iso.slice(2, 4) : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+  },
+};

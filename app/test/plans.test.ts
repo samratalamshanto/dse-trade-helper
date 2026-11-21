@@ -6,7 +6,7 @@ import { afterBuyLine, type BuyPlan, dividendLine, formFromBuyPlan, inputFromRow
 const plan = (x: Partial<BuyPlan>): BuyPlan => ({
   code: 'GP', quantity: 10, price: 100, cost: 1000, position52: 0.5, sma20: 101, sma50: 99, vsSma20Pct: -1, trend: 'sideways', typicalDailyMovePct: 1.2,
   moveOdds: [{ pct: 1, within: 5, fell: 60, rose: 55 }, { pct: 2, within: 5, fell: 35, rose: 30 }], daysCheaperPct: 40, dividend: null, afterBuy: null,
-  warnings: [], action: 'split', label: 'Split: part now, price alert for the rest', tone: 'info', buyNow: 5, later: 5, alertPrice: 98, reasons: [], sample: 240, ...x,
+  warnings: [], action: 'split', label: 'Split: part now, price alert for the rest', tone: 'info', buyNow: 5, later: 5, alertPrice: 98, reasons: [], sample: 240, avgPrice: 100, commission: 4, commissionPct: 0.4, totalWithCommission: 1004, ...x,
 });
 
 test('planQuery accepts whole shares or a taka budget and rejects the rest', () => {
@@ -38,7 +38,8 @@ test('oddsSentence speaks about the past 2% moves, or nothing without data', () 
 test('dividend and after-buy lines', () => {
   assert.equal(dividendLine(plan({})), null);
   assert.equal(dividendLine(plan({ dividend: { lastBuyDate: '2026-11-25', tradingDaysLeft: 1, cashPerShare: 1.5 } })), 'Own it at the end of 2026-11-25 to get ৳1.50 a share — 1 trading day left.');
-  assert.equal(afterBuyLine(plan({ afterBuy: { shares: 30, avgCost: 95.5, weightPct: 12.4 } })), 'After this buy: 30 shares at an average of ৳95.50, 12% of your holdings.');
+  assert.equal(afterBuyLine(plan({ afterBuy: { shares: 30, avgCost: 95.5, weightPct: 12.4 } })), 'After this buy, if the alert price fills: 30 shares at an average of ৳95.50, 12% of your holdings.');
+  assert.equal(afterBuyLine(plan({ afterBuy: { shares: 30, avgCost: 95.5, weightPct: null }, buyNow: 10, later: 0, alertPrice: null })), 'After this buy: 30 shares at an average of ৳95.50.');
 });
 
 test('every live status has a label, a palette tone and an icon', () => {

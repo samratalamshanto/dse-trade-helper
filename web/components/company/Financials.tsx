@@ -1,18 +1,20 @@
 'use client';
 
 import { Bar, Line } from 'react-chartjs-2';
-import { cagr, trendSeries, type TrendKey } from '@/lib/financial-trends';
+import { TREND_KIND, trendChange, trendSeries, type TrendKey } from '@/lib/financial-trends';
 import { interimIsFresh } from '@/lib/analysis';
 import { ChartBox, useChartColors } from '@/components/charts';
 import { fmt, signed, tone } from '@/components/format';
+import { Info } from '@/components/ui';
 import type { CompanyDetail } from '@/lib/service';
 
 type Summary = CompanyDetail['summary'];
 type YearKey = 'profit' | 'eps' | 'nav' | 'roe' | 'dps' | 'payout' | 'pe' | 'dividendYield';
 
-const ROWS: [string, YearKey | 'pb' | 'stockPct', number][] = [
-  ['Net profit (৳ mn)', 'profit', 0], ['EPS (৳)', 'eps', 2], ['NAV / share (৳)', 'nav', 2], ['ROE (%)', 'roe', 1], ['P/E', 'pe', 1], ['P/B', 'pb', 2],
-  ['Cash dividend / share (৳)', 'dps', 2], ['Bonus shares (%)', 'stockPct', 0], ['Payout (%)', 'payout', 0], ['Dividend yield (%)', 'dividendYield', 1],
+// The 4th value scales DSE's figure: profit comes in ৳ mn and is shown in crore (÷10).
+const ROWS: [string, YearKey | 'pb' | 'stockPct', number, number?][] = [
+  ['Net profit (৳ cr)', 'profit', 1, 0.1], ['EPS (৳)', 'eps', 2], ['NAV / share (৳)', 'nav', 2], ['ROE (%)', 'roe', 1], ['P/E', 'pe', 1], ['P/B', 'pb', 2],
+  ['Cash dividend / share (৳)', 'dps', 2], ['Bonus shares (%)', 'stockPct', 2], ['Payout (%)', 'payout', 0], ['Dividend yield (%)', 'dividendYield', 1],
 ];
 
 const QUARTERS: [string, string, number][] = [['q1', '3 months (Q1)', 4], ['half', '6 months', 2], ['q3', 'Q3 alone', 4], ['nine', '9 months', 4 / 3]];
@@ -23,23 +25,31 @@ const LABELS: Record<string, string> = {
   nav: 'NAV / share (৳)', navOriginal: 'NAV / share, original (৳)', navRestated: 'NAV / share, restated (৳)', navDiluted: 'NAV / share, diluted (৳)',
   pe: 'P/E', peBasicOriginal: 'P/E basic, original', peBasicRestated: 'P/E basic, restated', peDiluted: 'P/E diluted',
   peContBasicOriginal: 'P/E continuing ops, basic original', peContBasicRestated: 'P/E continuing ops, basic restated', peContDiluted: 'P/E continuing ops, diluted',
-  profit: 'Net profit (৳ mn)', pco: 'Profit from continuing operations (৳ mn)', profitForYear: 'Profit for the year (৳ mn)', comprehensive: 'Total comprehensive income (৳ mn)',
-  oci: 'Other comprehensive income (৳ mn)', reserve: 'Reserve (৳ mn)', dividend: 'Dividend (%)', dividendPct: 'Dividend (%)', dividendYield: 'Dividend yield (%)',
+  profit: 'Net profit (৳ cr)', pco: 'Profit from continuing operations (৳ cr)', profitForYear: 'Profit for the year (৳ cr)', comprehensive: 'Total comprehensive income (৳ cr)',
+  oci: 'Other comprehensive income (OCI) (৳ cr)', reserve: 'Reserve (৳ cr)', dividend: 'Dividend (%)', dividendPct: 'Dividend (%)', dividendYield: 'Dividend yield (%)',
 };
+// Yearly fields DSE sends in ৳ mn; shown in crore.
+const MN_KEYS = new Set(['profit', 'pco', 'profitForYear', 'comprehensive', 'oci', 'reserve']);
 const INTERIM_COLS: [string, string][] = [['q1', '3 months (Q1)'], ['q2', 'Q2 alone'], ['half', '6 months'], ['q3', 'Q3 alone'], ['nine', '9 months'], ['annual', 'Full year']];
 const cell = (v: unknown) => (typeof v === 'number' ? fmt(v) : v == null || v === '' ? '—' : typeof v === 'object' ? JSON.stringify(v) : String(v));
 const periodEnd = (v: unknown) => (typeof v === 'string' && /^\d{6}$/.test(v) ? new Date(Date.UTC(+v.slice(0, 4), +v.slice(4) - 1)).toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' }) : null);
 
 // Every yearly field DSE sends; a field empty in all years is left out.
+// Newest year first; a row whose values equal an earlier row's is left out.
 function AllYears({ years: raw }: { years: CompanyDetail['company']['years'] }) {
-  const years = Array.isArray(raw) ? raw : [];
-  const keys = [...new Set(years.flatMap((y) => Object.keys(y)))].filter((k) => k !== 'year' && years.some((y) => y[k] != null && y[k] !== ''));
+  const years = (Array.isArray(raw) ? [...raw] : []).reverse();
+  const all = [...new Set(years.flatMap((y) => Object.keys(y)))].filter((k) => k !== 'year' && years.some((y) => y[k] != null && y[k] !== ''));
+  const seen = new Set<string>();
+  const keys = all.filter((k) => { const sig = JSON.stringify(years.map((y) => y[k] ?? null)); return seen.has(sig) ? false : !!seen.add(sig); });
   if (!keys.length) return null;
+  const val = (k: string, v: unknown) => (MN_KEYS.has(k) && typeof v === 'number' ? fmt(v / 10, 1) : cell(v));
   return (
-    <div className="panel table-wrap" style={{ marginTop: 14 }}><h3>All yearly figures from DSE</h3>
-      <table><thead><tr><th>Field</th>{years.map((y, i) => <th key={y.year + '-' + i} className="n">{y.year}</th>)}</tr></thead>
-        <tbody>{keys.map((k) => <tr key={k}><td className={LABELS[k] ? '' : 'mono'}>{LABELS[k] ?? k}</td>{years.map((y, i) => <td key={y.year + '-' + i} className="n mono">{cell(y[k])}</td>)}</tr>)}</tbody></table>
-      <p className="why">Original = as first published; restated = corrected later; diluted = counting shares that may be issued. Blank years are missing on DSE.</p></div>
+    <div className="panel" style={{ marginTop: 14 }}>
+      <details><summary className="toggle-btn">All yearly figures from DSE (advanced)</summary>
+        <div className="table-wrap"><table><thead><tr><th>Field</th>{years.map((y, i) => <th key={y.year + '-' + i} className="n">{y.year}</th>)}</tr></thead>
+          <tbody>{keys.map((k) => <tr key={k}><td className={LABELS[k] ? '' : 'mono'}>{LABELS[k] ?? k}</td>{years.map((y, i) => <td key={y.year + '-' + i} className="n mono">{val(k, y[k])}</td>)}</tr>)}</tbody></table></div>
+        <p className="why">Original = as first published; restated = corrected later <Info text="Restated: DSE figures the company corrected after first publishing them, for example after a bonus share issue." />; diluted = counting shares that may be issued <Info text="Diluted: per-share figures that also count shares that may be issued later, such as convertible shares." />.
+          Blank years are missing on DSE.{all.length > keys.length ? ` ${all.length - keys.length} rows with the same values as a row above are hidden.` : ''}</p></details></div>
   );
 }
 
@@ -74,12 +84,13 @@ function TrendCards({ years, dividends, face }: { years: CompanyDetail['company'
       <p className="muted small"><b>Audited yearly results</b> from DSE&apos;s company page (dse.com.bd). Revenue, cash flow and balance-sheet lines are not published there, so they are not shown.</p>
       <div className="trend-grid">
         {TRENDS.map((k) => {
-          const pts = series[k.key], last = pts.at(-1), g = cagr(pts);
+          const pts = series[k.key], last = pts.at(-1), g = trendChange(pts, TREND_KIND[k.key]);
           return (
             <div key={k.key} className="panel kpi">
               <div className="small muted">{k.label}{last ? ` · ${last.year}` : ''}</div>
               <div className="trend-head"><span className="val mono">{last ? k.unit(last.value) : '—'}</span>
-                {g ? <span className={`pill ${g.pct >= 0 ? 's-research' : 's-avoid'}`}>{signed(g.pct)} · {g.years}-year CAGR</span> : null}</div>
+                {g ? <><span className={`pill ${g.value >= 0 ? 's-research' : 's-avoid'}`}>{g.kind === 'cagr' ? `${signed(g.value)} a year` : `${g.value > 0 ? '+' : ''}${fmt(g.value, 1)}${g.kind === 'pp' ? ' pp' : ''}`} over {g.years} years</span>{' '}
+                  <Info text={g.kind === 'cagr' ? `Average yearly growth (CAGR) from ${g.from} to ${g.to}: the steady rate per year that takes the first figure to the latest.` : `Change from ${g.from} to ${g.to}.${g.kind === 'pp' ? ' pp = percentage points.' : ''}`} /></> : null}</div>
               <div className="mini">{colors && pts.length > 1 ? (
                 <ChartBox height={70} label={`${k.label} by year: ` + pts.map((p) => `${p.year} ${k.unit(p.value)}`).join(', ')}>
                   <Line data={{ labels: pts.map((p) => p.year), datasets: [{ data: pts.map((p) => p.value), borderColor: colors['--accent'], backgroundColor: colors['--accent'] + '22', fill: true, pointRadius: 2, tension: 0.2 }] }}
@@ -115,16 +126,17 @@ function QuarterPanel({ interim, lastYearEps }: { interim: CompanyDetail['compan
 
 export function Financials({ s, years, dividends, face, interim, lastYearEps }: { s: Summary; years: CompanyDetail['company']['years']; dividends: CompanyDetail['company']['dividends']; face: number; interim: CompanyDetail['company']['interim']; lastYearEps: number | null }) {
   const colors = useChartColors();
+  const newest = [...s.years].reverse();
   const missingEps = years.filter((y) => y.eps == null).map((y) => y.year);
   return (
     <>
       {s.years.length ? (
         <>
           <TrendCards years={years} dividends={dividends} face={face} />
-          <div className="panel table-wrap" style={{ marginTop: 14 }}><h3>Year by year</h3>
-            <table><thead><tr><th>Metric</th>{s.years.map((y) => <th key={y.year} className="n">{y.year}</th>)}</tr></thead>
-              <tbody>{ROWS.map(([label, key, dp]) => (
-                <tr key={key}><td>{label}</td>{s.years.map((y) => <td key={y.year} className="n mono">{fmt(y[key] as number | null, dp)}</td>)}</tr>
+          <div className="panel table-wrap" style={{ marginTop: 14 }}><h3>Year by year <span className="small muted">(newest first)</span></h3>
+            <table><thead><tr><th>Metric</th>{newest.map((y) => <th key={y.year} className="n">{y.year}</th>)}</tr></thead>
+              <tbody>{ROWS.map(([label, key, dp, scale = 1]) => (
+                <tr key={key}><td>{label}</td>{newest.map((y) => { const v = y[key] as number | null; return <td key={y.year} className="n mono">{fmt(v == null ? v : v * scale, dp)}</td>; })}</tr>
               ))}</tbody></table></div>
         </>
       ) : null}

@@ -38,6 +38,7 @@ env:
 - takeScreenshot: company-03-financial-trends
 - scrollUntilVisible:
     element: "Who owns the shares"
+    timeout: 90000
     direction: DOWN
     centerElement: true
 - takeScreenshot: company-04-share-holding

@@ -14,6 +14,8 @@ export const DIVIDEND_SOON_TRADING_DAYS = 10;
 export const MAX_WEIGHT_PCT = 25;
 export const THIN_TRADING_BDT = 5_000_000;
 export const ORDER_SHARE_OF_DAY_WARN = 0.05;
+// Assumed broker commission incl. the DSE/CDBL levies; brokers charge about 0.3–0.5% of the trade value.
+export const BROKER_COMMISSION_PCT = 0.4;
 const TICK = 0.1;
 
 export interface PricePoint { date: string; price: number }
@@ -47,6 +49,8 @@ export interface PlannerInput {
   avgDailyValue: number | null;
   holding: Holding | null;
   today: string;
+  // No trade in the last 52 weeks: an order may never fill.
+  illiquid?: boolean;
 }
 
 export interface MoveOdds { pct: number; within: number; fell: number | null; rose: number | null }
@@ -65,6 +69,11 @@ export interface BuyPlan {
   moveOdds: MoveOdds[];
   daysCheaperPct: number | null;
   dividend: { lastBuyDate: string; tradingDaysLeft: number; cashPerShare: number | null } | null;
+  // avgPrice: average over every planned lot (buy-now at price, the rest at alertPrice); commission at BROKER_COMMISSION_PCT.
+  avgPrice: number;
+  commission: number;
+  commissionPct: number;
+  totalWithCommission: number;
   afterBuy: { shares: number; avgCost: number; weightPct: number | null } | null;
   warnings: string[];
   action: PlanAction;
@@ -130,13 +139,14 @@ export function trendOf(prices: readonly number[], price: number): Trend {
   return 'sideways';
 }
 
-export function afterBuying(holding: Holding | null, quantity: number, price: number): BuyPlan['afterBuy'] {
+// avgPrice: what the new shares cost on average; marketPrice values the position. No holding known → no weight.
+export function afterBuying(holding: Holding | null, quantity: number, avgPrice: number, marketPrice = avgPrice): BuyPlan['afterBuy'] {
   const before = holding ?? { shares: 0, avgCost: 0, portfolioValue: 0 };
   const shares = before.shares + quantity;
   if (shares <= 0) return null;
-  const avgCost = (before.shares * before.avgCost + quantity * price) / shares;
-  const total = before.portfolioValue + quantity * price;
-  return { shares, avgCost: round2(avgCost), weightPct: total > 0 ? round2(((before.shares + quantity) * price / total) * 100) : null };
+  const avgCost = (before.shares * before.avgCost + quantity * avgPrice) / shares;
+  const total = before.portfolioValue + quantity * marketPrice;
+  return { shares, avgCost: round2(avgCost), weightPct: holding && total > 0 ? round2((shares * marketPrice / total) * 100) : null };
 }
 
 export function planBuy(p: PlannerInput): BuyPlan {
@@ -153,13 +163,10 @@ export function planBuy(p: PlannerInput): BuyPlan {
   const left = lastBuy ? tradingDaysBetween(p.today, lastBuy) : 0;
   const cashPerShare = p.dividend?.cashPct != null && p.faceValue ? round2((p.dividend.cashPct / 100) * p.faceValue) : null;
   const dividend = lastBuy && left > 0 ? { lastBuyDate: lastBuy, tradingDaysLeft: left, cashPerShare } : null;
-  const afterBuy = afterBuying(p.holding, p.quantity, p.price);
   const cost = round2(p.price * p.quantity);
 
   const warnings: string[] = [];
-  if (afterBuy?.weightPct != null && afterBuy.weightPct > MAX_WEIGHT_PCT && (p.holding?.portfolioValue ?? 0) > 0) {
-    warnings.push(`After this buy ${p.code} would be ${afterBuy.weightPct.toFixed(0)}% of your holdings — more than ${MAX_WEIGHT_PCT}% in one share is concentrated`);
-  }
+  if (p.illiquid) warnings.push('No trades in the last 52 weeks — an order may never fill, and you may not be able to sell');
   if (p.avgDailyValue != null && p.avgDailyValue < THIN_TRADING_BDT) warnings.push('Thinly traded — it can be hard to buy or sell at a fair price');
   if (p.avgDailyValue != null && p.avgDailyValue > 0 && cost / p.avgDailyValue > ORDER_SHARE_OF_DAY_WARN) {
     warnings.push(`Your order is ${((cost / p.avgDailyValue) * 100).toFixed(0)}% of a normal day's trading — it may move the price; use a limit order`);
@@ -172,15 +179,26 @@ export function planBuy(p: PlannerInput): BuyPlan {
   if (trend) facts.push(`Trend: ${trend}`);
   if (main.fell != null) facts.push(`Within ${MOVE_WINDOW_DAYS} trading days it fell ${DEFAULT_DIP_PCT}% in ${main.fell}% and rose ${DEFAULT_DIP_PCT}% in ${main.rose}% of the last year's days`);
 
-  const plan = (action: PlanAction, buyNow: number, alertPrice: number | null, why: string[]): BuyPlan => ({
-    code: p.code, quantity: p.quantity, price: p.price, cost, position52: pos, sma20: s20 == null ? null : round2(s20), sma50: s50 == null ? null : round2(s50),
-    vsSma20Pct: vsSma == null ? null : round2(vsSma), trend, typicalDailyMovePct: typical == null ? null : round2(typical), moveOdds,
-    daysCheaperPct: daysCheaper(prices, p.price), dividend, afterBuy, warnings, action, ...PLAN_TEXT[action], buyNow, later: p.quantity - buyNow, alertPrice,
-    reasons: [...why, ...facts], sample: Math.max(0, prices.length - MOVE_WINDOW_DAYS),
-  });
+  const plan = (action: PlanAction, buyNow: number, alertPrice: number | null, why: string[]): BuyPlan => {
+    const later = p.quantity - buyNow;
+    const value = buyNow * p.price + later * (alertPrice ?? p.price);
+    const avgPrice = round2(value / p.quantity);
+    const commission = round2((value * BROKER_COMMISSION_PCT) / 100);
+    const afterBuy = afterBuying(p.holding, p.quantity, avgPrice, p.price);
+    const concentrated = afterBuy?.weightPct != null && afterBuy.weightPct > MAX_WEIGHT_PCT && (p.holding?.portfolioValue ?? 0) > 0
+      ? [`After this buy ${p.code} would be ${afterBuy.weightPct.toFixed(0)}% of your holdings — more than ${MAX_WEIGHT_PCT}% in one share is concentrated`] : [];
+    return {
+      code: p.code, quantity: p.quantity, price: p.price, cost, position52: pos, sma20: s20 == null ? null : round2(s20), sma50: s50 == null ? null : round2(s50),
+      vsSma20Pct: vsSma == null ? null : round2(vsSma), trend, typicalDailyMovePct: typical == null ? null : round2(typical), moveOdds,
+      daysCheaperPct: daysCheaper(prices, p.price), dividend, avgPrice, commission, commissionPct: BROKER_COMMISSION_PCT, totalWithCommission: round2(value + commission),
+      afterBuy, warnings: [...concentrated, ...warnings], action, ...PLAN_TEXT[action], buyNow, later, alertPrice,
+      reasons: [...why, ...facts], sample: Math.max(0, prices.length - MOVE_WINDOW_DAYS),
+    };
+  };
   const dipAlert = toTick(p.price * (1 - DEFAULT_DIP_PCT / 100));
   const half = Math.ceil(p.quantity / 2);
 
+  if (p.illiquid) return plan('avoid', 0, null, ['No trades in the last 52 weeks — there may be no seller at any price']);
   if (p.fraud === 'high' || p.signal === 'avoid') {
     return plan('avoid', 0, null, [p.fraud === 'high' ? 'High fraud risk on this company' : 'The signal is Avoid — loss-making, category Z or a high-risk pattern']);
   }
