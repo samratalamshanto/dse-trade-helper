@@ -1,6 +1,6 @@
 # Telegram alerts — setup
 
-DSE Trade Helper can send alerts to your phone through a Telegram bot that you own. You do not need a custom app. The alerts are a learning aid, not investment advice.
+Trade Helper can send alerts to your phone through a Telegram bot that you own. You do not need a custom app. The alerts are a learning aid, not investment advice.
 
 ## What you get
 
@@ -57,7 +57,7 @@ If either value is missing, alerts stay off and nothing is sent.
 
 1. Open the Trades page and make sure your trades key is entered.
 2. Press **Send test to Telegram**.
-3. Your phone shows: `DSE Trade Helper is connected ✅`.
+3. Your phone shows: `Trade Helper is connected ✅`.
 
 If the page shows "Telegram refused the message … chat not found", check the chat id in Step 3. If it shows "Unauthorized", check the token.
 

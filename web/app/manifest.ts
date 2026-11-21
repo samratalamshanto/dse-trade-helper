@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'DSE Trade Helper',
-    short_name: 'DSE Helper',
+    name: 'Trade Helper',
+    short_name: 'Trade Helper',
     description: 'Research Dhaka Stock Exchange companies: signals, fraud checks, dividends and your watchlist.',
     start_url: '/',
     display: 'standalone',

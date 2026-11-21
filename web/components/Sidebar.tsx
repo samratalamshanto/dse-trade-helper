@@ -8,13 +8,11 @@ import { useWatchlist } from '@/components/Watchlist';
 import { useLang } from '@/components/i18n';
 import { Icon, type IconName } from '@/components/ui';
 
-const NAV: { group: string; items: { href: string; label: string; icon: IconName }[] }[] = [
+const NAV: { group: string; items: { href: string; label: string; icon: IconName; also?: string[] }[] }[] = [
   { group: 'EXPLORE', items: [
     { href: '/', label: 'Dashboard', icon: 'home' },
-    { href: '/all', label: 'All companies', icon: 'list' },
-    { href: '/sectors', label: 'Sectors', icon: 'grid' },
+    { href: '/all', label: 'Companies', icon: 'list', also: ['/sectors', '/dividends'] },
     { href: '/compare', label: 'Compare', icon: 'columns' },
-    { href: '/dividends', label: 'Dividend calendar', icon: 'calendar' },
     { href: '/fraud', label: 'Fraud alerts', icon: 'high' },
     { href: '/scorecard', label: 'Signal scorecard', icon: 'research' },
   ] },
@@ -31,7 +29,14 @@ const NAV: { group: string; items: { href: string; label: string; icon: IconName
   ] },
 ];
 
-const isActive = (path: string, href: string) => (href === '/' ? path === '/' : path === href || path.startsWith(href + '/'));
+const under = (path: string, href: string) => (href === '/' ? path === '/' : path === href || path.startsWith(href + '/'));
+// One menu entry covers the tabbed pages (Companies = /all, /sectors, /dividends).
+const isActive = (path: string, it: { href: string; also?: string[] }) => [it.href, ...(it.also ?? [])].some((h) => under(path, h));
+// 'page' on the item's own page, 'true' when a sibling tab of the item is open.
+function currentOf(path: string, it: { href: string; also?: string[] }): 'page' | 'true' | undefined {
+  if (under(path, it.href)) return 'page';
+  return isActive(path, it) ? 'true' : undefined;
+}
 
 export function Sidebar() {
   const path = usePathname();
@@ -40,13 +45,13 @@ export function Sidebar() {
   const watched = useWatchlist().codes.length;
   const { t } = useLang();
   const [menuOpen, setMenuOpen] = useState(false);
-  const current = NAV.flatMap((g) => g.items).find((it) => isActive(path, it.href));
+  const current = NAV.flatMap((g) => g.items).find((it) => isActive(path, it));
   useEffect(() => { document.body.classList.toggle('nav-collapsed', collapsed); }, [collapsed]);
 
   return (
     <aside id="nav" className={menuOpen ? 'menu-open' : ''}>
       <div className="brand">
-        <span>৳</span><b className="nav-text">{t('DSE Trade Helper')}</b>
+        <span>৳</span><b className="nav-text">{t('Trade Helper')}</b>
         <button className="collapse" type="button" onClick={() => setNav(collapsed ? 'open' : 'collapsed')}
           aria-label={collapsed ? t('Show sidebar') : t('Hide sidebar')} aria-expanded={!collapsed}>
           <Icon name="panel" />
@@ -60,8 +65,8 @@ export function Sidebar() {
         <div key={g.group} style={{ display: 'contents' }}>
           <div className="navlabel">{t(g.group)}</div>
           {g.items.map((it) => (
-            <Link key={it.href} href={it.href} title={t(it.label)} className={isActive(path, it.href) ? 'active' : ''} onClick={() => setMenuOpen(false)}
-              aria-current={isActive(path, it.href) ? 'page' : undefined}>
+            <Link key={it.href} href={it.href} title={t(it.label)} className={isActive(path, it) ? 'active' : ''} onClick={() => setMenuOpen(false)}
+              aria-current={currentOf(path, it)}>
               <Icon name={it.icon} /><span className="nav-text">{t(it.label)}</span>
               {it.href === '/watchlist' && watched ? <span className="nav-count mono" aria-label={`${watched} saved`}>{watched}</span> : null}
             </Link>

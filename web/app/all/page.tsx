@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Tr } from '@/components/Tr';
+import { CompanyTabs } from '@/components/CompanyTabs';
 import { useLang } from '@/components/i18n';
 import { Suspense, useMemo } from 'react';
 import { useApi } from '@/components/AppProvider';
@@ -83,6 +84,7 @@ function AllCompanies() {
 
   if (error && !data) return <div className="note bad">Could not load the companies: {error}</div>;
   const fresh = rows.filter((r) => !r.stale).length;
+  const filtered = Boolean(preset) || FILTERS.some((k) => state[k]);
 
   const select = (k: Filter, label: string, icon: IconName, options: [string, string][]) => (
     <span className="select-ic"><Icon name={icon} />
@@ -95,25 +97,34 @@ function AllCompanies() {
   return (
     <>
       <h1><Tr text="All companies" /></h1>
+      <CompanyTabs />
       <p className="muted">{rows.length} companies listed{fresh < rows.length ? `, ${fresh} with the newest data` : ''}. Click a row for the full explanation.</p>
-      <div role="group" aria-label={t('Quick picks:')} className="presets">
-        <span className="small muted"><Tr text="Quick picks:" /></span>
-        {PRESETS.map((p) => (
-          <button key={p.key} type="button" className={`btn chip chip-${p.tone}${preset?.key === p.key ? ' active' : ''}`} aria-pressed={preset?.key === p.key} title={t(p.hint)}
-            onClick={() => setParams(preset?.key === p.key ? { preset: '', sort: 'score', dir: -1 } : { preset: p.key, sort: p.sort, dir: p.dir })}><Icon name={p.icon} /><Tr text={p.label} /></button>
-        ))}
+      <div className="panel filter-panel">
+        <div role="group" aria-label={t('Quick picks:')} className="presets">
+          <span className="small muted"><Tr text="Quick picks:" /></span>
+          {PRESETS.map((p) => (
+            <button key={p.key} type="button" className={`btn chip chip-${p.tone}${preset?.key === p.key ? ' active' : ''}`} aria-pressed={preset?.key === p.key} title={t(p.hint)}
+              onClick={() => setParams(preset?.key === p.key ? { preset: '', sort: 'score', dir: -1 } : { preset: p.key, sort: p.sort, dir: p.dir })}><Icon name={p.icon} /><Tr text={p.label} /></button>
+          ))}
+        </div>
+        {preset ? <p className="small muted preset-hint"><Tr text={preset.label} />: {t(preset.hint)}</p> : null}
+        <div className="filter-grid all-filters">
+          {select('signal', 'Signal', 'research', [['', 'Any signal'], ...Object.entries(SIGNALS).map(([k, s]) => [k, s.label] as [string, string])])}
+          {select('sector', 'Sector', 'grid', [['', 'All sectors'], ...sectors.map((s) => [s, sectorName(s)] as [string, string])])}
+          {select('fraud', 'Fraud check', 'clean', [['', 'Any fraud risk'], ...Object.entries(FRAUD) as [string, string][]])}
+          {select('cat', 'Category', 'list', [['', 'Any category'], ...['A', 'B', 'N', 'Z'].map((c) => [c, 'Category ' + c] as [string, string])])}
+          {select('yield', 'Dividend yield', 'coins', [['', 'Any dividend yield'], ['3', 'Yield 3%+'], ['5', 'Yield 5%+'], ['8', 'Yield 8%+']])}
+          {select('liquid', 'Trading', 'columns', [['', 'Any trading volume'], ['10', '৳0.1 cr+ a day'], ['100', '৳1 cr+ a day']])}
+        </div>
       </div>
-      {preset ? <p className="small muted"><Tr text={preset.label} />: {t(preset.hint)}</p> : null}
-      <div className="filters all-filters">
-        {select('signal', 'Signal', 'research', [['', 'Any signal'], ...Object.entries(SIGNALS).map(([k, s]) => [k, s.label] as [string, string])])}
-        {select('sector', 'Sector', 'grid', [['', 'All sectors'], ...sectors.map((s) => [s, sectorName(s)] as [string, string])])}
-        {select('fraud', 'Fraud check', 'clean', [['', 'Any fraud risk'], ...Object.entries(FRAUD) as [string, string][]])}
-        {select('cat', 'Category', 'list', [['', 'Any category'], ...['A', 'B', 'N', 'Z'].map((c) => [c, 'Category ' + c] as [string, string])])}
-        {select('yield', 'Dividend yield', 'coins', [['', 'Any dividend yield'], ['3', 'Yield 3%+'], ['5', 'Yield 5%+'], ['8', 'Yield 8%+']])}
-        {select('liquid', 'Trading', 'columns', [['', 'Any trading volume'], ['10', '৳0.1 cr+ a day'], ['100', '৳1 cr+ a day']])}
-        <span className="small muted" aria-live="polite" style={{ alignSelf: 'center' }}>{t('Showing {n} companies').replace('{n}', String(shown.length))}</span>
-        <button type="button" className="btn" onClick={() => downloadCsv(shown)} disabled={!shown.length}>
-          <Icon name="download" />{t('Download list')} <span className="small muted">(Excel / CSV)</span></button>
+      <div className="list-toolbar">
+        <span className="small muted" aria-live="polite">{t('Showing {n} companies').replace('{n}', String(shown.length))}</span>
+        {/* Disabled, not removed, when nothing is set, so keyboard focus is not lost after a click. */}
+        <button type="button" className="btn ghost" disabled={!filtered}
+          onClick={() => setParams({ preset: '', sort: 'score', dir: -1, ...Object.fromEntries(FILTERS.map((k) => [k, ''])) })}>
+          <Icon name="cross" />{t('Clear filters')}</button>
+        <button type="button" className="btn ghost" onClick={() => downloadCsv(shown)} disabled={!shown.length}>
+          <Icon name="download" />{t('Download list')} <span className="small muted">CSV</span></button>
       </div>
       {/* Phones hide the table header that holds the sort buttons, so the card layout gets its own control. */}
       <div className="filters card-sort">

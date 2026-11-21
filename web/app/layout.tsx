@@ -28,7 +28,7 @@ const mono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: 'DSE Trade Helper',
+  title: 'Trade Helper',
   description: 'Research Dhaka Stock Exchange companies: signals, fraud checks, dividends and history from public DSE data.',
 };
 

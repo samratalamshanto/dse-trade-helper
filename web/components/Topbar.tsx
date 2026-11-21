@@ -39,6 +39,7 @@ function Search() {
 
   return (
     <div className="search" ref={box}>
+      <Icon name="search" />
       <input id="q" placeholder={t('Search company (code or name)')} autoComplete="off" aria-label={t('Search company')}
         role="combobox" aria-expanded={open && hits.length > 0}
         aria-controls={open && hits.length > 0 ? 'suggest' : undefined}
@@ -85,15 +86,24 @@ export function Topbar() {
   const status = session ? `${t('DSE data')}: ${session.dataTime || fmtDate(session.sessionDate)} · ${stateText}` : '';
 
   return (
-    <div className="topbar">
+    <header className="topbar">
       <Search />
-      <span className="updated" aria-live="polite">{status}</span>
-      <button className={`btn${spinning ? ' spin' : ''}`} type="button" aria-label={t('Refresh data now')} disabled={spinning}
-        onClick={() => { setSpinning(true); refresh({ fresh: true }); setTimeout(() => setSpinning(false), 1500); }}>
-        <Icon name="refresh" />{t('Refresh')}
-      </button>
-      <LangToggle icon={<Icon name="globe" />} />
-      <button className="btn" type="button" aria-label={t('Toggle dark or light theme')} onClick={toggleTheme}><Icon name="moon" />{t('Theme')}</button>
-    </div>
+      {/* Always mounted, so screen readers announce the status when it arrives; the visible pill repeats it. */}
+      <span className="mkt-status" title={status || undefined}>
+        {session ? <span aria-hidden="true" className="mkt-visual">
+          <span className={`mkt-pill m-${st.key}`}><i />{t(st.short.replace('● ', ''))}</span>
+          <span className="mkt-time">{session.dataTime || fmtDate(session.sessionDate)}</span>
+        </span> : null}
+        <span className="sr-only" aria-live="polite">{status}</span>
+      </span>
+      <div className="top-actions">
+        <button className={`btn icon-btn${spinning ? ' spin' : ''}`} type="button" aria-label={t('Refresh data now')} title={t('Refresh data now')} disabled={spinning}
+          onClick={() => { setSpinning(true); refresh({ fresh: true }); setTimeout(() => setSpinning(false), 1500); }}>
+          <Icon name="refresh" />
+        </button>
+        <LangToggle icon={<Icon name="globe" />} />
+        <button className="btn icon-btn" type="button" aria-label={t('Toggle dark or light theme')} title={t('Toggle dark or light theme')} onClick={toggleTheme}><Icon name="moon" /></button>
+      </div>
+    </header>
   );
 }

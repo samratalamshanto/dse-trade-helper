@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Tr } from '@/components/Tr';
+import { CompanyTabs } from '@/components/CompanyTabs';
 import { useMemo } from 'react';
 import { useApi } from '@/components/AppProvider';
 import { fmt, sectorName, signed, tone } from '@/components/format';
@@ -36,6 +37,7 @@ export default function SectorsPage() {
   return (
     <>
       <h1><Tr text="Sectors" /></h1>
+      <CompanyTabs />
       <p className="muted">Compare a company with others in the same industry. A bank&apos;s P/E is not comparable with a pharma company&apos;s P/E. <Info text="Median P/E counts only profitable companies outside category Z." /></p>
       <div className="grid g3">{sectors.map((s) => (
         <section key={s.sector} className="panel sector-card" aria-label={sectorName(s.sector)}>

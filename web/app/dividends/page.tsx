@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Tr } from '@/components/Tr';
+import { CompanyTabs } from '@/components/CompanyTabs';
 import { useState } from 'react';
 import { useApi } from '@/components/AppProvider';
 import { isTooLate, LastBuy } from '@/components/LastBuy';
@@ -49,12 +50,13 @@ export default function DividendsPage() {
   return (
     <>
       <h1><Tr text="Dividend calendar" /></h1>
+      <CompanyTabs />
       <div className="note"><b>How to get a dividend:</b> buy the share on or before the <b>last day to buy</b>. Owners on the <b>record date</b> receive it after the AGM approves it.
         The price usually falls by about the dividend after the record date, so a dividend is not free money.
         <br /><b>12-month cash yield</b> = all cash dividends announced in the last 12 months (interim + final) ÷ today&apos;s price. Bonus shares are not cash. Tap the i next to a yield to see its sum.</div>
 
       <h2><Tr text="Upcoming record dates" /></h2>
-      <div className="filters">
+      <div className="filters filters-center">
         <label className="check small"><input type="checkbox" checked={showPast} onChange={(e) => setShowPast(e.target.checked)} />
           <span><Tr text="Show rows where the last day to buy has passed" /> ({pastCount})</span></label>
         <span className="small muted"><Tr text="Companies with no fraud flag are listed first." /></span>

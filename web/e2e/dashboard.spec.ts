@@ -31,14 +31,30 @@ test.describe('dashboard', () => {
     expect(sw).toBeLessThanOrEqual(iw);
   });
 
+  test('sidebar scrolls to its last link on a short laptop window', async ({ page }, info) => {
+    test.skip(isPhone(info.project.name));
+    await page.setViewportSize({ width: 1280, height: 640 });
+    const last = page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Start investing' });
+    await last.scrollIntoViewIfNeeded();
+    await expect(last).toBeInViewport();
+  });
+
+  test('company tabs switch between list, sectors and dividends', async ({ page }) => {
+    await page.goto('/sectors');
+    const tabs = page.getByRole('navigation', { name: 'Companies' });
+    await expect(tabs.getByRole('link', { name: 'Sectors' })).toHaveAttribute('aria-current', 'page');
+    await tabs.getByRole('link', { name: 'Dividends' }).click();
+    await expect(page).toHaveURL(/\/dividends$/);
+  });
+
   test('phone menu button opens the nav', async ({ page }, info) => {
     test.skip(!isPhone(info.project.name));
     const menu = page.getByRole('button', { name: /^Menu/ });
     await menu.click();
     await expect(menu).toHaveCount(0);
     const nav = page.getByRole('navigation', { name: 'Main' });
-    await expect(nav.getByRole('link', { name: 'All companies' })).toBeVisible();
-    await nav.getByRole('link', { name: 'All companies' }).click();
+    await expect(nav.getByRole('link', { name: 'Companies' })).toBeVisible();
+    await nav.getByRole('link', { name: 'Companies' }).click();
     await expect(page).toHaveURL(/\/all$/);
   });
 });
