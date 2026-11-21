@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useApi } from '@/components/AppProvider';
+import type { CompanyRow } from '@/lib/service';
 import { useStoredValue } from '@/components/useStored';
 import { useWatchlist } from '@/components/Watchlist';
 import { useLang } from '@/components/i18n';
@@ -42,7 +44,11 @@ export function Sidebar() {
   const path = usePathname();
   const [nav, setNav] = useStoredValue('nav', 'open');
   const collapsed = nav === 'collapsed';
-  const watched = useWatchlist().codes.length;
+  const { codes } = useWatchlist();
+  const watched = codes.length;
+  // Same request the top bar makes, so this adds no API call. Z stocks are left out, as on the Fraud alerts page's default list.
+  const { data } = useApi<{ rows: CompanyRow[]; session: null }>('/api/companies');
+  const flagged = data ? data.rows.filter((r) => r.fraud !== 'clean' && r.category !== 'Z' && codes.includes(r.code)).length : 0;
   const { t } = useLang();
   const [menuOpen, setMenuOpen] = useState(false);
   const current = NAV.flatMap((g) => g.items).find((it) => isActive(path, it));
@@ -69,6 +75,7 @@ export function Sidebar() {
               aria-current={currentOf(path, it)}>
               <Icon name={it.icon} /><span className="nav-text">{t(it.label)}</span>
               {it.href === '/watchlist' && watched ? <span className="nav-count mono" aria-label={`${watched} saved`}>{watched}</span> : null}
+              {it.href === '/fraud' && flagged ? <span className="nav-count nav-alert mono">{flagged}<span className="sr-only"> {t('of your watchlist flagged')}</span></span> : null}
             </Link>
           ))}
         </div>

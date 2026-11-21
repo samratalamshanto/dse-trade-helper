@@ -66,6 +66,17 @@ test.describe('dashboard', () => {
     expect(calls).toEqual([]);
   });
 
+  test('Fraud alerts menu item counts flagged stocks in the watchlist', async ({ page }, info) => {
+    const body = await (await page.request.get('/api/companies')).json() as { rows: { code: string; fraud: string; category: string }[] };
+    const flagged = body.rows.find((r) => r.fraud !== 'clean' && r.category !== 'Z')!.code;
+    const clean = body.rows.find((r) => r.fraud === 'clean')!.code;
+    await page.goto('/');
+    await page.evaluate((list) => localStorage.setItem('watchlist', JSON.stringify(list)), [flagged, clean]);
+    await page.reload();
+    if (isPhone(info.project.name)) await page.getByRole('button', { name: /^Menu/ }).click();
+    await expect(page.getByRole('link', { name: 'Fraud alerts 1 of your watchlist flagged' })).toBeVisible();
+  });
+
   test('title and tabs stay on screen while the data loads', async ({ page }) => {
     await page.route('**/api/dividends', async (route) => { await new Promise((r) => setTimeout(r, 1500)); await route.continue(); });
     await page.goto('/dividends');

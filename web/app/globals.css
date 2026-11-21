@@ -264,6 +264,7 @@ a.btn { text-decoration: none; }
 .co-cell { display: flex; align-items: center; gap: 6px; }
 .co-cell .watch-btn { margin-left: -8px; flex: none; }
 .nav-count { margin-left: auto; font-size: 12px; background: var(--panel-2); border-radius: 999px; padding: 1px 8px; color: var(--text); }
+.nav-count.nav-alert { background: var(--bad-soft); color: var(--down); font-weight: 600; }
 body.nav-collapsed .nav-count { display: none; }
 
 .empty-state { text-align: center; padding: 32px 16px; }
