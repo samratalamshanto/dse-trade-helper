@@ -32,7 +32,7 @@ export default function WatchlistPage() {
         <div className="panel empty-state">
           <Icon name="star" />
           <p><b><Tr text="Your watchlist is empty." /></b></p>
-          <p className="muted">Press the ☆ next to a company in <Link href="/all">All companies</Link>, or the <b>Save</b> button on a company page.</p>
+          <p className="muted">Press the ☆ next to a company in <Link href="/all"><Tr text="Companies" /></Link>, or the <b>Save</b> button on a company page.</p>
         </div>
       ) : (
         <div className="panel table-wrap"><table className="cards">

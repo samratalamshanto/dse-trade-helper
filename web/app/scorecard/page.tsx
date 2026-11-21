@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Tr } from '@/components/Tr';
 import { useApi } from '@/components/AppProvider';
+import { Skeleton } from '@/components/ui';
 import { fmt, fmtDate, signed, tone } from '@/components/format';
 import { GRADED_SIGNALS, HORIZONS, weakestGroup, type Grade, type Scorecard } from '@/lib/scorecard';
 
@@ -33,13 +34,13 @@ function CallList({ title, list }: { title: string; list: Grade[] }) {
 export default function ScorecardPage() {
   const { data: d, error } = useApi<Report>('/api/scorecard');
   if (error && !d) return <div className="note bad">Could not load the scorecard: {error}</div>;
-  if (!d) return <div className="empty">Loading…</div>;
+  if (!d) return <Skeleton label="Loading scorecard" />;
   const weak = weakestGroup(d.bySignal);
   const graded = GRADED_SIGNALS.some((s) => HORIZONS.some((h) => d.bySignal[s][h].n > 0));
 
   return (
     <>
-      <h1><Tr text="How our signals did" /></h1>
+      <h1><Tr text="Signal scorecard" /></h1>
       <div className="note">Every trading day after the close we save what this app said about each company. Later we grade each call against the
         DSEX index at <b>1, 5 and 20 trading days</b>. <b>Research</b> is right when the share beat DSEX; <b>caution</b> and <b>avoid</b> are right when it lagged DSEX.
         Neutral is not graded. The first grades appear after 1 trading day; the full picture needs 20. This is our track record, not a forecast. Learning aid, not investment advice.</div>

@@ -9,7 +9,7 @@ import { useApi, useApp } from '@/components/AppProvider';
 import { ChangeText } from '@/components/CompanyCard';
 import { ChartBox, useChartColors, type Colors } from '@/components/charts';
 import { fmt, fmtDate, moneyPerDay, pctNum, sectorName, signed } from '@/components/format';
-import { FraudPill, Icon, SignalPill, type FraudLevel, type Signal } from '@/components/ui';
+import { FraudPill, Icon, SignalPill, Skeleton, type FraudLevel, type Signal } from '@/components/ui';
 import { useLang } from '@/components/i18n';
 import type { CompanyDetail, CompanyRow } from '@/lib/service';
 import { CODE_RE } from '@/lib/dhaka';
@@ -138,5 +138,5 @@ function Compare() {
 }
 
 export default function ComparePage() {
-  return <Suspense fallback={<div className="empty">Loading…</div>}><Compare /></Suspense>;
+  return <Suspense fallback={<Skeleton />}><Compare /></Suspense>;
 }

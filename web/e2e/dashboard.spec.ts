@@ -60,7 +60,7 @@ test.describe('dashboard', () => {
     page.on('request', (r) => { if (r.url().includes('/api/')) calls.push(r.url()); });
     await tabs.getByRole('link', { name: 'Sectors' }).click();
     await expect(page.locator('.sector-card').first()).toBeVisible();
-    await expect(page.getByText('Loading…')).toHaveCount(0);
+    await expect(page.locator('.skel-block')).toHaveCount(0);
     await tabs.getByRole('link', { name: 'Dividends' }).click();
     await expect(page.getByRole('heading', { name: 'Upcoming record dates' })).toBeVisible();
     expect(calls).toEqual([]);
@@ -87,10 +87,19 @@ test.describe('dashboard', () => {
     await expect(page.locator('.my-stocks')).toContainText(/GP\s*৳\d/);
   });
 
+  test('dashboard shows the market first, before the personal panels', async ({ page }) => {
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('watchlist', '["GP"]'));
+    await page.reload();
+    await expect(page.locator('.my-stocks')).toContainText(/GP\s*৳\d/);
+    const order = await page.locator('main section.market, main section.my-stocks').evaluateAll((els) => els.map((e) => e.className));
+    expect(order[0]).toContain('market');
+  });
+
   test('title and tabs stay on screen while the data loads', async ({ page }) => {
     await page.route('**/api/dividends', async (route) => { await new Promise((r) => setTimeout(r, 1500)); await route.continue(); });
     await page.goto('/dividends');
-    await expect(page.getByText('Loading…')).toBeVisible();
+    await expect(page.locator('.skel-block')).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Companies' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   });

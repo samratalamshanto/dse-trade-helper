@@ -144,7 +144,7 @@ test.describe('/plans (API mocked)', () => {
 
   test('without a key it asks for the trades key', async ({ page }) => {
     await page.goto('/plans');
-    await expect(page.getByRole('heading', { name: 'My buy plans' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Buy plans' })).toBeVisible();
     await expect(page.getByLabel('Trades key')).toBeVisible();
   });
 });

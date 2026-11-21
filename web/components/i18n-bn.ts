@@ -249,4 +249,11 @@ export const BN: Record<string, string> = {
   'below the 52-week high.': '৫২ সপ্তাহের সর্বোচ্চের নিচে।', 'Who owns the shares': 'শেয়ারের মালিক কারা', 'As on': 'তারিখ',
   'Data as of': 'তথ্যের সময়', 'Source: DSE public website': 'উৎস: DSE পাবলিক ওয়েবসাইট',
   'My trades': 'আমার লেনদেন',
+  'Buy plans': 'কেনার পরিকল্পনা', 'Signal scorecard': 'সংকেতের ফলাফল', 'How dividends work': 'লভ্যাংশ কীভাবে পাওয়া যায়',
+  'Upcoming': 'আসন্ন', 'Declared': 'ঘোষিত', 'Sections': 'অংশ', 'Filters': 'ফিল্টার', 'Has': 'আছে',
+  'Loading companies…': 'কোম্পানি লোড হচ্ছে…', 'Find a company (code or name)': 'কোম্পানি খুঁজুন (কোড বা নাম)',
+  'Find a sector or company': 'খাত বা কোম্পানি খুঁজুন', 'Showing {n} sectors': '{n}টি খাত দেখানো হচ্ছে',
+  'No company matches the search.': 'খোঁজার সাথে কোনো কোম্পানি মেলেনি।', 'No sector or company matches the search.': 'খোঁজার সাথে কোনো খাত বা কোম্পানি মেলেনি।',
+  'Loading dividends': 'লভ্যাংশ লোড হচ্ছে', 'Loading sectors': 'খাত লোড হচ্ছে', 'Loading dashboard': 'ড্যাশবোর্ড লোড হচ্ছে',
+  'Loading scorecard': 'ফলাফল লোড হচ্ছে', 'Loading trades': 'লেনদেন লোড হচ্ছে',
 };

@@ -18,10 +18,12 @@ interface Companies { rows: CompanyRow[]; session: MarketSession | null }
 interface Calendar { upcoming: CalendarRow[]; session: MarketSession | null }
 
 // The user's own codes (watchlist and portfolio) at a glance, shown only when they saved something.
-export function MyStocks() {
+const NONE: string[] = [];
+
+export function MyStocks({ exclude = NONE }: { exclude?: string[] }) {
   const { codes: watched } = useWatchlist();
   const [rawLots] = useStoredValue('portfolio', '[]');
-  const codes = useMemo(() => [...new Set([...parseLots(rawLots).map((l) => l.code), ...watched])], [rawLots, watched]);
+  const codes = useMemo(() => [...new Set([...parseLots(rawLots).map((l) => l.code), ...watched])].filter((c) => !exclude.includes(c)), [rawLots, watched, exclude]);
   const { data } = useApi<Companies>(codes.length ? '/api/companies' : null);
   const { data: cal } = useApi<Calendar>(codes.length ? '/api/dividends' : null);
   if (!codes.length) return null;

@@ -26,7 +26,7 @@ export function LangToggle({ icon }: { icon?: ReactNode }) {
   return (
     <button type="button" className="btn" lang={lang === 'en' ? 'bn' : 'en'} onClick={() => setLang(lang === 'en' ? 'bn' : 'en')}
       aria-label={lang === 'en' ? 'বাংলায় দেখুন (Switch to Bangla)' : 'Switch to English (ইংরেজিতে দেখুন)'}>
-      {icon}{lang === 'en' ? 'বাংলা' : 'English'}
+      {icon}<span className="lang-text">{lang === 'en' ? 'বাংলা' : 'English'}</span>
     </button>
   );
 }

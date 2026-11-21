@@ -183,6 +183,17 @@ th[aria-sort="ascending"], th[aria-sort="descending"] { color: var(--text); font
 .sort-btn:hover { border-color: var(--accent); color: var(--text); }
 .sort-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 .skel { background: linear-gradient(90deg, var(--panel-2), var(--border), var(--panel-2)); background-size: 200% 100%; animation: shimmer 1.2s infinite; border-radius: 12px; }
+.skel-block { display: grid; gap: 12px; }
+.skel-line { height: 40px; } .skel-line:first-child { height: 22px; width: 40%; }
+.page-toolbar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; padding: 10px 0; margin: 4px 0 8px; background: var(--bg); }
+.page-toolbar .search { flex: 1 1 260px; max-width: 420px; }
+.jump-bar { display: flex; flex-wrap: wrap; gap: 6px; }
+.jump-bar a { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--panel); color: var(--text); text-decoration: none; font-size: 14px; }
+.jump-bar a:hover { border-color: var(--accent); }
+.jump-bar .count { color: var(--muted); font-size: 12px; }
+.page-toolbar ~ h2[id] { scroll-margin-top: 150px; }
+details.note > summary { cursor: pointer; font-weight: 600; min-height: 28px; }
+details.note[open] > summary { margin-bottom: 6px; }
 @keyframes shimmer { to { background-position: -200% 0; } }
 .spin .ic { animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -375,7 +386,20 @@ summary.toggle-btn:hover { border-color: var(--accent); background: var(--accent
   div.filter-panel .presets { display: flex; }
   .filter-panel .presets > span { flex-basis: 100%; }
   .page-tabs { display: flex; } .page-tabs .tab-link { flex: 1; justify-content: center; padding: 10px 8px; } .page-tabs .tab-link .ic { display: none; }
+  div.filter-panel .presets { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; align-items: center; }
+  div.filter-panel .presets > * { flex: none; }
+  .filter-panel .filter-toggle { display: inline-flex; width: 100%; justify-content: center; margin-bottom: 8px; }
+  .filter-grid.all-filters:not(.open) { display: none; }
+  /* One header row on a phone: search plus three icon buttons; the market status is on the dashboard. */
+  .topbar { flex-wrap: nowrap; }
+  .topbar .search { flex: 1 1 0; min-width: 0; }
+  .topbar .mkt-visual { display: none; }
+  .top-actions .lang-text { display: none; }
+  .top-actions .btn { padding-left: 0; padding-right: 0; width: 44px; justify-content: center; }
+  .today-list li a, .open-link { display: inline-flex; align-items: center; min-height: 44px; }
+  .note .link-btn { min-height: 44px; }
 }
+.filter-toggle { display: none; }
 .filter-grid .select-ic, .filter-grid select { width: 100%; }
 .list-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
 .list-toolbar > span:first-child { margin-right: auto; }

@@ -17,6 +17,31 @@ test('dividends: past rows hidden by default, show-past reveals more', async ({ 
   await expect(upcoming).toHaveCount(before);
 });
 
+test('dividends: the search box narrows every table to the typed company', async ({ page }) => {
+  await page.goto('/dividends');
+  const upcoming = page.locator('table.cards').first().locator('tbody tr');
+  await expect(upcoming.first()).toBeVisible();
+  const code = (await upcoming.first().locator('td b.mono').innerText()).trim();
+  await page.getByRole('searchbox', { name: 'Find a company (code or name)' }).fill(code);
+  for (const t of await upcoming.locator('td b.mono').allInnerTexts()) expect(t).toContain(code);
+  await page.getByRole('searchbox', { name: 'Find a company (code or name)' }).fill('zzzz-no-such');
+  await expect(page.getByText('No company matches the search.')).toBeVisible();
+  await page.getByRole('navigation', { name: 'Sections' }).getByRole('link', { name: /Expected/ }).click();
+  await expect(page).toHaveURL(/#expected$/);
+});
+
+test('sectors: the search box keeps only matching sectors', async ({ page }) => {
+  await page.goto('/sectors');
+  await expect(page.locator('.sector-card').first()).toBeVisible();
+  const all = await page.locator('.sector-card').count();
+  await page.getByRole('searchbox', { name: 'Find a sector or company' }).fill('bank');
+  await expect(page.locator('.sector-card')).not.toHaveCount(all);
+  // A card matches by its sector name, or names the matching company on a "Has" line.
+  for (const t of await page.locator('.sector-card').allInnerTexts()) expect(t).toMatch(/bank|Has/i);
+  await page.getByRole('searchbox', { name: 'Find a sector or company' }).fill('GP');
+  await expect(page.locator('.sector-card').filter({ hasText: 'Has' }).first()).toBeVisible();
+});
+
 test('watchlist: add from company page, shows, persists, remove', async ({ page }) => {
   await page.goto('/c/GP');
   await page.getByRole('button', { name: 'Save to watchlist' }).click();

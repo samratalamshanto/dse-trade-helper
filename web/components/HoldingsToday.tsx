@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useApi } from '@/components/AppProvider';
 import { fmt } from '@/components/format';
+import { ChangeText } from '@/components/CompanyCard';
 import { call, CheckBadge, ensureKey, type TradesList } from '@/components/trades-client';
 import { dhakaToday } from '@/lib/dhaka';
 import type { CompanyRow } from '@/lib/service';
@@ -30,7 +31,8 @@ function saveLabels(labels: Labels) {
 const signedMoney = (x: number) => `${x > 0 ? '+' : x < 0 ? '-' : ''}৳${fmt(Math.abs(x))}`;
 
 // The owner's own holdings with today's check, shown only when this browser holds a working trades key.
-export function HoldingsToday() {
+// onHeld tells the dashboard which codes are shown here, so My stocks does not list them a second time.
+export function HoldingsToday({ onHeld }: { onHeld?: (codes: string[]) => void }) {
   const [list, setList] = useState<TradesList | null>(null);
   const [before, setBefore] = useState<Labels>({});
   const { data: companies } = useApi<Companies>(list ? '/api/companies' : null);
@@ -43,9 +45,10 @@ export function HoldingsToday() {
       setBefore(previousLabels());
       saveLabels(labels);
       setList(l);
+      onHeld?.(l.holdings.filter((h) => h.shares > 0).map((h) => h.code));
     }, (e: unknown) => console.warn('dashboard: holdings hidden, /api/trades failed', e)) : undefined);
     return () => { active = false; };
-  }, []);
+  }, [onHeld]);
 
   const held = list?.holdings.filter((h) => h.shares > 0) ?? [];
   if (!held.length) return null;
@@ -67,8 +70,9 @@ export function HoldingsToday() {
         const changed = h.check && before[h.code] && before[h.code] !== h.check.label;
         return (
           <li key={h.code}>
-            <span><Link href={'/c/' + encodeURIComponent(h.code)} className="mono"><b>{h.code}</b></Link> <span className="small muted">{h.shares} {h.shares === 1 ? 'share' : 'shares'}</span></span>
+            <span><Link href={'/c/' + encodeURIComponent(h.code)} className="mono"><b>{h.code}</b></Link> {byCode[h.code] ? <span className="mono small">৳{fmt(byCode[h.code].price)}</span> : null} <span className="small muted">{h.shares} {h.shares === 1 ? 'share' : 'shares'}</span></span>
             <span className="my-stock-facts">
+              {byCode[h.code] ? <span className="mono small"><ChangeText pct={byCode[h.code].changePct} /></span> : null}
               {changed ? <span className="small t-warn" title={`Was: ${before[h.code]}`}>Changed since last visit</span> : null}
               {h.check ? <CheckBadge check={h.check} /> : null}
             </span>

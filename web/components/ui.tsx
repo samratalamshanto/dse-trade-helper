@@ -66,6 +66,16 @@ export function FraudPill({ level, big = false }: { level: FraudLevel; big?: boo
   return <span className={`pill f-${level}`} style={big ? { fontSize: 16 } : undefined}><Icon name={level} /> <Tr text={FRAUD[level]} /></span>;
 }
 
+// Grey rows in the shape of the content, so a page never looks empty or jumps while its data loads.
+export function Skeleton({ label = 'Loading…', rows = 6 }: { label?: string; rows?: number }) {
+  return (
+    <div className="panel skel-block" role="status" aria-busy="true">
+      <span className="sr-only"><Tr text={label} /></span>
+      {Array.from({ length: rows }, (_, i) => <div key={i} className="skel skel-line" />)}
+    </div>
+  );
+}
+
 // Small "i" that shows a plain-language explanation on hover or keyboard focus.
 export function Info({ text }: { text: string }) {
   return <span className="info" tabIndex={0} role="note" aria-label={text} data-tip={text}>i</span>;

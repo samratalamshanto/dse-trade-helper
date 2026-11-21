@@ -12,6 +12,7 @@ import type { CompanyRow, CalendarRow } from '@/lib/service';
 import type { MarketSession } from '@/lib/dse';
 import styles from './alerts.module.css';
 import { CODE_RE } from '@/lib/dhaka';
+import { Tr } from '@/components/Tr';
 
 interface Companies { rows: CompanyRow[]; session: MarketSession | null }
 interface Calendar { upcoming: CalendarRow[]; session: MarketSession | null }
@@ -203,7 +204,7 @@ export default function AlertsPage() {
 
   return (
     <>
-      <h1>My Alerts</h1>
+      <h1><Tr text="Alerts" /></h1>
       <p className="muted">Rules are checked only while a page of this site is open in this browser, and each rule fires at most once a day.
         Price and move rules use the current trading session only. All settings are saved in this browser only.</p>
 

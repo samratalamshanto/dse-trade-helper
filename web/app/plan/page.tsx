@@ -9,6 +9,7 @@ import { ChartBox, useChartColors, type Colors } from '@/components/charts';
 import { fmt, fmtDate, marketState } from '@/components/format';
 import { ALLOCATION, futureValue, GROWTH_RATES, GROWTH_YEARS, INITIAL_CHOICES, MONTHLY_SPLIT, PLAN_COMPANIES, RESEARCH, type PlanCompany } from '@/components/plan/data';
 import type { CompanyDetail, Dashboard } from '@/lib/service';
+import { Tr } from '@/components/Tr';
 
 const SECTIONS = [['start', 'First steps'], ['risks', 'Risks'], ['market', 'Market'], ['companies', 'Example companies'], ['ranking', 'Ranking'], ['portfolio', 'Example portfolio'], ['growth', 'Growth'], ['research', 'Research list']] as const;
 const SECTION_OFFSET = 90;
@@ -94,7 +95,7 @@ export default function PlanPage() {
 
   return (
     <>
-      <h1>How to start investing on DSE</h1>
+      <h1><Tr text="Start investing" /></h1>
       <p className="muted">First steps for a new investor: open a BO account, pick a broker, start small, and learn the risks.
         Further down is an <b>example</b> long-term plan with four well-known companies, to show how a plan can look.</p>
       <nav className="section-tabs" aria-label="Sections on this page">

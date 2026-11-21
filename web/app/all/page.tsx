@@ -4,12 +4,12 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Tr } from '@/components/Tr';
 import { CompanyTabs } from '@/components/CompanyTabs';
 import { useLang } from '@/components/i18n';
-import { Suspense, useMemo } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { useApi } from '@/components/AppProvider';
 import { SortHeader } from '@/components/SortHeader';
 import { WatchButton } from '@/components/Watchlist';
 import { compareNullsLast, fmt, moneyPerDay, sectorName, signed, tone } from '@/components/format';
-import { FRAUD, FraudPill, Icon, SIGNAL_ORDER, SIGNALS, SignalPill, type FraudLevel, type IconName, type Signal } from '@/components/ui';
+import { FRAUD, FraudPill, Icon, SIGNAL_ORDER, SIGNALS, SignalPill, Skeleton, type FraudLevel, type IconName, type Signal } from '@/components/ui';
 import type { CompanyRow } from '@/lib/service';
 import type { MarketSession } from '@/lib/dse';
 
@@ -50,6 +50,7 @@ type Filter = (typeof FILTERS)[number];
 function AllCompanies() {
   const { t } = useLang();
   const { data, error } = useApi<CompaniesResponse>('/api/companies');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -84,7 +85,8 @@ function AllCompanies() {
 
   if (error && !data) return <div className="note bad">Could not load the companies: {error}</div>;
   const fresh = rows.filter((r) => !r.stale).length;
-  const filtered = Boolean(preset) || FILTERS.some((k) => state[k]);
+  const activeFilters = FILTERS.filter((k) => state[k]).length;
+  const filtered = Boolean(preset) || activeFilters > 0;
 
   const select = (k: Filter, label: string, icon: IconName, options: [string, string][]) => (
     <span className="select-ic"><Icon name={icon} />
@@ -96,9 +98,9 @@ function AllCompanies() {
 
   return (
     <>
-      <h1><Tr text="All companies" /></h1>
+      <h1><Tr text="Companies" /></h1>
       <CompanyTabs />
-      <p className="muted">{rows.length} companies listed{fresh < rows.length ? `, ${fresh} with the newest data` : ''}. Click a row for the full explanation.</p>
+      <p className="muted">{data ? <>{rows.length} companies listed{fresh < rows.length ? `, ${fresh} with the newest data` : ''}. </> : null}Click a row for the full explanation.</p>
       <div className="panel filter-panel">
         <div role="group" aria-label={t('Quick picks:')} className="presets">
           <span className="small muted"><Tr text="Quick picks:" /></span>
@@ -108,7 +110,10 @@ function AllCompanies() {
           ))}
         </div>
         {preset ? <p className="small muted preset-hint"><Tr text={preset.label} />: {t(preset.hint)}</p> : null}
-        <div className="filter-grid all-filters">
+        {/* On a phone the six selects fold behind this button, so the list is visible without scrolling. */}
+        <button type="button" className="btn filter-toggle" aria-expanded={filtersOpen} aria-controls="all-filters" onClick={() => setFiltersOpen(!filtersOpen)}>
+          <Icon name="list" />{t('Filters')}{activeFilters ? ` (${activeFilters})` : ''}</button>
+        <div id="all-filters" className={`filter-grid all-filters${filtersOpen ? ' open' : ''}`}>
           {select('signal', 'Signal', 'research', [['', 'Any signal'], ...Object.entries(SIGNALS).map(([k, s]) => [k, s.label] as [string, string])])}
           {select('sector', 'Sector', 'grid', [['', 'All sectors'], ...sectors.map((s) => [s, sectorName(s)] as [string, string])])}
           {select('fraud', 'Fraud check', 'clean', [['', 'Any fraud risk'], ...Object.entries(FRAUD) as [string, string][]])}
@@ -118,7 +123,7 @@ function AllCompanies() {
         </div>
       </div>
       <div className="list-toolbar">
-        <span className="small muted" aria-live="polite">{t('Showing {n} companies').replace('{n}', String(shown.length))}</span>
+        <span className="small muted" aria-live="polite">{data ? t('Showing {n} companies').replace('{n}', String(shown.length)) : t('Loading companies…')}</span>
         {/* Disabled, not removed, when nothing is set, so keyboard focus is not lost after a click. */}
         <button type="button" className="btn ghost" disabled={!filtered}
           onClick={() => setParams({ preset: '', sort: 'score', dir: -1, ...Object.fromEntries(FILTERS.map((k) => [k, ''])) })}>
@@ -161,5 +166,5 @@ function AllCompanies() {
 }
 
 export default function AllCompaniesPage() {
-  return <Suspense fallback={<div className="empty">Loading…</div>}><AllCompanies /></Suspense>;
+  return <Suspense fallback={<Skeleton label="Loading companies…" />}><AllCompanies /></Suspense>;
 }

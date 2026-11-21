@@ -3,11 +3,12 @@
 import Link from 'next/link';
 import { Tr } from '@/components/Tr';
 import { CompanyTabs } from '@/components/CompanyTabs';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { FilterBox, matchesText } from '@/components/FilterBox';
 import { useApi } from '@/components/AppProvider';
 import { fmt, sectorName, signed, tone } from '@/components/format';
 import { useLang } from '@/components/i18n';
-import { Info, SIGNALS, type Signal } from '@/components/ui';
+import { Info, SIGNALS, Skeleton, type Signal } from '@/components/ui';
 import type { CompanyRow } from '@/lib/service';
 import type { MarketSession } from '@/lib/dse';
 
@@ -18,6 +19,7 @@ const TOP = 3;
 export default function SectorsPage() {
   const { t } = useLang();
   const { data, error } = useApi<Companies>('/api/companies');
+  const [q, setQ] = useState('');
   const sectors = useMemo(() => {
     const groups: Record<string, CompanyRow[]> = {};
     for (const r of data?.rows || []) (groups[r.sector] ||= []).push(r);
@@ -35,14 +37,23 @@ export default function SectorsPage() {
   // Title and tabs stay on screen while the data loads, so a tab change does not look like a page reload.
   const head = <><h1><Tr text="Sectors" /></h1><CompanyTabs /></>;
   if (error && !data) return <>{head}<div className="note bad">Could not load sectors: {error}</div></>;
-  if (!data) return <>{head}<div className="empty">Loading…</div></>;
+  if (!data) return <>{head}<Skeleton label="Loading sectors" rows={8} /></>;
+  // A sector shows when its name matches, or when one of its companies does (that company is then named on the card).
+  const shown = sectors.map((s) => ({ ...s, found: matchesText(q, sectorName(s.sector)) ? [] : s.rows.filter((r) => matchesText(q, r.code, r.name)) }))
+    .filter((s) => !q.trim() || matchesText(q, sectorName(s.sector)) || s.found.length);
   return (
     <>
       {head}
       <p className="muted">Compare a company with others in the same industry. A bank&apos;s P/E is not comparable with a pharma company&apos;s P/E. <Info text="Median P/E counts only profitable companies outside category Z." /></p>
-      <div className="grid g3">{sectors.map((s) => (
+      <div className="page-toolbar">
+        <FilterBox value={q} onChange={setQ} label="Find a sector or company" />
+        <span className="small muted" aria-live="polite">{t('Showing {n} sectors').replace('{n}', String(shown.length))}</span>
+      </div>
+      {shown.length ? null : <div className="empty"><Tr text="No sector or company matches the search." /></div>}
+      <div className="grid g3">{shown.map((s) => (
         <section key={s.sector} className="panel sector-card" aria-label={sectorName(s.sector)}>
           <div className="sector-head"><h2 className="h3">{sectorName(s.sector)}</h2><span className="small muted">{s.rows.length} companies</span></div>
+          {s.found.length ? <p className="small"><Tr text="Has" />: {s.found.slice(0, TOP).map((r, i) => <span key={r.code}>{i ? ', ' : ''}<Link href={'/c/' + encodeURIComponent(r.code)} className="mono">{r.code}</Link></span>)}</p> : null}
           <div className="grid g2 sector-stats">
             <div><div className="small muted"><Tr text="Median P/E" /></div><div className="mono stat">{fmt(s.medianPe, 1)}</div></div>
             <div><div className="small muted"><Tr text="Average move" /></div><div className={`mono stat ${tone(s.avgMove)}`}>{signed(s.avgMove, 2)}</div></div>

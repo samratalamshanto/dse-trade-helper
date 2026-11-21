@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { fmt, fmtDate } from '@/components/format';
 import { dhakaToday } from '@/lib/dhaka';
-import { Icon } from '@/components/ui';
+import { Icon, Skeleton } from '@/components/ui';
 import TelegramTestButton from '@/components/TelegramTestButton';
 import { call, CheckBadge, ensureKey, storeKey, type TradesList as List, type Valued } from '@/components/trades-client';
 import type { LimitSettings } from '@/lib/positions';
@@ -217,7 +217,7 @@ export default function TradesPage() {
       {error ? <div className="note bad" role="alert">{error}</div> : null}
       {data?.warnings.map((w) => <div key={w} className="note warn">{w}</div>)}
       {data?.badRows.length ? <div className="note warn">Rows {data.badRows.join(', ')} in the sheet could not be read; fix them in the sheet.</div> : null}
-      {data ? <Summary holdings={data.holdings} /> : <p className="muted">{busy ? 'Loading…' : ''}</p>}
+      {data ? <Summary holdings={data.holdings} /> : busy ? <Skeleton label="Loading trades" rows={4} /> : null}
 
       {paper ? null : <div className={`panel ${css.section}`}>
         <h2 className="h3">Import from your broker (Excel order summary)</h2>

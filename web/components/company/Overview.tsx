@@ -81,7 +81,7 @@ function KeyFacts({ d }: { d: CompanyDetail }) {
         <Fact label="EPS (last year)">{taka(m.epsNow)}</Fact>
         <Fact label="P/E (audited)" hint={HINTS.peAudited}>{fmt(pl?.audited ?? m.pe, 1)}</Fact>
         <Fact label="P/E (latest results)" hint={HINTS.peUnaudited}>{fmt(pl?.unaudited, 1)}</Fact>
-        <Fact label="12-month cash yield">{m.latestYield != null ? fmt(m.latestYield, 2) + '%' : '—'}</Fact>
+        <Fact label="12-month cash yield" hint={"Cash dividends of the last 12 months ÷ today's price. " + (m.yieldBasis || 'No cash dividend in the last 12 months.') + (m.yieldNote ? ' ' + m.yieldNote + '.' : '')}>{m.latestYield != null ? fmt(m.latestYield, 2) + '%' : '—'}</Fact>
         <Fact label="Shares outstanding">{shares != null ? fmt(shares / CRORE, 2) + ' cr' : '—'}</Fact>
         <Fact label="Paid-up capital">{crore(c.paidUpCapital)}</Fact>
         <Fact label="Market cap">{crore(c.marketCap)}</Fact>
@@ -152,10 +152,9 @@ export function Overview({ d }: { d: CompanyDetail }) {
       <BuyPlanner key={c.code} code={c.code} bar={<RangeBar52 c={c} />} />
       {d.today ? <div style={{ marginTop: 14 }}><TodayPanel d={d} /></div> : null}
       <div style={{ marginTop: 14 }}><KeyFacts d={d} /></div>
-      <div className="grid g4" style={{ marginTop: 14 }}>
-        <Metric label="P/E" value={fmt(m.pe, 1)} hint="Price ÷ yearly profit per share. Lower can mean cheaper." />
-        <Metric label="Sector P/E" value={fmt(d.sectorPe, 1)} hint="Median P/E of profitable companies in the same sector." />
-        <Metric label="12-month cash yield" value={m.latestYield != null ? fmt(m.latestYield, 2) + '%' : '—'} hint={"Cash dividends of the last 12 months ÷ today's price. " + (m.yieldBasis || 'No cash dividend in the last 12 months.') + (m.yieldNote ? ' ' + m.yieldNote + '.' : '')} />
+      {/* P/E and yield are already in the header and the key facts; this row adds only what they lack. */}
+      <div className="grid g2" style={{ marginTop: 14 }}>
+        <Metric label="Sector P/E" value={fmt(d.sectorPe, 1)} hint="Median P/E of profitable companies in the same sector. Compare it with this company's P/E above." />
         <Metric label="Traded a day" value={moneyPerDay(m.avgDailyValue)} hint="Average value traded per day, last 20 days. Higher = easier to sell." />
       </div>
       <div className="panel" style={{ marginTop: 14 }}><h3><Tr text="Price" /> <Info text="Tap or hover the line to see the price on each day." /></h3><PriceChart c={c} /></div>

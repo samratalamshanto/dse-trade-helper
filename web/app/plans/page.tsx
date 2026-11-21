@@ -8,6 +8,7 @@ import { PlanForm, type PlanDraft } from '@/components/planner/PlanForm';
 import { STATUS_PILL, type LivePlan, type PlansList } from '@/components/planner/plan-text';
 import css from '@/components/planner/planner.module.css';
 import type { PlanStatus, SavedPlan } from '@/lib/plans';
+import { Tr } from '@/components/Tr';
 
 const STATUS_WORD: Record<PlanStatus['status'], string> = { reached: 'Target reached', waiting: 'Waiting', expired: 'Expired', done: 'Done', cancelled: 'Cancelled' };
 
@@ -58,7 +59,7 @@ export default function PlansPage() {
   if (!key) {
     return (
       <>
-        <h1>My buy plans</h1>
+        <h1><Tr text="Buy plans" /></h1>
         <p className="muted">Plans are saved in your own Google Sheet, next to your trades. Enter the trades key once on this device.</p>
         <form className={`panel ${css.form}`} onSubmit={unlock}>
           <label>Trades key<input type="password" autoComplete="off" value={keyDraft} onChange={(e) => setKeyDraft(e.target.value)} required minLength={16} /></label>
@@ -71,7 +72,7 @@ export default function PlansPage() {
 
   return (
     <>
-      <h1>My buy plans</h1>
+      <h1><Tr text="Buy plans" /></h1>
       <p className="muted small">Make a plan from a company page with <b>Plan a buy</b>. A plan turns green when today&apos;s price is at or under your target. Learning aid, not investment advice.</p>
       {error ? <div className="note bad" role="alert">{error}</div> : null}
       {data?.badRows.length ? <div className="note warn">Rows {data.badRows.join(', ')} in the plans sheet could not be read; fix them in the sheet.</div> : null}

@@ -14,8 +14,16 @@ test.describe('/all', () => {
     await expect(page.getByRole('option', { name: /Grameenphone/i }).first()).toBeVisible();
   });
 
-  test('signal filter narrows the list', async ({ page }) => {
+  test('phone: the selects stay folded until Filters is pressed', async ({ page }, info) => {
+    test.skip(info.project.name !== 'phone', 'the Filters button shows only at phone width');
+    await expect(page.getByLabel('Signal', { exact: true })).toBeHidden();
+    await page.getByRole('button', { name: /^Filters/ }).click();
+    await expect(page.getByLabel('Signal', { exact: true })).toBeVisible();
+  });
+
+  test('signal filter narrows the list', async ({ page }, info) => {
     const all = await rows(page).count();
+    if (info.project.name === 'phone') await page.getByRole('button', { name: /^Filters/ }).click();
     await page.getByLabel('Signal', { exact: true }).selectOption('research');
     await expect(page).toHaveURL(/signal=research/);
     await expect(page.getByText(/Showing \d+ companies/)).toBeVisible();

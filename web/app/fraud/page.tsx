@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { useApi } from '@/components/AppProvider';
 import { fmt, sectorName, signed } from '@/components/format';
-import { FraudPill, type FraudLevel } from '@/components/ui';
+import { FraudPill, Skeleton, type FraudLevel } from '@/components/ui';
 import type { CompanyRow } from '@/lib/service';
 import type { MarketSession } from '@/lib/dse';
 
@@ -48,5 +48,5 @@ function FraudAlerts() {
 }
 
 export default function FraudPage() {
-  return <Suspense fallback={<div className="empty">Loading…</div>}><FraudAlerts /></Suspense>;
+  return <Suspense fallback={<Skeleton />}><FraudAlerts /></Suspense>;
 }

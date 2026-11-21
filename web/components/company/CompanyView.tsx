@@ -25,6 +25,7 @@ type Tab = (typeof TABS)[number][0];
 const ANSWER_UI: Record<string, [string, string, IconName]> = {
   yes: ['Yes', 't-good', 'research'], partly: ['Partly', 't-warn', 'caution'], no: ['No', 't-bad', 'avoid'], unknown: ['Unknown', 't-neutral', 'neutral'],
 };
+const NO_DIVIDEND_UI: [string, string, IconName] = ['No', 't-neutral', 'calendar'];
 // The fraud answer uses the same Clean / Suspicious / High risk words as every other screen.
 const FRAUD_QUESTION = 'Any fraud warning signs?';
 const NOT_RATED = 'Not rated — no EPS published';
@@ -88,7 +89,8 @@ export function CompanyView({ code }: { code: string }) {
       <h2 className="sr-title">{t('Four questions before you buy')}</h2>
       <div className="grid g4 questions">
         {d.questions.map((q) => {
-          const [label, cls, icon] = ANSWER_UI[q.answer] ?? ANSWER_UI.unknown;
+          // No dividend soon is not bad news, so it is grey with a calendar, not a red cross.
+          const [label, cls, icon] = q.tab === 'dividends' && q.answer === 'no' ? NO_DIVIDEND_UI : ANSWER_UI[q.answer] ?? ANSWER_UI.unknown;
           return (
             <button key={q.q} type="button" className="panel qcard" onClick={() => { show(q.tab as Tab, false); tablist.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>
               <div className="small muted">{t(q.q)}</div>

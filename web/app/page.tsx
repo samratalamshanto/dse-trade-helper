@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { type ReactNode } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
+import { useWatchlist } from '@/components/Watchlist';
 import { useStoredValue } from '@/components/useStored';
 import { useLang } from '@/components/i18n';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
@@ -15,7 +16,7 @@ import { MyStocks } from '@/components/MyStocks';
 import { PlansMini, TodaysPicks } from '@/components/planner/DashboardCards';
 import { Tr } from '@/components/Tr';
 import { fmt, fmtDate, marketState, pctNum, sectorName, signed, tone } from '@/components/format';
-import { FraudPill, Icon, Info, SIGNALS, type FraudLevel, type IconName, type Signal } from '@/components/ui';
+import { FraudPill, Icon, Info, SIGNALS, Skeleton, type FraudLevel, type IconName, type Signal } from '@/components/ui';
 import type { Dashboard } from '@/lib/service';
 
 const SIGNAL_COLORS: Record<Signal, '--up' | '--muted' | '--warn' | '--down'> = { research: '--up', neutral: '--muted', caution: '--warn', avoid: '--down' };
@@ -114,8 +115,13 @@ function DsexLine({ d }: { d: Dashboard }) {
 export default function DashboardPage() {
   const { t } = useLang();
   const { data: d, error } = useApi<Dashboard>('/api/dashboard');
+  const [held, setHeld] = useState<string[]>([]);
+  const onHeld = useCallback((codes: string[]) => setHeld(codes), []);
+  const [rawLots] = useStoredValue('portfolio', '[]');
+  // Someone with nothing saved yet sees the start guide near the top; everyone else finds it near the end.
+  const isNew = useWatchlist().codes.length === 0 && rawLots === '[]';
   if (error && !d) return <div className="note bad">Could not load the dashboard: {error}. Try Refresh in a minute.</div>;
-  if (!d) return <div aria-busy="true" aria-label="Loading dashboard"><div className="skel" style={{ height: 300 }} /></div>;
+  if (!d) return <><h1 className="sr-title">{t('DSE dashboard')}</h1><Skeleton label="Loading dashboard" rows={7} /></>;
 
   const dsex = d.index.find((x) => x.key === 'DSEX');
   const b = d.breadth, traded = (b.advanced || 0) + (b.declined || 0) + (b.unchanged || 0);
@@ -131,10 +137,6 @@ export default function DashboardPage() {
   return (
     <>
       <h1 className="sr-title">{t('DSE dashboard')}</h1>
-      <HoldingsToday />
-      <MyStocks />
-      <PlansMini />
-      <StartGuide />
       <section className="panel market" aria-label={t('Market')}>
         {d.live ? null : <p className="small muted session-note">{t('Showing the last session')}, <b>{fmtDate(d.showingDate)}</b>. {t("Today's figures appear when trading starts.")}</p>}
         <div className="market-top">
@@ -159,6 +161,10 @@ export default function DashboardPage() {
         <div className="small breadth-labels"><span className="up">{b.advanced} {t('up')}</span><span className="muted">{b.unchanged} {t('unchanged')}</span><span className="down">{b.declined} {t('down')}</span>
           {notTraded ? <span className="muted">+ {notTraded} {t('not traded')}</span> : null}</div>
       </section>
+      {isNew ? <StartGuide /> : null}
+      <HoldingsToday onHeld={onHeld} />
+      <MyStocks exclude={held} />
+      <PlansMini />
 
       <div className="grid g4 quick">
         <Link className="panel card quick-card" href="/all?signal=research"><Icon name="star" /><div><div className="small muted">{t('Shortlist')}</div><div className="stat mono">{d.counts.research}</div><div className="small muted">{t('pass every check')}</div></div></Link>
@@ -166,8 +172,6 @@ export default function DashboardPage() {
         <Link className="panel card quick-card" href="/fraud"><Icon name="high" /><div><div className="small muted">{t('Fraud alerts')}</div><div className="stat mono">{d.fraudCount}</div><div className="small muted">{t('companies with warnings')}</div></div></Link>
         <Link className="panel card quick-card" href="/learn"><Icon name="help" /><div><div className="small muted">{t('New here?')}</div><div className="stat">{t('How it works')}</div><div className="small muted">{t('signals in plain words')}</div></div></Link>
       </div>
-      <TrustCard />
-      <TodaysPicks />
 
       <h2>{t(liveNow ? "Today's important things" : 'Important things from the last session')}</h2>
       <div className="grid g3">
@@ -191,12 +195,15 @@ export default function DashboardPage() {
         </TodayItem>
       </div>
 
+      <TodaysPicks />
       <MarketCharts d={d} liveNow={liveNow} />
 
       <h2>{t('Top of the shortlist')}</h2>
       <p className="muted small">{t('Companies that pass every research check, best score first. A place to start research, not a buy order.')}</p>
       <div className="grid g3">{d.shortlist.length ? d.shortlist.map((r) => <CompanyCard key={r.code} r={r} />) : <div className="empty panel">No company has passed yet.</div>}</div>
       <p><Link href="/all?signal=research">{t('See the whole shortlist →')}</Link></p>
+      {isNew ? null : <StartGuide />}
+      <TrustCard />
     </>
   );
 }
