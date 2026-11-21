@@ -77,6 +77,16 @@ test.describe('dashboard', () => {
     await expect(page.getByRole('link', { name: 'Fraud alerts 1 of your watchlist flagged' })).toBeVisible();
   });
 
+  test('a panel that starts without a path still shows the data another part already loaded', async ({ page }) => {
+    await page.goto('/');
+    await page.evaluate(() => localStorage.removeItem('watchlist'));
+    await page.reload();
+    await expect(page.getByText(/DSEX index/)).toBeVisible();
+    // The top bar has loaded /api/companies; adding a stock now makes My stocks switch from no path to that cached path.
+    await page.evaluate(() => { localStorage.setItem('watchlist', '["GP"]'); dispatchEvent(new Event('stored-value-change')); });
+    await expect(page.locator('.my-stocks')).toContainText(/GP\s*৳\d/);
+  });
+
   test('title and tabs stay on screen while the data loads', async ({ page }) => {
     await page.route('**/api/dividends', async (route) => { await new Promise((r) => setTimeout(r, 1500)); await route.continue(); });
     await page.goto('/dividends');

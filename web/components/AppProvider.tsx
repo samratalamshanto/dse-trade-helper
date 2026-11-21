@@ -108,8 +108,8 @@ export function useApi<T extends { session?: MarketSession | null }>(path: strin
     if (!path) return;
     let active = true;
     const samePath = shownPath.current === path;
-    // The first render already took the cached answer; a later path change shows that path's cached answer (or none).
-    if (!samePath && shownPath.current !== null) setState(fromCache<T>(path, tick));
+    // A new path (also the first one after starting with none) shows that path's cached answer, or none.
+    if (!samePath) setState(fromCache<T>(path, tick));
     // Only the refresh that asked for fresh data bypasses the cache; a page opened later uses the normal path.
     const fresh = samePath && loadedTick.current !== tick && freshTick === tick;
     shownPath.current = path;
