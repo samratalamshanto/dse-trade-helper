@@ -17,6 +17,43 @@ const ROWS: [string, YearKey | 'pb' | 'stockPct', number][] = [
 
 const QUARTERS: [string, string, number][] = [['q1', '3 months (Q1)', 4], ['half', '6 months', 2], ['q3', 'Q3 alone', 4], ['nine', '9 months', 4 / 3]];
 
+const LABELS: Record<string, string> = {
+  eps: 'EPS (৳)', epsBasic: 'EPS basic (৳)', epsBasicOriginal: 'EPS basic, original (৳)', epsBasicRestated: 'EPS basic, restated (৳)', epsDiluted: 'EPS diluted (৳)',
+  epsContBasicOriginal: 'EPS continuing ops, basic original (৳)', epsContBasicRestated: 'EPS continuing ops, basic restated (৳)', epsContDiluted: 'EPS continuing ops, diluted (৳)',
+  nav: 'NAV / share (৳)', navOriginal: 'NAV / share, original (৳)', navRestated: 'NAV / share, restated (৳)', navDiluted: 'NAV / share, diluted (৳)',
+  pe: 'P/E', peBasicOriginal: 'P/E basic, original', peBasicRestated: 'P/E basic, restated', peDiluted: 'P/E diluted',
+  peContBasicOriginal: 'P/E continuing ops, basic original', peContBasicRestated: 'P/E continuing ops, basic restated', peContDiluted: 'P/E continuing ops, diluted',
+  profit: 'Net profit (৳ mn)', pco: 'Profit from continuing operations (৳ mn)', profitForYear: 'Profit for the year (৳ mn)', comprehensive: 'Total comprehensive income (৳ mn)',
+  oci: 'Other comprehensive income (৳ mn)', reserve: 'Reserve (৳ mn)', dividend: 'Dividend (%)', dividendPct: 'Dividend (%)', dividendYield: 'Dividend yield (%)',
+};
+const INTERIM_COLS: [string, string][] = [['q1', '3 months (Q1)'], ['q2', 'Q2 alone'], ['half', '6 months'], ['q3', 'Q3 alone'], ['nine', '9 months'], ['annual', 'Full year']];
+const cell = (v: unknown) => (typeof v === 'number' ? fmt(v) : v == null || v === '' ? '—' : typeof v === 'object' ? JSON.stringify(v) : String(v));
+const periodEnd = (v: unknown) => (typeof v === 'string' && /^\d{6}$/.test(v) ? new Date(Date.UTC(+v.slice(0, 4), +v.slice(4) - 1)).toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' }) : null);
+
+// Every yearly field DSE sends; a field empty in all years is left out.
+function AllYears({ years: raw }: { years: CompanyDetail['company']['years'] }) {
+  const years = Array.isArray(raw) ? raw : [];
+  const keys = [...new Set(years.flatMap((y) => Object.keys(y)))].filter((k) => k !== 'year' && years.some((y) => y[k] != null && y[k] !== ''));
+  if (!keys.length) return null;
+  return (
+    <div className="panel table-wrap" style={{ marginTop: 14 }}><h3>All yearly figures from DSE</h3>
+      <table><thead><tr><th>Field</th>{years.map((y, i) => <th key={y.year + '-' + i} className="n">{y.year}</th>)}</tr></thead>
+        <tbody>{keys.map((k) => <tr key={k}><td className={LABELS[k] ? '' : 'mono'}>{LABELS[k] ?? k}</td>{years.map((y, i) => <td key={y.year + '-' + i} className="n mono">{cell(y[k])}</td>)}</tr>)}</tbody></table>
+      <p className="why">Original = as first published; restated = corrected later; diluted = counting shares that may be issued. Blank years are missing on DSE.</p></div>
+  );
+}
+
+function InterimTable({ interim }: { interim: CompanyDetail['company']['interim'] }) {
+  const rows = Array.isArray(interim?.rows) ? interim.rows : [];
+  const cols = INTERIM_COLS.filter(([k]) => rows.some((r) => k in r));
+  if (!rows.length || !cols.length) return null;
+  return (
+    <div className="panel table-wrap" style={{ marginTop: 14 }}><h3>All quarterly figures from DSE (unaudited)</h3>
+      <table><thead><tr><th>Metric</th>{cols.map(([k, label]) => <th key={k} className="n">{label}{periodEnd(interim?.periods?.[k]) ? <div className="small muted">to {periodEnd(interim?.periods?.[k])}</div> : null}</th>)}</tr></thead>
+        <tbody>{rows.map((r, i) => <tr key={String(r.metric) + i}><td>{r.metric || '—'}</td>{cols.map(([k]) => <td key={k} className="n mono">{cell(r[k])}</td>)}</tr>)}</tbody></table></div>
+  );
+}
+
 // Simple full-year pace from the latest interim figure; seasonal businesses can differ a lot.
 const TRENDS: { key: TrendKey; label: string; unit: (v: number) => string; why: string }[] = [
   { key: 'profit', label: 'Net profit', unit: (v) => '৳' + fmt(v, 0) + ' cr', why: 'What the company earned in the year after all costs and tax.' },
@@ -99,7 +136,9 @@ export function Financials({ s, years, dividends, face, interim, lastYearEps }: 
           </ChartBox>) : null}
         {missingEps.length ? <p className="why">No EPS on DSE for {missingEps.join(', ')}. A missing bar is missing data, not a loss.</p> : null}
       </div>
+      <AllYears years={years} />
       <QuarterPanel interim={interim} lastYearEps={lastYearEps} />
+      <InterimTable interim={interim} />
     </>
   );
 }

@@ -9,6 +9,8 @@ import { Financials } from '@/components/company/Financials';
 import { Owners, Safety } from '@/components/company/SafetyOwners';
 import { Valuation } from '@/components/company/Valuation';
 import { News } from '@/components/company/News';
+import { PriceHistory } from '@/components/company/PriceHistory';
+import { Details } from '@/components/company/Details';
 import Link from 'next/link';
 import { useLang } from '@/components/i18n';
 import { WatchButton } from '@/components/Watchlist';
@@ -17,7 +19,7 @@ import { CATEGORY_TEXT } from '@/lib/glossary';
 import { FRAUD, Icon, Info, SIGNALS, SignalPill, type FraudLevel, type IconName, type Signal } from '@/components/ui';
 import type { CompanyDetail } from '@/lib/service';
 
-const TABS = [['overview', 'Overview'], ['valuation', 'Cheap or expensive'], ['financials', '5-year financials'], ['dividends', 'Dividends'], ['news', 'News'], ['safety', 'Safety checks'], ['owners', 'Owners']] as const;
+const TABS = [['overview', 'Overview'], ['history', 'Price history (52 weeks)'], ['valuation', 'Cheap or expensive'], ['financials', '5-year financials'], ['dividends', 'Dividends'], ['news', 'News'], ['safety', 'Safety checks'], ['owners', 'Owners'], ['details', 'Company details']] as const;
 type Tab = (typeof TABS)[number][0];
 
 const ANSWER_UI: Record<string, [string, string, IconName]> = {
@@ -99,12 +101,14 @@ export function CompanyView({ code }: { code: string }) {
       </div>
       <div id="pane" role="tabpanel" tabIndex={0} aria-labelledby={'tab-' + tab}>
         {tab === 'overview' ? <Overview d={d} /> : null}
-        {tab === 'valuation' ? <Valuation p={d.position} /> : null}
+        {tab === 'history' ? <PriceHistory h={d.priceHistory} series={c.series} /> : null}
+        {tab === 'valuation' ? <Valuation p={d.position} peTrend={c.peTrend ?? []} /> : null}
         {tab === 'financials' ? <Financials s={d.summary} years={c.years} dividends={c.dividends} face={c.faceValue || 10} interim={c.interim} lastYearEps={a.metrics.epsNow ?? null} /> : null}
         {tab === 'dividends' ? <Dividends d={d} /> : null}
         {tab === 'news' ? <News news={c.news} code={c.code} /> : null}
         {tab === 'safety' ? <Safety a={a} /> : null}
         {tab === 'owners' ? <Owners c={c} /> : null}
+        {tab === 'details' ? <Details details={c.details} /> : null}
       </div>
       <p className="why">{t('Data as of')} {d.session?.dataTime || fmtDate(d.session?.sessionDate)} · {t('Source: DSE public website')}.{' '}<a href={'https://www.dse.com.bd/company/' + encodeURIComponent(c.code)} target="_blank" rel="noopener noreferrer">{t('Open on DSE ↗')}</a></p>
     </>

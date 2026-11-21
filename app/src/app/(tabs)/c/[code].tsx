@@ -5,6 +5,7 @@ import { Pressable, RefreshControl, ScrollView, Text, TextInput, useWindowDimens
 import Svg, { Path, Text as SvgText } from 'react-native-svg';
 import type { Question } from '../../../../../web/lib/types.ts';
 import type { CompanyResponse } from '../../../api.ts';
+import { CompanyDetails, DividendHistory, InterimResults, PeTrend, PriceHistory, TodayCard, YearlyFigures } from '../../../CompanyMore.tsx';
 import { pieSlices, RANGES, type Range, seriesChange, sliceSeries } from '../../../chart.ts';
 import { answerColor, changeColor, fmtNum, fmtPct, SIGNAL, TONE } from '../../../format.ts';
 import { afterBuyLine, type BuyPlan, dividendLine, fetchBuyPlan, formFromBuyPlan, HAS_TRADES_KEY, oddsSentence, planQuery, type PlanMode, splitLine, TREND_TONE } from '../../../plans.ts';
@@ -368,6 +369,8 @@ export default function Company() {
                 <Button variant="primary" label={saved ? '★ In your watchlist' : '☆ Add to watchlist'} onPress={() => toggle(code)} />
               </View>
 
+              <TodayCard today={data.today} />
+
               <SectionTitle icon="help-buoy-outline" title="Four questions before you buy" />
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' }}>
                 {data.questions.map((q) => <AnswerTile key={q.q} q={q} />)}
@@ -377,7 +380,11 @@ export default function Company() {
 
               <PriceChart data={data} />
 
+              <PriceHistory history={data.priceHistory} series={data.company.series ?? []} />
+
               <KeyFacts data={data} />
+
+              <PeTrend points={data.company.peTrend} />
 
               <View style={s.card}>
                 <Text style={s.title}>Why this signal</Text>
@@ -391,7 +398,15 @@ export default function Company() {
 
               <FinancialTrends c={data.company} />
 
+              <InterimResults interim={data.company.interim} />
+
+              <YearlyFigures years={data.company.years} />
+
+              <DividendHistory dividends={data.company.dividends} />
+
               <ShareHolding c={data.company} />
+
+              <CompanyDetails details={{ website: data.company.website, yearEnd: data.company.yearEnd, agmDate: data.company.agmDate, operationalStatus: data.company.operationalStatus, loanStatus: data.company.loanStatus, ...data.company.details }} />
 
               {data.analysis.fraud.flags.length > 0 && (
                 <View style={[s.card, { borderColor: colors.down }]}>

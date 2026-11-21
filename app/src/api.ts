@@ -1,4 +1,6 @@
-import type { Analysis, Question, SeriesPoint, SharePattern, YearRow } from '../../web/lib/types.ts';
+import type { PriceHistory } from '../../web/lib/price-history.ts';
+import type { TodayTrading } from '../../web/lib/service.ts';
+import type { Analysis, Dividend, InterimFinancials, PeTrendPoint, Question, SeriesPoint, SharePattern, YearRow } from '../../web/lib/types.ts';
 
 export const FETCH_TIMEOUT_MS = 20_000;
 
@@ -102,10 +104,21 @@ export interface CompanyResponse {
     sharePattern?: SharePattern[];
     years?: YearRow[];
     series?: SeriesPoint[];
+    website?: string | null;
+    yearEnd?: string | null;
+    agmDate?: string | null;
+    operationalStatus?: string | null;
+    loanStatus?: { shortTerm?: number | null; longTerm?: number | null } | null;
+    dividends?: Dividend[];
+    interim?: InterimFinancials | null;
+    peTrend?: PeTrendPoint[];
+    details?: Record<string, unknown>;
   };
   analysis: Analysis;
   questions: Question[];
   sectorPe: number | null;
   session: Session | null;
   position: { verdict: { label: string; tone: string; text: string } | null } | null;
+  today?: TodayTrading | null;
+  priceHistory?: PriceHistory | null;
 }

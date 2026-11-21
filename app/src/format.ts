@@ -46,7 +46,7 @@ export function changeColor(x: number | null | undefined, c: Palette): string {
   return x > 0 ? c.up : c.down;
 }
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export function fmtDate(iso: string | null | undefined): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso ?? '');

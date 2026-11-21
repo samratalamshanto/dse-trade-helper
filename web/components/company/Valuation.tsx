@@ -1,3 +1,7 @@
+'use client';
+
+import { Line } from 'react-chartjs-2';
+import { ChartBox, useChartColors } from '@/components/charts';
 import { fmt, signed, tone } from '@/components/format';
 import { Tr } from '@/components/Tr';
 import type { CompanyDetail } from '@/lib/service';
@@ -20,10 +24,28 @@ function RangeBar({ title, band, unit, hint }: { title: string; band: Band; unit
 
 const NOTE_TONE: Record<string, string> = { good: 'good', bad: 'bad', warn: 'warn', neutral: '' };
 
-export function Valuation({ p }: { p: Position | null }) {
-  if (!p) return <p className="muted">Not enough history.</p>;
+function PeTrend({ points }: { points: NonNullable<CompanyDetail['company']['peTrend']> }) {
+  const colors = useChartColors();
+  if (!points.length) return null;
+  return (
+    <div className="panel" style={{ marginTop: 14 }}><h3><Tr text="P/E over the last 30 trading days" /></h3>
+      {colors ? (
+        <ChartBox label={'P/E by day: ' + points.map((x) => `${x.date} audited ${fmt(x.audited, 2)}, latest results ${fmt(x.unaudited, 2)}`).join('; ')}>
+          <Line data={{ labels: points.map((x) => x.date), datasets: [
+            { label: 'P/E (audited)', data: points.map((x) => x.audited ?? null), borderColor: colors['--accent'], pointRadius: 0, pointHoverRadius: 5, borderWidth: 2, tension: 0.2 },
+            { label: 'P/E (latest results)', data: points.map((x) => x.unaudited ?? null), borderColor: colors['--warn'], borderDash: [5, 4], pointRadius: 0, pointHoverRadius: 5, borderWidth: 2, tension: 0.2 },
+          ] }} options={{ maintainAspectRatio: false, plugins: { tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label} ${fmt(ctx.parsed.y, 2)}` } } }, scales: { x: { ticks: { maxTicksLimit: 6 } } } }} />
+        </ChartBox>) : null}
+      <p className="why"><Tr text="Audited = price ÷ EPS of the last audited year. Latest results = price ÷ EPS from the latest unaudited quarters. Source: DSE." /></p>
+    </div>
+  );
+}
+
+export function Valuation({ p, peTrend }: { p: Position | null; peTrend: NonNullable<CompanyDetail['company']['peTrend']> }) {
+  if (!p) return <><p className="muted">Not enough history.</p><PeTrend points={peTrend} /></>;
   const v = p.verdict;
   return (
+    <>
     <div className="panel">
       <h3><Tr text="Is it cheap or expensive now?" /></h3>
       {v ? <div className={`note ${NOTE_TONE[v.tone] ?? ''}`}><b><Tr text={v.label} />:</b> {v.text}</div> : null}
@@ -46,5 +68,7 @@ export function Valuation({ p }: { p: Position | null }) {
         </>
       ) : null}
     </div>
+    <PeTrend points={peTrend} />
+    </>
   );
 }

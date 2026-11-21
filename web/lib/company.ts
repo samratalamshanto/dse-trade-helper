@@ -1,10 +1,10 @@
 import { extractJson } from './extract.ts';
 import { parseAnnouncements } from './announcements.ts';
-import type { Company, YearRow, Dividend, SharePattern, SeriesPoint, InterimFinancials, InterimEpsRow } from './types.ts';
+import type { Company, YearRow, Dividend, SharePattern, SeriesPoint, InterimFinancials, InterimEpsRow, PeTrendPoint } from './types.ts';
 
 const SERIES_KEEP_DAYS = 260;
-export const DATA_VERSION = 5;
-const NEWS_KEEP = 25;
+export const DATA_VERSION = 6;
+const NEWS_KEEP = 40;
 const NEWS_BODY_CHARS = 700;
 
 interface RawAnnouncement {
@@ -24,9 +24,11 @@ interface RawDividendHistory {
   cash?: unknown;
   stock?: unknown;
   yieldPct?: unknown;
+  rights?: unknown;
 }
 
 interface RawYearFinancials {
+  [key: string]: unknown;
   year?: unknown;
   epsBasic?: unknown;
   epsContBasicOriginal?: unknown;
@@ -49,6 +51,7 @@ interface RawInterim {
 }
 
 interface RawCompany {
+  [key: string]: unknown;
   code?: unknown;
   name?: unknown;
   sector?: unknown;
@@ -77,6 +80,10 @@ interface RawCompany {
   asOfDate?: unknown;
 }
 
+const NAMED_FIELDS = new Set(['code', 'name', 'sector', 'category', 'price', 'changePct', 'marketCap', 'pe', 'eps', 'nav', 'bookValue', 'dividendYield',
+  'weekHigh52', 'weekLow52', 'paidUpCapital', 'faceValue', 'listingYear', 'yearEnd', 'agmDate', 'website', 'operationalStatus', 'loanStatus', 'asOfDate',
+  'sharePattern', 'dividendHistory', 'multiYearFinancials']);
+
 export function flightText(html: string): string {
   const parts = [...html.matchAll(/self\.__next_f\.push\(\[1,("(?:[^"\\]|\\.)*")\]\)/g)].map((m) => {
     try { return JSON.parse(m[1]) as string; } catch { return ''; }
@@ -93,8 +100,10 @@ export function resolveRef(text: string, value: unknown): unknown {
   return Buffer.from(text.slice(start, start + bytes)).subarray(0, bytes).toString('utf8');
 }
 
+// Keep every DSE field of the year; the six names the analysis reads are normalised on top.
 function toYear(y: RawYearFinancials): YearRow {
   return {
+    ...y,
     year: y.year as number,
     eps: (y.epsBasic ?? y.epsContBasicOriginal ?? null) as number | null,
     nav: (y.nav ?? y.navOriginal ?? null) as number | null,
@@ -120,8 +129,10 @@ export function parseCompanyPage(html: string): Company | null {
     }));
   const interimEps = interim?.rows?.find((r) => /^Earnings Per Share \(EPS\) Basic/.test(String(r.metric)));
   const parsedInterim: InterimFinancials | null = interimEps
-    ? { periods: (interim?.periodEnds ?? {}) as Record<string, unknown>, eps: interimEps as InterimEpsRow }
+    ? { periods: (interim?.periodEnds ?? {}) as Record<string, unknown>, eps: interimEps as InterimEpsRow, rows: (interim?.rows ?? []) as InterimEpsRow[] }
     : null;
+  // Every company field DSE sends that has no named place below goes to `details`, so nothing is dropped.
+  const details = Object.fromEntries(Object.entries(c).filter(([k]) => !NAMED_FIELDS.has(k)));
   return {
     version: DATA_VERSION,
     code: c.code as string,
@@ -146,14 +157,17 @@ export function parseCompanyPage(html: string): Company | null {
     operationalStatus: (c.operationalStatus ?? null) as string | null,
     loanStatus: (c.loanStatus ?? null) as Record<string, unknown> | null,
     sharePattern: ((c.sharePattern || []).map((s) => ({ date: s.date as string | null | undefined, ...s.pattern })) as SharePattern[]),
-    dividends: ((c.dividendHistory || []).map((d) => ({ year: d.year, cash: d.cash, stock: d.stock, yieldPct: d.yieldPct })) as Dividend[]),
+    dividends: ((c.dividendHistory || []).map((d) => ({ year: d.year, cash: d.cash, stock: d.stock, yieldPct: d.yieldPct, rights: d.rights || null })) as Dividend[]),
     years: ((c.multiYearFinancials || []).map(toYear).sort((a, b) => (a.year ?? 0) - (b.year ?? 0))),
     interim: parsedInterim,
     peLatest: peTrend.at(-1) ?? null,
+    peTrend: peTrend as PeTrendPoint[],
     events: parseAnnouncements(announcements),
     // Keep recent news short so the saved scan stays small.
     news: announcements.slice(0, NEWS_KEEP).map((a) => ({ date: a.date ?? null, type: a.type ?? null, summary: a.summary || '', body: (a.body || '').slice(0, NEWS_BODY_CHARS) })),
-    series: series.slice(-SERIES_KEEP_DAYS).map((s) => ({ date: s['date'] as string, price: s['price'] as number, volume: s['volume'] as number })) as SeriesPoint[],
+    series: series.slice(-SERIES_KEEP_DAYS).map((s) => ({ date: s['date'] as string, price: s['price'] as number, volume: s['volume'] as number,
+      open: (s['open'] ?? null) as number | null, high: (s['high'] ?? null) as number | null, low: (s['low'] ?? null) as number | null, trades: (s['trades'] ?? null) as number | null })) as SeriesPoint[],
     asOf: (c.asOfDate ?? null) as string | null,
+    details,
   };
 }

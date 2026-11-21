@@ -5,6 +5,8 @@ export interface YearRow {
   profit?: number | null;
   pe?: number | null;
   dividend?: number | null;
+  // Every other yearly DSE field (restated / diluted EPS, NAV and P/E, comprehensive income, OCI, reserve).
+  [key: string]: unknown;
 }
 
 export interface Dividend {
@@ -12,6 +14,7 @@ export interface Dividend {
   cash?: number | null;
   stock?: number | null;
   yieldPct?: number | null;
+  rights?: string | null;
 }
 
 export interface SharePattern {
@@ -28,6 +31,10 @@ export interface SeriesPoint {
   date: string;
   price: number;
   volume: number;
+  open?: number | null;
+  high?: number | null;
+  low?: number | null;
+  trades?: number | null;
 }
 
 export interface Declaration {
@@ -73,7 +80,10 @@ export interface InterimEpsRow {
 export interface InterimFinancials {
   periods: Record<string, unknown>;
   eps: InterimEpsRow;
+  rows?: InterimEpsRow[];
 }
+
+export interface PeTrendPoint { date: string; audited?: number | null; unaudited?: number | null }
 
 export interface NewsItem { date: string | null; type: string | null; summary: string; body: string }
 
@@ -109,6 +119,9 @@ export interface Company {
   news?: NewsItem[];
   series: SeriesPoint[];
   asOf?: string | null;
+  peTrend?: PeTrendPoint[];
+  // The rest of DSE's company block: ISIN, free float, capital, contacts, links, today's session quote.
+  details?: Record<string, unknown>;
 }
 
 export interface FraudFlag {

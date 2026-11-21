@@ -7,7 +7,7 @@ import { ShareholdingDonut } from '@/components/company/SafetyOwners';
 import { BuyPlanner } from '@/components/planner/BuyPlanner';
 import { Tr } from '@/components/Tr';
 import { useLang } from '@/components/i18n';
-import { fmt, moneyPerDay, sectorName, tone } from '@/components/format';
+import { fmt, moneyPerDay, sectorName, signed, tone } from '@/components/format';
 import { Icon, Info, Metric, type IconName } from '@/components/ui';
 import type { CompanyDetail } from '@/lib/service';
 
@@ -18,12 +18,12 @@ const RANGES = [['1W', 7], ['1M', 30], ['3M', 91], ['6M', 182], ['1Y', 366]] as 
 type Range = (typeof RANGES)[number][0];
 const TONE_ICON: Record<string, [IconName, string]> = { good: ['check', 't-good'], warn: ['info', 't-warn'], bad: ['cross', 't-bad'], neutral: ['neutral', 't-neutral'] };
 
-const crore = (v: number | null | undefined, d = 0) => (v == null || !Number.isFinite(v) ? '—' : '৳' + fmt(v / CRORE, d) + ' cr');
-const taka = (v: number | null | undefined) => (v == null || !Number.isFinite(v) ? '—' : '৳' + fmt(v));
+export const crore = (v: number | null | undefined, d = 0) => (v == null || !Number.isFinite(v) ? '—' : '৳' + fmt(v / CRORE, d) + ' cr');
+export const taka = (v: number | null | undefined) => (v == null || !Number.isFinite(v) ? '—' : '৳' + fmt(v));
 const peLatest = (c: Company) => (c.peLatest && typeof c.peLatest === 'object' ? c.peLatest as { audited?: number | null; unaudited?: number | null } : null);
 
 // Only a plain domain or an http(s) address becomes a link; anything else is shown as text.
-function websiteHref(raw: string | null | undefined): string | null {
+export function websiteHref(raw: string | null | undefined): string | null {
   const v = (raw || '').trim();
   if (/^https?:\/\/[\w.-]+\.[a-z]{2,}(\/\S*)?$/i.test(v)) return v;
   return /^[\w.-]+\.[a-z]{2,}(\/\S*)?$/i.test(v) ? 'https://' + v : null;
@@ -53,7 +53,7 @@ export function HeaderStats({ d }: { d: CompanyDetail }) {
   );
 }
 
-function Fact({ label, children }: { label: string; children: ReactNode }) {
+export function Fact({ label, children }: { label: string; children: ReactNode }) {
   return <div className="fact"><div className="k"><Tr text={label} /></div><div className="v">{children}</div></div>;
 }
 
@@ -110,11 +110,34 @@ function PriceChart({ c }: { c: Company }) {
   );
 }
 
+function TodayPanel({ d }: { d: CompanyDetail }) {
+  const x = d.today;
+  if (!x) return null;
+  const change = x.close != null && x.prevClose != null ? x.close - x.prevClose : null;
+  const pct = change != null && x.prevClose ? (change / x.prevClose) * 100 : null;
+  return (
+    <div className="panel"><h3><Tr text="Today's trading" /> <span className="small muted">{x.live ? <Tr text="live" /> : <Tr text="saved copy from last session" />}</span></h3>
+      <div className="facts">
+        <Fact label="Open">{taka(x.open)}</Fact>
+        <Fact label="High">{taka(x.high)}</Fact>
+        <Fact label="Low">{taka(x.low)}</Fact>
+        <Fact label={x.live ? 'Last price' : 'Close'}>{taka(x.close)}</Fact>
+        <Fact label="Previous close">{taka(x.prevClose)}</Fact>
+        <Fact label="Change"><span className={tone(change)}>{change != null ? `${change >= 0 ? '+' : '−'}৳${fmt(Math.abs(change))} (${signed(pct, 2)})` : '—'}</span></Fact>
+        <Fact label="Volume (shares)">{fmt(x.volume, 0)}</Fact>
+        <Fact label="Value">{x.valueMn != null ? '৳' + fmt(x.valueMn) + ' mn' : '—'}</Fact>
+        <Fact label="Trades">{fmt(x.trades, 0)}</Fact>
+      </div>
+    </div>
+  );
+}
+
 export function Overview({ d }: { d: CompanyDetail }) {
   const m = d.analysis.metrics, c = d.company, sp = c.sharePattern.at(-1);
   return (
     <>
       <BuyPlanner key={c.code} code={c.code} bar={<RangeBar52 c={c} />} />
+      {d.today ? <div style={{ marginTop: 14 }}><TodayPanel d={d} /></div> : null}
       <div style={{ marginTop: 14 }}><KeyFacts d={d} /></div>
       <div className="grid g4" style={{ marginTop: 14 }}>
         <Metric label="P/E" value={fmt(m.pe, 1)} hint="Price ÷ yearly profit per share. Lower can mean cheaper." />

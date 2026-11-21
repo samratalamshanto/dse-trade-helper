@@ -1,6 +1,7 @@
 import { analyze, currentYield, sectorMedians, fiveYearSummary, pricePosition, metrics, fourQuestions } from './analysis.ts';
 import { dividendStatus, dhakaToday, previousTradingDay, toIso } from './announcements.ts';
 import { DATA_VERSION } from './company.ts';
+import { priceHistory } from './price-history.ts';
 import { snapshot, intraday, livePrices, marketSession, seen, remember, SNAPSHOT_TTL_MS, FAILURE_TTL_MS, type SnapshotRow, type Intraday, type Snapshot } from './dse.ts';
 import { allCompanies, fetchCompany, readLastSession, saveCompanies, saveLastSession, storeVersion, NotFoundError, type StoredCompany, type LastSession } from './store.ts';
 
@@ -258,6 +259,20 @@ async function loadCompany(code: string, fresh: boolean): Promise<{ company: Sto
   return { company: await refresh(code), freshSkipped: false };
 }
 
+export interface TodayTrading { open: number | null; high: number | null; low: number | null; close: number | null; prevClose: number | null; volume: number | null; valueMn: number | null; trades: number | null; live: boolean }
+
+const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+
+// Live snapshot first; before the first trade (ltp 0) fall back to the session quote saved from the company page.
+export function todayTrading(row: SnapshotRow | undefined, details: Record<string, unknown> | undefined): TodayTrading | null {
+  if (row && row.ltp > 0) {
+    return { open: num(row.open), high: num(row.high), low: num(row.low), close: num(row.ltp), prevClose: num(row.ycp), volume: num(row.volume), valueMn: num(row.value), trades: num(row.trades), live: true };
+  }
+  const q = details?.sessionQuote as Record<string, unknown> | null | undefined;
+  if (!q || typeof q !== 'object') return null;
+  return { open: num(q.open), high: num(q.high), low: num(q.low), close: num(q.close ?? q.lastPrice), prevClose: num(q.prevClose), volume: num(q.volume), valueMn: num(q.valueMn), trades: num(q.trades), live: false };
+}
+
 export async function companyDetail(code: string, fresh: boolean) {
   const { company, freshSkipped } = await loadCompany(code, fresh);
   const live: Live = await livePrices().catch(() => ({}));
@@ -268,7 +283,7 @@ export async function companyDetail(code: string, fresh: boolean) {
   const dividend = dividendStatus(current.events);
   return {
     company: { ...current, pe: analysis.metrics.pe, dividendYield: analysis.metrics.latestYield }, analysis, summary: fiveYearSummary(current), position, dividend,
-    questions: fourQuestions(current, analysis, position, dividend), sectorPe: sectorPe ?? null, freshSkipped,
+    questions: fourQuestions(current, analysis, position, dividend), sectorPe: sectorPe ?? null, freshSkipped, today: todayTrading(live[code], company.details), priceHistory: priceHistory(company.series ?? []),
     session: await marketSession().catch(() => null), updatedAt: Date.now(),
   };
 }

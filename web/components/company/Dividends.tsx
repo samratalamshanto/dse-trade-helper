@@ -53,11 +53,20 @@ export function Dividends({ d }: { d: CompanyDetail }) {
       </div>
       {s.years.length ? (
         <div className="panel table-wrap" style={{ marginTop: 14 }}><h3><Tr text="5-year dividend record" /></h3>
-          <table><thead><tr><th>Year</th><th className="n">Cash / share</th><th className="n">Bonus %</th><th className="n">Payout</th><th className="n">Yield</th></tr></thead>
+          <table><thead><tr><th>Year</th><th className="n">Cash / share</th><th className="n">Bonus %</th><th className="n">Payout</th><th className="n">Yield</th><th>Rights</th></tr></thead>
             <tbody>{[...s.years].reverse().map((y) => (
               <tr key={y.year}><td>{y.year}</td><td className="n mono">{y.dps != null ? '৳' + fmt(y.dps) : '—'}</td><td className="n mono">{fmt(y.stockPct, 0)}</td>
-                <td className="n mono">{y.payout != null ? fmt(y.payout, 0) + '%' : '—'}</td><td className="n mono">{y.dividendYield != null ? fmt(y.dividendYield, 1) + '%' : '—'}</td></tr>
+                <td className="n mono">{y.payout != null ? fmt(y.payout, 0) + '%' : '—'}</td><td className="n mono">{y.dividendYield != null ? fmt(y.dividendYield, 1) + '%' : '—'}</td>
+                <td className="mono">{String(c.dividends.find((x) => x.year === y.year)?.rights || '—')}</td></tr>
             ))}</tbody></table></div>) : null}
+      {c.dividends.length ? (
+        <div className="panel table-wrap" style={{ marginTop: 14 }}><h3><Tr text="DSE dividend history" /></h3>
+          <table><thead><tr><th>Year</th><th className="n">Cash %</th><th className="n">Bonus (stock) %</th><th>Rights</th><th className="n">Yield</th></tr></thead>
+            <tbody>{[...c.dividends].sort((a, b) => b.year - a.year).map((x, i) => (
+              <tr key={x.year + '-' + i}><td>{x.year}</td><td className="n mono">{pctNum(x.cash)}</td><td className="n mono">{pctNum(x.stock)}</td><td className="mono">{String(x.rights || '—')}</td>
+                <td className="n mono">{x.yieldPct != null ? fmt(x.yieldPct, 2) + '%' : '—'}</td></tr>
+            ))}</tbody></table>
+          <p className="why">Cash % is of the face value (৳{fmt(face, 0)}). Rights &quot;1R:2&quot; = one new share you may buy for every 2 you hold.</p></div>) : null}
       <p className="why">Record date: you must own the share on this day to get the dividend. AGM: the meeting where shareholders approve it. Payment usually comes within about 30 days after the AGM.</p>
     </>
   );
