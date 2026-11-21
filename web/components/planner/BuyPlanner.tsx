@@ -21,7 +21,7 @@ function splitLine(p: BuyPlan): string {
 }
 
 const draftFrom = (p: BuyPlan): PlanDraft => ({
-  code: p.code, quantity: String(p.quantity), boughtNow: String(p.buyNow), targetPrice: p.alertPrice == null ? '' : String(p.alertPrice),
+  code: p.code, quantity: String(p.quantity), boughtNow: '0', targetPrice: p.alertPrice == null ? '' : String(p.alertPrice),
   until: plusTradingDays(dhakaToday(), PLAN_DAYS), note: p.label, status: 'active',
 });
 
@@ -106,7 +106,7 @@ export function BuyPlanner({ code, bar }: { code: string; bar: ReactNode }) {
           {saving === 'form' ? <PlanForm initial={draftFrom(plan)} submitLabel={t('Save plan')} onSubmit={save} onCancel={() => setSaving(null)} /> : (
             <div className={css.buttons}>
               {saving === 'saved' ? null : <button className="btn primary" type="button" onClick={async () => setSaving((await ensureKey()) ? 'form' : 'nokey')}>{t('Save as plan')}</button>}
-              {saving === 'nokey' ? <span className="small" role="status">{t('Enter your trades key on')} <Link href="/trades">{t('My trades')}</Link> {t('first')}.</span> : null}
+              {saving === 'nokey' ? <span className="small" role="status">{t('Enter your trades key on')} <Link href="/portfolio">{t('Portfolio')}</Link> {t('first')}.</span> : null}
               {saving === 'saved' ? <span className="small t-good" role="status">{t('Saved.')} <Link href="/plans">{t('See my buy plans →')}</Link></span> : null}
             </div>
           )}

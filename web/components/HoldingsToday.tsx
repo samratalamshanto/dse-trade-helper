@@ -63,7 +63,7 @@ export function HoldingsToday({ onHeld }: { onHeld?: (codes: string[]) => void }
   return (
     <section className="panel my-stocks" aria-labelledby="holdings-today-title">
       <div className="today-head"><h2 className="h3" id="holdings-today-title">My holdings today</h2>
-        <Link href="/trades" className="small">Open my trades →</Link></div>
+        <Link href="/portfolio" className="small">Open portfolio →</Link></div>
       <p className="small">Value <b className="mono">৳{fmt(value)}</b> · Today{' '}
         <b className={`mono ${today > 0 ? 'up' : today < 0 ? 'down' : ''}`}>{companies ? signedMoney(today) : '…'}</b></p>
       <ul className="today-list">{held.map((h) => {

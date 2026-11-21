@@ -216,7 +216,7 @@ export const BN: Record<string, string> = {
   'Category Z: missed AGMs, paid no dividend or stopped operating. Highest risk on DSE.': 'ক্যাটাগরি Z: AGM করেনি, লভ্যাংশ দেয়নি বা কাজ বন্ধ। DSE-তে সবচেয়ে ঝুঁকিপূর্ণ।',
   'Tap or hover the line to see the price on each day.': 'প্রতিদিনের দাম দেখতে রেখায় ট্যাপ করুন বা মাউস রাখুন।',
   // Dashboard additions
-  'My stocks today': 'আজ আমার শেয়ার', 'From your watchlist and portfolio': 'আপনার ওয়াচলিস্ট ও পোর্টফোলিও থেকে', 'not in the DSE list': 'DSE তালিকায় নেই',
+  'My stocks today': 'আজ আমার শেয়ার', 'From your watchlist': 'আপনার ওয়াচলিস্ট থেকে', 'not in the DSE list': 'DSE তালিকায় নেই',
   'not traded': 'লেনদেন হয়নি', 'buy by': 'কিনুন এর মধ্যে', 'Important things from the last session': 'শেষ সেশনের গুরুত্বপূর্ণ বিষয়',
   'Dividends you can still buy for (record date within 7 days)': 'যে লভ্যাংশ এখনো কিনে পাওয়া যায় (৭ দিনের মধ্যে রেকর্ড তারিখ)',
   'Top gainers today': 'আজ সর্বোচ্চ বৃদ্ধি', 'Top losers today': 'আজ সর্বোচ্চ পতন',
@@ -248,7 +248,6 @@ export const BN: Record<string, string> = {
   'No price history from DSE yet.': 'DSE থেকে এখনো দামের ইতিহাস নেই।', 'Price range': 'দামের সময়সীমা',
   'below the 52-week high.': '৫২ সপ্তাহের সর্বোচ্চের নিচে।', 'Who owns the shares': 'শেয়ারের মালিক কারা', 'As on': 'তারিখ',
   'Data as of': 'তথ্যের সময়', 'Source: DSE public website': 'উৎস: DSE পাবলিক ওয়েবসাইট',
-  'My trades': 'আমার লেনদেন',
   'Buy plans': 'কেনার পরিকল্পনা', 'Signal scorecard': 'সংকেতের ফলাফল', 'How dividends work': 'লভ্যাংশ কীভাবে পাওয়া যায়',
   'Upcoming': 'আসন্ন', 'Declared': 'ঘোষিত', 'Sections': 'অংশ', 'Filters': 'ফিল্টার', 'Has': 'আছে',
   'Loading companies…': 'কোম্পানি লোড হচ্ছে…', 'Find a company (code or name)': 'কোম্পানি খুঁজুন (কোড বা নাম)',

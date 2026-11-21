@@ -74,15 +74,15 @@ test.describe('buy planner on the company page (API mocked)', () => {
   });
   test.use({ allowedConsole: [/status of 400/] });
 
-  test('save as plan without a key points to My trades', async ({ page }) => {
+  test('save as plan without a key points to Portfolio', async ({ page }) => {
     await page.route('**/api/plan/GP?**', (r) => json(r, 200, PLANS.split));
     await page.goto('/c/GP');
     const p = planner(page);
     await p.getByLabel('How many shares').fill('10');
     await p.getByRole('button', { name: 'Plan it' }).click();
     await p.getByRole('button', { name: 'Save as plan' }).click();
-    await expect(p.getByRole('status')).toContainText('Enter your trades key on My trades first');
-    await expect(p.getByRole('link', { name: 'My trades' })).toHaveAttribute('href', '/trades');
+    await expect(p.getByRole('status')).toContainText('Enter your trades key on Portfolio first');
+    await expect(p.getByRole('link', { name: 'Portfolio' })).toHaveAttribute('href', '/portfolio');
   });
 
   test('save as plan posts the prefilled plan with the key', async ({ page }) => {
@@ -99,7 +99,7 @@ test.describe('buy planner on the company page (API mocked)', () => {
     const req = page.waitForRequest((q) => q.method() === 'POST' && q.url().endsWith('/api/plans'));
     await p.getByRole('button', { name: 'Save plan' }).click();
     expect((await req).headers()['x-trades-key']).toBe(KEY);
-    expect(posted).toMatchObject({ code: 'GP', quantity: '10', boughtNow: '5', targetPrice: '222.2', note: 'e2e', status: 'active' });
+    expect(posted).toMatchObject({ code: 'GP', quantity: '10', boughtNow: '0', targetPrice: '222.2', note: 'e2e', status: 'active' });
     expect(posted.until).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     await expect(p.getByRole('link', { name: 'See my buy plans →' })).toBeVisible();
   });

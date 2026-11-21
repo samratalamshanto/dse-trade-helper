@@ -88,7 +88,7 @@ export default function PlansPage() {
             </div>
             {p.live.status === 'reached' ? <p style={{ fontSize: 17, fontWeight: 700, margin: '8px 0' }}>Target reached — buy the other {p.live.remaining} now</p> : <p className="small">{p.live.text}</p>}
             <div className={css.meta}>
-              <span>Bought <b className="mono">{p.boughtNow}</b> of {p.quantity}</span>
+              <span title="Counted from the buys in your Portfolio since this plan was made">Bought <b className="mono">{p.boughtNow}</b> of {p.quantity}</span>
               <span>Target <b className="mono">{p.targetPrice == null ? '—' : '৳' + fmt(p.targetPrice)}</b></span>
               <span>Now <b className="mono">{p.price == null ? '—' : '৳' + fmt(p.price)}</b></span>
               <span>Until <b>{p.until ? fmtDate(p.until) : '—'}</b></span>

@@ -21,7 +21,6 @@ const NAV: { group: string; items: { href: string; label: string; icon: IconName
   { group: 'MINE', items: [
     { href: '/watchlist', label: 'Watchlist', icon: 'star' },
     { href: '/portfolio', label: 'Portfolio', icon: 'wallet' },
-    { href: '/trades', label: 'My trades', icon: 'trend' },
     { href: '/plans', label: 'Buy plans', icon: 'target' },
     { href: '/alerts', label: 'Alerts', icon: 'bell' },
   ] },

@@ -21,7 +21,6 @@ export function PlanForm({ initial, submitLabel, onSubmit, onCancel }: { initial
   return (
     <form className={css.form} onSubmit={submit} aria-label={`Plan for ${d.code}`}>
       <label>Quantity<input type="number" min={1} step={1} required value={d.quantity} onChange={set('quantity')} /></label>
-      <label>Bought now<input type="number" min={0} step={1} value={d.boughtNow} onChange={set('boughtNow')} /></label>
       <label>Target price ৳<input type="number" min={0} step="any" value={d.targetPrice} onChange={set('targetPrice')} /></label>
       <label>Until<input type="date" value={d.until} onChange={set('until')} /></label>
       <label>Note<input type="text" maxLength={200} value={d.note} onChange={set('note')} /></label>

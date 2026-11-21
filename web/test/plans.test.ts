@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { planStatus, plansFromRows, planToRow, validatePlan, type SavedPlan } from '../lib/plans.ts';
+import { boughtSince, planStatus, plansFromRows, planToRow, validatePlan, type SavedPlan } from '../lib/plans.ts';
 
 const TODAY = '2026-11-20';
 const ok = { code: 'gp', quantity: '10', boughtNow: '5', targetPrice: '222.20', until: '2026-11-30', note: '=split', status: '' };
@@ -15,7 +15,7 @@ test('bad plans are refused with a plain reason', () => {
   const bad: [Record<string, unknown>, RegExp][] = [
     [{ ...ok, code: 'not a code' }, /code/],
     [{ ...ok, quantity: '0' }, /Quantity/],
-    [{ ...ok, boughtNow: '11' }, /no more than the quantity/],
+    [{ ...ok, boughtNow: '11' }, /already bought 11 shares/],
     [{ ...ok, targetPrice: '-1' }, /Target price/],
     [{ ...ok, targetPrice: '' }, /Set a target price/],
     [{ ...ok, until: '2026-11-19' }, /today or later/],
@@ -47,4 +47,15 @@ test('plans round-trip through sheet rows; an expired plan still reads back; bad
   const { plans, badRows } = plansFromRows([planToRow(p), [], ['', 'GP', '1'], ['p2', 'GP', 'x']]);
   assert.deepEqual(plans.map(({ row, ...rest }) => [row, rest]), [[2, p]]);
   assert.deepEqual(badRows, [4, 5]);
+});
+
+test('boughtSince counts real buys of the plan company from the plan day (Dhaka date), capped at the quantity', () => {
+  const plan = { code: 'GP', quantity: 10, createdAt: '2026-11-19T20:00:00Z' }; // 20 Nov 02:00 in Dhaka
+  const t = (date: string, quantity: number, side = 'BUY', code = 'GP') => ({ code, side, quantity, date });
+  assert.equal(boughtSince(plan, []), 0);
+  assert.equal(boughtSince(plan, [t('2026-11-19', 4)]), 0, 'a buy before the plan day does not count');
+  assert.equal(boughtSince(plan, [t('2026-11-20', 1)]), 1, 'a buy on the plan day counts');
+  assert.equal(boughtSince(plan, [t('2026-11-21', 3), t('2026-11-22', 2, 'SELL'), t('2026-11-22', 5, 'BUY', 'ROBI')]), 3, 'sells and other codes do not count');
+  assert.equal(boughtSince(plan, [t('2026-11-21', 8), t('2026-11-24', 8)]), 10, 'never more than the plan quantity');
+  assert.equal(boughtSince({ ...plan, createdAt: 'not a date' }, [t('2020-01-01', 2)]), 2, 'an unreadable plan date counts every buy');
 });

@@ -1,7 +1,7 @@
 import { planBuy, todaysPicks, type Holding } from './buy-planner.ts';
 import { dhakaToday } from './dhaka.ts';
 import { livePrices } from './dse.ts';
-import { planStatus, planToRow, plansFromRows, PLAN_COLUMNS, type SavedPlan, validatePlan } from './plans.ts';
+import { boughtSince, planStatus, planToRow, plansFromRows, PLAN_COLUMNS, type SavedPlan, validatePlan } from './plans.ts';
 import { companyDetail, listCompanies } from './service.ts';
 import { appendRows, deleteRow, readRows, SheetsError, writeRow, type TabSpec } from './sheets.ts';
 import { allCompanies } from './store.ts';
@@ -69,7 +69,10 @@ const serial = <T>(work: () => Promise<T>): Promise<T> => { const next = queue.t
 const checked = (input: unknown) => { const v = validatePlan(input); if (!v.ok) throw new TradeInputError(v.error); return v.value; };
 
 export async function listPlans() {
-  const { plans, badRows } = plansFromRows(await readRows(PLANS));
+  const { plans: saved, badRows } = plansFromRows(await readRows(PLANS));
+  // "Bought" comes from the real trades, so the plan, Portfolio and the dashboard always agree.
+  const { trades } = fromRows(await readRows());
+  const plans = saved.map((p) => ({ ...p, boughtNow: boughtSince(p, trades) }));
   const live = await livePrices().catch((e: unknown) => { console.warn('plans: live prices unavailable', e); return {} as Record<string, { ltp: number }>; });
   const today = dhakaToday();
   return {

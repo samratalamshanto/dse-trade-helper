@@ -16,20 +16,24 @@ const LIST = {
   settings: { default: { stopPct: 10, targetPct: 20 }, perCode: {} },
 };
 
+// Opens the Portfolio with the key, then unfolds "Add or import trades" (folded once trades exist).
 async function unlock(page: Page) {
-  await page.goto('/trades');
+  await page.goto('/portfolio');
   await page.getByLabel('Trades key').fill(KEY);
-  await page.getByRole('button', { name: 'Open my trades' }).click();
+  await page.getByRole('button', { name: 'Open my portfolio' }).click();
+  await page.getByText('Add or import trades').click();
 }
 
 test.describe('/trades (API mocked)', () => {
   test('bad key: 401 shows an error and returns to the key prompt', async ({ page }) => {
     test.info().annotations.push({ type: 'note', description: 'Chrome logs the mocked 401 as a console error; only that line is allowed.' });
     await page.route('**/api/trades**', (r) => json(r, 401, { error: 'Wrong trades key.' }));
+    // The old /trades address still works: it opens the Portfolio.
     await page.goto('/trades');
-    await expect(page.getByRole('heading', { name: 'My trades' })).toBeVisible();
+    await expect(page).toHaveURL(/\/portfolio$/);
+    await expect(page.getByRole('heading', { name: 'Portfolio', level: 1 })).toBeVisible();
     await page.getByLabel('Trades key').fill(KEY);
-    await page.getByRole('button', { name: 'Open my trades' }).click();
+    await page.getByRole('button', { name: 'Open my portfolio' }).click();
     await expect(page.locator('p[role=alert]')).toHaveText('Wrong trades key.');
     await expect(page.getByLabel('Trades key')).toBeVisible();
   });
@@ -38,7 +42,7 @@ test.describe('/trades (API mocked)', () => {
   test('localhost: key from the dev key server opens the list without the key box', async ({ page }) => {
     await page.route('http://127.0.0.1:3011/trades-key', (r) => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ key: KEY }) }));
     await page.route('**/api/trades**', (r) => json(r, r.request().headers()['x-trades-key'] === KEY ? 200 : 401, LIST));
-    await page.goto('/trades');
+    await page.goto('/portfolio');
     await expect(page.getByRole('heading', { name: 'All trades' })).toBeVisible();
     await expect(page.getByLabel('Trades key')).toHaveCount(0);
   });
@@ -214,11 +218,11 @@ test.describe('/trades (API mocked)', () => {
   test('telegram test button: shown after unlock, posts with the key and shows the result', async ({ page }) => {
     await page.route('**/api/trades**', (r) => json(r, 200, LIST));
     await page.route('**/api/notify/test', (r) => json(r, 200, { sent: true }));
-    await page.goto('/trades');
+    await page.goto('/portfolio');
     await expect(page.getByRole('button', { name: 'Send test to Telegram' })).toHaveCount(0);
     await page.getByLabel('Trades key').fill(KEY);
-    await page.getByRole('button', { name: 'Open my trades' }).click();
-    await expect(page.getByText('Phone alerts via Telegram — setup: web/docs/telegram-setup.md')).toBeVisible();
+    await page.getByRole('button', { name: 'Open my portfolio' }).click();
+    await expect(page.getByRole('heading', { name: 'Phone alerts' })).toBeVisible();
     const req = page.waitForRequest((q) => q.method() === 'POST' && q.url().endsWith('/api/notify/test'));
     await page.getByRole('button', { name: 'Send test to Telegram' }).click();
     expect((await req).headers()['x-trades-key']).toBe(KEY);
@@ -226,8 +230,38 @@ test.describe('/trades (API mocked)', () => {
   });
 });
 
+test.describe('portfolio: holdings saved by the old browser-only page (API mocked)', () => {
+  test('one click moves them into the trades as buys, then the browser copy is cleared', async ({ page }) => {
+    const posted: Record<string, string>[] = [];
+    await page.route('**/api/trades', async (r) => {
+      if (r.request().method() === 'POST') { posted.push(r.request().postDataJSON()); return json(r, 201, {}); }
+      return json(r, 200, LIST);
+    });
+    await page.addInitScript(() => localStorage.setItem('portfolio', JSON.stringify([{ code: 'ACI', shares: 10, buyPrice: 180, buyDate: '2026-03-01' }, { code: 'ROBI', shares: 5, buyPrice: 30 }])));
+    await unlock(page);
+    await expect(page.getByText('2 holdings are saved only in this browser')).toBeVisible();
+    await page.getByRole('button', { name: 'Move 2 into my trades' }).click();
+    await expect(page.getByText('2 holdings are saved only in this browser')).toHaveCount(0);
+    expect(posted.map((p) => [p.code, p.side, p.quantity, p.price, p.date])).toEqual([['ACI', 'BUY', '10', '180', '2026-03-01'], ['ROBI', 'BUY', '5', '30', posted[1].date]]);
+    expect(await page.evaluate(() => localStorage.getItem('portfolio'))).toBe('[]');
+  });
+
+  test('a move that fails half-way keeps only the holdings not yet saved, so a retry never adds one twice', async ({ page }) => {
+    let posts = 0;
+    await page.route('**/api/trades', (r) => (r.request().method() === 'POST' ? (++posts === 1 ? json(r, 201, {}) : json(r, 503, { error: 'Sheet is busy.' })) : json(r, 200, LIST)));
+    await page.addInitScript(() => { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('portfolio', JSON.stringify([{ code: 'ACI', shares: 10, buyPrice: 180 }, { code: 'ROBI', shares: 5, buyPrice: 30 }])); } });
+    await unlock(page);
+    await page.getByRole('button', { name: 'Move 2 into my trades' }).click();
+    await expect(page.getByRole('alert').filter({ hasText: 'Sheet is busy.' })).toBeVisible();
+    const left = JSON.parse((await page.evaluate(() => localStorage.getItem('portfolio')))!) as { code: string }[];
+    expect(left.map((l) => l.code)).toEqual(['ROBI']);
+    await expect(page.getByRole('button', { name: 'Move 1 into my trades' })).toBeVisible();
+  });
+  test.use({ allowedConsole: [/status of 503/] });
+});
+
 test.describe('dashboard: My holdings today (API mocked)', () => {
-  test('shows value, check badges and a changed marker; links to /trades', async ({ page }) => {
+  test('shows value, check badges and a changed marker; links to /portfolio', async ({ page }) => {
     await page.addInitScript((k) => {
       localStorage.setItem('tradesKey', k);
       localStorage.setItem('holdingChecks', JSON.stringify({ date: '2026-11-19', labels: { GP: 'Hold' } }));
@@ -238,7 +272,7 @@ test.describe('dashboard: My holdings today (API mocked)', () => {
     await expect(card).toContainText('৳16,800.00');
     await expect(card.locator('.pill.s-caution')).toHaveText('Consider taking some profit');
     await expect(card.getByText('Changed since last visit')).toHaveAttribute('title', 'Was: Hold');
-    await expect(card.getByRole('link', { name: 'Open my trades →' })).toHaveAttribute('href', '/trades');
+    await expect(card.getByRole('link', { name: 'Open portfolio →' })).toHaveAttribute('href', '/portfolio');
     expect(JSON.parse((await page.evaluate(() => localStorage.getItem('holdingChecks')))!).labels).toEqual({ GP: 'Consider taking some profit' });
   });
 

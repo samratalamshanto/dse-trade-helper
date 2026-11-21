@@ -117,9 +117,9 @@ export default function DashboardPage() {
   const { data: d, error } = useApi<Dashboard>('/api/dashboard');
   const [held, setHeld] = useState<string[]>([]);
   const onHeld = useCallback((codes: string[]) => setHeld(codes), []);
-  const [rawLots] = useStoredValue('portfolio', '[]');
   // Someone with nothing saved yet sees the start guide near the top; everyone else finds it near the end.
-  const isNew = useWatchlist().codes.length === 0 && rawLots === '[]';
+  const [tradesKey] = useStoredValue('tradesKey', '');
+  const isNew = useWatchlist().codes.length === 0 && held.length === 0 && !tradesKey;
   if (error && !d) return <div className="note bad">Could not load the dashboard: {error}. Try Refresh in a minute.</div>;
   if (!d) return <><h1 className="sr-title">{t('DSE dashboard')}</h1><Skeleton label="Loading dashboard" rows={7} /></>;
 

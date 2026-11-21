@@ -23,7 +23,9 @@ export function validatePlan(input: unknown, today = dhakaToday()): Result<PlanI
   const quantity = parseAmount(t.quantity);
   if (quantity == null || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > MAX_QUANTITY) return { ok: false, error: 'Quantity must be a whole number of shares, 1 or more.' };
   const bought = t.boughtNow == null || t.boughtNow === '' ? 0 : parseAmount(t.boughtNow);
-  if (bought == null || !Number.isSafeInteger(bought) || bought > quantity) return { ok: false, error: 'Shares bought now must be a whole number, no more than the quantity.' };
+  if (bought == null || !Number.isSafeInteger(bought) || bought < 0) return { ok: false, error: 'Shares bought must be a whole number.' };
+  // Bought comes from the trades now, so the only way to hit this is lowering the quantity below it.
+  if (bought > quantity) return { ok: false, error: `You already bought ${bought} shares, so the quantity must be ${bought} or more.` };
   const rawTarget = t.targetPrice;
   const targetPrice = rawTarget == null || rawTarget === '' ? null : parseAmount(rawTarget);
   if (rawTarget != null && rawTarget !== '' && (targetPrice == null || targetPrice <= 0 || targetPrice > MAX_PRICE)) return { ok: false, error: 'Target price must be a positive amount in taka, or empty.' };
@@ -53,6 +55,17 @@ export function plansFromRows(rows: string[][]): { plans: (SavedPlan & { row: nu
     else plans.push({ ...v.value, id, createdAt, row });
   });
   return { plans, badRows };
+}
+
+const DHAKA_OFFSET_MS = 6 * 60 * 60 * 1000;
+
+// Shares of the plan's company bought on or after the plan day (Dhaka date), capped at the plan quantity.
+// Pass real-account trades only; "bought" is read from the trades, never typed by hand.
+export function boughtSince(p: { code: string; quantity: number; createdAt: string }, trades: { code: string; side: string; quantity: number; date: string }[]): number {
+  const at = Date.parse(p.createdAt);
+  const from = Number.isFinite(at) ? new Date(at + DHAKA_OFFSET_MS).toISOString().slice(0, 10) : '';
+  const bought = trades.filter((t) => t.code === p.code && t.side === 'BUY' && t.date >= from).reduce((a, t) => a + t.quantity, 0);
+  return Math.min(p.quantity, bought);
 }
 
 export function planStatus(p: PlanInput, price: number | null, today: string): PlanStatus {

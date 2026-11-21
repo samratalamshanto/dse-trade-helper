@@ -28,3 +28,4 @@
 .banner { font-size: 15px; }
 /* Practice panels get a dashed amber edge so they cannot be mistaken for the real account. */
 .practice :global(.panel) { border: 2px dashed var(--warn); }
+.topAlign { align-items: start; }

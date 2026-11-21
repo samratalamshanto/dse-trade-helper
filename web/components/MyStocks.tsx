@@ -6,24 +6,21 @@ import { useApi } from '@/components/AppProvider';
 import { ChangeText } from '@/components/CompanyCard';
 import { LastBuy } from '@/components/LastBuy';
 import { Tr } from '@/components/Tr';
-import { useStoredValue } from '@/components/useStored';
 import { useWatchlist } from '@/components/Watchlist';
 import { fmt, fmtDate } from '@/components/format';
 import { FraudPill, SignalPill, type FraudLevel, type Signal } from '@/components/ui';
-import { parseLots } from '@/lib/portfolio';
 import type { CalendarRow, CompanyRow } from '@/lib/service';
 import type { MarketSession } from '@/lib/dse';
 
 interface Companies { rows: CompanyRow[]; session: MarketSession | null }
 interface Calendar { upcoming: CalendarRow[]; session: MarketSession | null }
 
-// The user's own codes (watchlist and portfolio) at a glance, shown only when they saved something.
+// The watchlist at a glance; shares the user owns are listed by My holdings (from the trades), so they are left out here.
 const NONE: string[] = [];
 
 export function MyStocks({ exclude = NONE }: { exclude?: string[] }) {
   const { codes: watched } = useWatchlist();
-  const [rawLots] = useStoredValue('portfolio', '[]');
-  const codes = useMemo(() => [...new Set([...parseLots(rawLots).map((l) => l.code), ...watched])].filter((c) => !exclude.includes(c)), [rawLots, watched, exclude]);
+  const codes = useMemo(() => watched.filter((c) => !exclude.includes(c)), [watched, exclude]);
   const { data } = useApi<Companies>(codes.length ? '/api/companies' : null);
   const { data: cal } = useApi<Calendar>(codes.length ? '/api/dividends' : null);
   if (!codes.length) return null;
@@ -33,7 +30,7 @@ export function MyStocks({ exclude = NONE }: { exclude?: string[] }) {
   return (
     <section className="panel my-stocks" aria-labelledby="my-stocks-title">
       <div className="today-head"><h2 className="h3" id="my-stocks-title"><Tr text="My stocks today" /></h2>
-        <span className="small muted"><Tr text="From your watchlist and portfolio" /></span></div>
+        <span className="small muted"><Tr text="From your watchlist" /></span></div>
       <ul className="today-list">{codes.map((code) => {
         const r = byCode[code], dv = divByCode[code];
         return (

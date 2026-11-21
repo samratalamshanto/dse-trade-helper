@@ -1,7 +1,7 @@
 import type { Limits, LimitSettings, PositionCheck } from '@/lib/positions';
 import type { Holding, Trade } from '@/lib/trades';
 
-// Shared by /trades and the dashboard card: the stored trades key, the keyed API call and the check badge.
+// Shared by /portfolio and the dashboard card: the stored trades key, the keyed API call and the check badge.
 const KEY_STORE = 'tradesKey';
 
 export type Valued = Holding & { price: number | null; value: number | null; unrealised: number | null; limits?: Limits; check?: PositionCheck | null };

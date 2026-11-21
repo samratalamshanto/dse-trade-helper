@@ -26,6 +26,10 @@ const nextConfig: NextConfig = {
   // The daily GitHub Action commits data/ (company cache, scorecard); Vercel's disk is read-only and starts empty.
   outputFileTracingIncludes: { '/*': ['./data/companies.json', './data/last-session.json', './data/scorecard/*.json'] },
   poweredByHeader: false,
+  // My trades and the old browser-only Portfolio became one Portfolio page; old links and bookmarks still work.
+  async redirects() {
+    return [{ source: '/trades', destination: '/portfolio', permanent: false }];
+  },
   async headers() {
     return [{
       source: '/(.*)',
