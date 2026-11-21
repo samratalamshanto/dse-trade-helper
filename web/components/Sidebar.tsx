@@ -54,7 +54,7 @@ export function Sidebar() {
         <span>৳</span><b className="nav-text">{t('Trade Helper')}</b>
         <button className="collapse" type="button" onClick={() => setNav(collapsed ? 'open' : 'collapsed')}
           aria-label={collapsed ? t('Show sidebar') : t('Hide sidebar')} aria-expanded={!collapsed}>
-          <Icon name="panel" />
+          <Icon name={collapsed ? 'panelOpen' : 'panelClose'} />
         </button>
         <button className="btn menu-btn" type="button" aria-expanded={menuOpen} aria-controls="nav-links" onClick={() => setMenuOpen(!menuOpen)}>
           <Icon name={menuOpen ? 'cross' : 'list'} /> {menuOpen ? t('Close') : `${t('Menu')}${current ? ' · ' + t(current.label) : ''}`}

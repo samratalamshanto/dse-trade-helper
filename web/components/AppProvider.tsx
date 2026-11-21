@@ -80,10 +80,27 @@ function load(url: string, tick: number): Promise<unknown> {
   return pending;
 }
 
+// Last answer per path and the refresh tick it came from. A page opened again shows it at once and
+// calls the API only when a refresh or auto-refresh has run since. Only the browser writes it (effects do not run on the server).
+const lastAnswer = new Map<string, { tick: number; data: unknown }>();
+const MAX_CACHED_PATHS = 50;
+
+function remember(path: string, tick: number, data: unknown): void {
+  lastAnswer.delete(path);
+  lastAnswer.set(path, { tick, data });
+  // Maps keep insertion order, so the first key is the path used longest ago.
+  if (lastAnswer.size > MAX_CACHED_PATHS) lastAnswer.delete(lastAnswer.keys().next().value as string);
+}
+
+function fromCache<T>(path: string | null, tick: number): ApiResult<T> {
+  const hit = path ? lastAnswer.get(path) : undefined;
+  return { data: (hit?.data as T) ?? null, error: null, loading: !hit || hit.tick !== tick };
+}
+
 // Loads a JSON API path, reloads on Refresh / auto-refresh, and keeps the old data visible while reloading.
 export function useApi<T extends { session?: MarketSession | null }>(path: string | null): ApiResult<T> {
   const { tick, freshTick, setSession } = useApp();
-  const [state, setState] = useState<ApiResult<T>>({ data: null, error: null, loading: true });
+  const [state, setState] = useState<ApiResult<T>>(() => fromCache<T>(path, tick));
   const shownPath = useRef<string | null>(null);
   const loadedTick = useRef(-1);
 
@@ -91,14 +108,22 @@ export function useApi<T extends { session?: MarketSession | null }>(path: strin
     if (!path) return;
     let active = true;
     const samePath = shownPath.current === path;
-    if (!samePath) setState({ data: null, error: null, loading: true });
+    // The first render already took the cached answer; a later path change shows that path's cached answer (or none).
+    if (!samePath && shownPath.current !== null) setState(fromCache<T>(path, tick));
     // Only the refresh that asked for fresh data bypasses the cache; a page opened later uses the normal path.
     const fresh = samePath && loadedTick.current !== tick && freshTick === tick;
     shownPath.current = path;
     loadedTick.current = tick;
+    const hit = lastAnswer.get(path);
+    if (hit && hit.tick === tick) {
+      setSession((hit.data as T).session);
+      return;
+    }
     const url = fresh && path.startsWith('/api/company/') ? path + '?fresh=1' : path;
     load(url, tick)
       .then((body) => {
+        // Kept even when the page has closed, so going back to it shows this answer at once.
+        remember(path, tick, body);
         if (!active) return;
         const data = body as T;
         setSession(data.session);

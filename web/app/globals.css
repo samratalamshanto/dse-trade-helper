@@ -5,15 +5,15 @@
   --warn: #8a5300; --warn-soft: #fff4dc; --shadow: 0 1px 2px rgba(16,24,40,.06); --control-border: #7b8494; --on-fill: #fff; --field: #fff;
 }
 :root[data-theme="dark"] {
-  --bg: #0d1117; --panel: #151b24; --panel-2: #1c2430; --border: #283241; --text: #e6ebf2; --muted: #969ca6;
-  --accent: #5b93f5; --accent-soft: #1b2a45; --up: #2fc483; --good-soft: #12342a; --down: #f06363; --bad-soft: #3d1a1d;
-  --warn: #f0b429; --warn-soft: #3a2f12; --shadow: none; --control-border: #8592a8; --on-fill: #0d1117; --field: #0d1117;
+  --bg: #0a0d13; --panel: #161c27; --panel-2: #212a38; --border: #303b4d; --text: #edf1f7; --muted: #a9b1be;
+  --accent: #6fa3ff; --accent-soft: #1e3260; --up: #3ad48f; --good-soft: #113b2c; --down: #ff7676; --bad-soft: #4a1a1f;
+  --warn: #f7c04a; --warn-soft: #3f3213; --shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 6px 18px rgba(0,0,0,.35); --control-border: #8b98ae; --on-fill: #0a0d13; --field: #0f141c;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0d1117; --panel: #151b24; --panel-2: #1c2430; --border: #283241; --text: #e6ebf2; --muted: #969ca6;
-    --accent: #5b93f5; --accent-soft: #1b2a45; --up: #2fc483; --good-soft: #12342a; --down: #f06363; --bad-soft: #3d1a1d;
-    --warn: #f0b429; --warn-soft: #3a2f12; --shadow: none; --control-border: #8592a8; --on-fill: #0d1117; --field: #0d1117;
+    --bg: #0a0d13; --panel: #161c27; --panel-2: #212a38; --border: #303b4d; --text: #edf1f7; --muted: #a9b1be;
+    --accent: #6fa3ff; --accent-soft: #1e3260; --up: #3ad48f; --good-soft: #113b2c; --down: #ff7676; --bad-soft: #4a1a1f;
+    --warn: #f7c04a; --warn-soft: #3f3213; --shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 6px 18px rgba(0,0,0,.35); --control-border: #8b98ae; --on-fill: #0a0d13; --field: #0f141c;
   }
 }
 * { box-sizing: border-box; }
@@ -28,6 +28,7 @@ aside { background: var(--panel); border-right: 1px solid var(--border); padding
 aside a { display: flex; align-items: center; min-height: 44px; padding: 8px 10px; border-radius: 8px; color: var(--text); text-decoration: none; }
 aside a:hover, aside a.active { background: var(--panel-2); }
 .navlabel { font-size: 11px; letter-spacing: .08em; color: var(--muted); margin: 14px 8px 6px; }
+aside nav > div + div > .navlabel { border-top: 1px solid var(--border); padding-top: 14px; }
 main { padding: 22px 28px 60px; width: 100%; max-width: 1680px; margin: 0 auto; }
 .topbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; position: relative; z-index: 10; margin: -22px -28px 22px; padding: 12px 28px;
   background: var(--panel); border-bottom: 1px solid var(--border); box-shadow: var(--shadow); }
@@ -120,6 +121,7 @@ select { padding: 8px 10px; border-radius: 8px; font: inherit; }
 .start ol { margin: 8px 0 4px; padding-left: 20px; }
 .start .btn { white-space: nowrap; flex: none; } .start li { margin: 4px 0; }
 .tab-link { padding: 10px 14px; border-radius: 9px; text-decoration: none; color: var(--muted); white-space: nowrap; min-height: 44px; display: inline-flex; align-items: center; }
+.tab-link:hover { color: var(--text); }
 .tab-link[aria-current="page"] { background: var(--panel); color: var(--text); font-weight: 600; box-shadow: inset 0 -3px 0 var(--accent); }
 .today-list { list-style: none; margin: 0; padding: 0; }
 .today-list li { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-top: 1px solid var(--border); font-size: 14px; }

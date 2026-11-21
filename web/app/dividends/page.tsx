@@ -36,8 +36,10 @@ export default function DividendsPage() {
   const router = useRouter();
   const [sort, setSort] = useState<SortState>({ key: 'recordDate', dir: 1 });
   const [showPast, setShowPast] = useState(false);
-  if (error && !d) return <div className="note bad">Could not load the dividend calendar: {error}</div>;
-  if (!d) return <div className="empty">Loading…</div>;
+  // Title and tabs stay on screen while the data loads, so a tab change does not look like a page reload.
+  const head = <><h1><Tr text="Dividend calendar" /></h1><CompanyTabs /></>;
+  if (error && !d) return <>{head}<div className="note bad">Could not load the dividend calendar: {error}</div></>;
+  if (!d) return <>{head}<div className="empty">Loading…</div></>;
 
   const onSort = (k: string) => setSort((s) => ({ key: k, dir: s.key === k ? -s.dir : k === 'yieldPct' ? -1 : 1 }));
   const get = (r: CalendarRow, k: string) => (r as unknown as Record<string, unknown>)[k];
@@ -49,8 +51,7 @@ export default function DividendsPage() {
 
   return (
     <>
-      <h1><Tr text="Dividend calendar" /></h1>
-      <CompanyTabs />
+      {head}
       <div className="note"><b>How to get a dividend:</b> buy the share on or before the <b>last day to buy</b>. Owners on the <b>record date</b> receive it after the AGM approves it.
         The price usually falls by about the dividend after the record date, so a dividend is not free money.
         <br /><b>12-month cash yield</b> = all cash dividends announced in the last 12 months (interim + final) ÷ today&apos;s price. Bonus shares are not cash. Tap the i next to a yield to see its sum.</div>

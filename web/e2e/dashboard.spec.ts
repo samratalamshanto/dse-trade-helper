@@ -47,6 +47,33 @@ test.describe('dashboard', () => {
     await expect(page).toHaveURL(/\/dividends$/);
   });
 
+  test('switching back to a tab shows its data at once, with no new API call', async ({ page }) => {
+    test.setTimeout(30_000);
+    await page.goto('/sectors');
+    const tabs = page.getByRole('navigation', { name: 'Companies' });
+    await expect(page.locator('.sector-card').first()).toBeVisible();
+    await tabs.getByRole('link', { name: 'Dividends' }).click();
+    await expect(page.getByRole('heading', { name: 'Upcoming record dates' })).toBeVisible();
+    // Outlast the 5 s in-flight reuse window, so only the answer cache can explain a missing request.
+    await page.waitForTimeout(5_500);
+    const calls: string[] = [];
+    page.on('request', (r) => { if (r.url().includes('/api/')) calls.push(r.url()); });
+    await tabs.getByRole('link', { name: 'Sectors' }).click();
+    await expect(page.locator('.sector-card').first()).toBeVisible();
+    await expect(page.getByText('Loading…')).toHaveCount(0);
+    await tabs.getByRole('link', { name: 'Dividends' }).click();
+    await expect(page.getByRole('heading', { name: 'Upcoming record dates' })).toBeVisible();
+    expect(calls).toEqual([]);
+  });
+
+  test('title and tabs stay on screen while the data loads', async ({ page }) => {
+    await page.route('**/api/dividends', async (route) => { await new Promise((r) => setTimeout(r, 1500)); await route.continue(); });
+    await page.goto('/dividends');
+    await expect(page.getByText('Loading…')).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Companies' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  });
+
   test('phone menu button opens the nav', async ({ page }, info) => {
     test.skip(!isPhone(info.project.name));
     const menu = page.getByRole('button', { name: /^Menu/ });

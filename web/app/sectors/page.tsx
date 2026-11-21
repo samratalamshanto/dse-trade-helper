@@ -32,12 +32,13 @@ export default function SectorsPage() {
     }).sort((a, b) => b.rows.length - a.rows.length);
   }, [data]);
 
-  if (error && !data) return <div className="note bad">Could not load sectors: {error}</div>;
-  if (!data) return <div className="empty">Loading…</div>;
+  // Title and tabs stay on screen while the data loads, so a tab change does not look like a page reload.
+  const head = <><h1><Tr text="Sectors" /></h1><CompanyTabs /></>;
+  if (error && !data) return <>{head}<div className="note bad">Could not load sectors: {error}</div></>;
+  if (!data) return <>{head}<div className="empty">Loading…</div></>;
   return (
     <>
-      <h1><Tr text="Sectors" /></h1>
-      <CompanyTabs />
+      {head}
       <p className="muted">Compare a company with others in the same industry. A bank&apos;s P/E is not comparable with a pharma company&apos;s P/E. <Info text="Median P/E counts only profitable companies outside category Z." /></p>
       <div className="grid g3">{sectors.map((s) => (
         <section key={s.sector} className="panel sector-card" aria-label={sectorName(s.sector)}>
