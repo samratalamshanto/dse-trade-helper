@@ -135,6 +135,7 @@ export interface CompanyResponse {
   session: Session | null;
   position: { verdict: { label: string; tone: string; text: string } | null } | null;
   today?: TodayView | null;
+  dataStale?: boolean;
   priceHistory?: PriceHistoryView | null;
   dividendRecord?: { year: number; cashPct: number | null; stockPct: number | null; rights: string | null; yieldPct: number | null; declared?: boolean }[];
 }

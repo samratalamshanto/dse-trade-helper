@@ -105,6 +105,7 @@ export function CompanyView({ code }: { code: string }) {
             ref={(el) => { tabRefs.current[k] = el; }} onClick={() => show(k)}>{t(label)}</button>
         ))}
       </div>
+      {d.dataStale ? <div className="note warn" role="status">{t("Full company details (company facts, P/E trend, daily high and low) arrive after the next data refresh, usually within a day.")}</div> : null}
       <div id="pane" role="tabpanel" tabIndex={0} aria-labelledby={'tab-' + tab}>
         {tab === 'overview' ? <Overview d={d} /> : null}
         {tab === 'history' ? <PriceHistory h={d.priceHistory} series={c.series} /> : null}

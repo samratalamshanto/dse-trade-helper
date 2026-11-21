@@ -66,6 +66,18 @@ export function cached<T>(key: string, ttlMs: number, load: () => Promise<T>, st
   return stale ?? (entry.value as Promise<T>);
 }
 
+// Waits past FAILURE_TTL_MS, because cached() keeps a failed load for that long and would hand back the same error.
+export const RETRY_WAIT_MS = FAILURE_TTL_MS + 5_000;
+export async function withRetry<T>(load: () => Promise<T>, tries = 3, waitMs = RETRY_WAIT_MS): Promise<T> {
+  for (let i = 1; ; i++) {
+    try { return await load(); } catch (e) {
+      if (i >= tries) throw e;
+      console.warn(`attempt ${i} of ${tries} failed; retrying in ${waitMs / 1000} s`, e);
+      await new Promise((r) => setTimeout(r, waitMs));
+    }
+  }
+}
+
 export const remember = (key: string): void => put(stamps, key, Date.now());
 
 export function seen(key: string, ttlMs: number): boolean {

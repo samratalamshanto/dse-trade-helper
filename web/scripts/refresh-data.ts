@@ -1,6 +1,6 @@
 // Run by .github/workflows/refresh-data.yml after the close: refetch every listed company and take the scorecard snapshot.
 import { DATA_VERSION } from '../lib/company.ts';
-import { livePrices } from '../lib/dse.ts';
+import { livePrices, withRetry } from '../lib/dse.ts';
 import { takeSnapshot } from '../lib/scorecard-store.ts';
 import { allCompanies, fetchCompany, saveCompanies } from '../lib/store.ts';
 
@@ -8,7 +8,7 @@ const PAUSE_MS = 4_000; // 15 pages a minute, the same pace as the in-app scan
 const SAVE_EVERY = 25;
 const MIN_OK_SHARE = 0.8;
 
-const live = await livePrices();
+const live = await withRetry(livePrices);
 const codes = Object.values(live).filter((p) => p.assetType === 'EQ').map((p) => p.code).sort();
 let ok = 0;
 const failed: string[] = [];

@@ -372,6 +372,7 @@ export default function Company() {
                 <Button variant="primary" label={saved ? '★ In your watchlist' : '☆ Add to watchlist'} onPress={() => toggle(code)} />
               </View>
 
+              {data.dataStale ? <View style={[s.card, { borderColor: colors.warn }]}><Text style={[s.text, { color: colors.warn }]} accessibilityRole="text">Full company details (company facts, P/E trend, daily high and low) arrive after the next data refresh, usually within a day.</Text></View> : null}
               <TodayCard today={data.today} />
 
               <SectionTitle icon="help-buoy-outline" title="Four questions before you buy" />

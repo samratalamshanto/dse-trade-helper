@@ -4,6 +4,10 @@ on:
   schedule:
     - cron: '30 9 * * 0-4' # 15:30 Dhaka, Sunday to Thursday, after the 14:30 close
   workflow_dispatch:
+  # A parser change (DATA_VERSION in web/lib/company.ts) needs new saved data at once, not at the next close.
+  push:
+    branches: [main]
+    paths: ['web/lib/company.ts']
 
 permissions:
   contents: write

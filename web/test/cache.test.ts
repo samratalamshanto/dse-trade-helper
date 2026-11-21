@@ -126,3 +126,19 @@ test('a closed market still refreshes slowly so a tab left open sees the next se
   assert.strictEqual(refreshDue(session({}), now - SLOW_REFRESH_MS, now), true);
   assert.strictEqual(refreshDue(session({ isOpen: true }), now - 60_000, now), true);
 });
+
+test('withRetry tries again after a failure and gives up after the last try', async () => {
+  const { withRetry } = await import('../lib/dse.ts');
+  let calls = 0;
+  const flaky = async () => { calls++; if (calls < 3) throw new Error('DSE slow'); return 'ok'; };
+  assert.strictEqual(await withRetry(flaky, 3, 1), 'ok');
+  assert.strictEqual(calls, 3);
+  calls = 0;
+  await assert.rejects(withRetry(async () => { calls++; throw new Error('down'); }, 2, 1), /down/);
+  assert.strictEqual(calls, 2);
+});
+
+test('withRetry waits longer than cached() keeps a failed load, so a retry is a real new request', async () => {
+  const { RETRY_WAIT_MS, FAILURE_TTL_MS } = await import('../lib/dse.ts');
+  assert.ok(RETRY_WAIT_MS > FAILURE_TTL_MS);
+});

@@ -289,7 +289,7 @@ export async function companyDetail(code: string, fresh: boolean) {
   return {
     company: { ...current, pe: analysis.metrics.pe, dividendYield: analysis.metrics.latestYield }, analysis, summary: fiveYearSummary(current), position, dividend,
     dividendRecord: dividendRecord(current),
-    questions: fourQuestions(current, analysis, position, dividend), sectorPe: sectorPe ?? null, freshSkipped,
+    questions: fourQuestions(current, analysis, position, dividend), sectorPe: sectorPe ?? null, freshSkipped, dataStale: isStale(company),
     today: todayTrading(live[code], company.details, session, analysis.metrics.lastTradeDate),
     priceHistory: priceHistory(company.series ?? [], company.events?.declarations ?? [], company.faceValue ?? null),
     session, updatedAt: Date.now(),

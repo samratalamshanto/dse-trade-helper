@@ -64,3 +64,20 @@ test.describe('/c/GP full DSE data', () => {
     await expect(page.getByRole('heading', { name: 'P/E over the last 30 trading days' })).toBeVisible();
   });
 });
+
+test.describe('saved data older than the parser', () => {
+  test('the company page says when full details arrive instead of showing empty sections', async ({ page }) => {
+    await page.route('**/api/company/GP*', async (route) => {
+      const res = await route.fetch();
+      await route.fulfill({ response: res, json: { ...(await res.json()), dataStale: true } });
+    });
+    await page.goto('/c/GP');
+    await expect(page.getByRole('status').filter({ hasText: 'arrive after the next data refresh' })).toBeVisible();
+  });
+
+  test('no note when the saved data is current', async ({ page }) => {
+    await page.goto('/c/GP');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(/Grameenphone/i);
+    await expect(page.getByText('arrive after the next data refresh')).toHaveCount(0);
+  });
+});
