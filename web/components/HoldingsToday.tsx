@@ -5,7 +5,8 @@ import { useEffect, useState } from 'react';
 import { useApi } from '@/components/AppProvider';
 import { fmt } from '@/components/format';
 import { ChangeText } from '@/components/CompanyCard';
-import { call, CheckBadge, ensureKey, type TradesList } from '@/components/trades-client';
+import { CheckBadge, type TradesList } from '@/components/trades-client';
+import { listTrades, useMode } from '@/components/portfolio-store';
 import { dhakaToday } from '@/lib/dhaka';
 import type { CompanyRow } from '@/lib/service';
 import type { MarketSession } from '@/lib/dse';
@@ -30,25 +31,27 @@ function saveLabels(labels: Labels) {
 
 const signedMoney = (x: number) => `${x > 0 ? '+' : x < 0 ? '-' : ''}৳${fmt(Math.abs(x))}`;
 
-// The owner's own holdings with today's check, shown only when this browser holds a working trades key.
+// The user's own holdings (this browser or the Google Sheet) with today's check; hidden when there are none.
 // onHeld tells the dashboard which codes are shown here, so My stocks does not list them a second time.
 export function HoldingsToday({ onHeld }: { onHeld?: (codes: string[]) => void }) {
   const [list, setList] = useState<TradesList | null>(null);
   const [before, setBefore] = useState<Labels>({});
   const { data: companies } = useApi<Companies>(list ? '/api/companies' : null);
 
+  const { mode, ready } = useMode();
   useEffect(() => {
+    if (!ready) return;
     let active = true;
-    void ensureKey().then((key) => key ? call<TradesList>(key, '/api/trades').then((l) => {
+    listTrades('real').then((l) => {
       if (!active) return;
       const labels = Object.fromEntries(l.holdings.flatMap((h) => (h.check ? [[h.code, h.check.label]] : [])));
       setBefore(previousLabels());
       saveLabels(labels);
       setList(l);
       onHeld?.(l.holdings.filter((h) => h.shares > 0).map((h) => h.code));
-    }, (e: unknown) => console.warn('dashboard: holdings hidden, /api/trades failed', e)) : undefined);
+    }, (e: unknown) => console.warn('dashboard: holdings hidden, they could not be loaded', e));
     return () => { active = false; };
-  }, [onHeld]);
+  }, [onHeld, ready, mode]);
 
   const held = list?.holdings.filter((h) => h.shares > 0) ?? [];
   if (!held.length) return null;

@@ -16,26 +16,30 @@ const LIST = {
   settings: { default: { stopPct: 10, targetPct: 20 }, perCode: {} },
 };
 
-// Opens the Portfolio with the key, then unfolds "Add or import trades" (folded once trades exist).
+// Sheet mode: the key is already saved in this browser; then unfolds "Add or import trades" (folded once trades exist).
 async function unlock(page: Page) {
+  await page.addInitScript((k) => localStorage.setItem('tradesKey', k), KEY);
   await page.goto('/portfolio');
-  await page.getByLabel('Trades key').fill(KEY);
-  await page.getByRole('button', { name: 'Open my portfolio' }).click();
   await page.getByText('Add or import trades').click();
 }
 
+const syncPanel = (page: Page) => page.locator('details').filter({ has: page.getByText('Sync with my Google Sheet') });
+
 test.describe('/trades (API mocked)', () => {
-  test('bad key: 401 shows an error and returns to the key prompt', async ({ page }) => {
+  test('no password box at first; a wrong password in the sync panel shows the error and stays in this browser', async ({ page }) => {
     test.info().annotations.push({ type: 'note', description: 'Chrome logs the mocked 401 as a console error; only that line is allowed.' });
     await page.route('**/api/trades**', (r) => json(r, 401, { error: 'Wrong trades key.' }));
     // The old /trades address still works: it opens the Portfolio.
     await page.goto('/trades');
     await expect(page).toHaveURL(/\/portfolio$/);
     await expect(page.getByRole('heading', { name: 'Portfolio', level: 1 })).toBeVisible();
-    await page.getByLabel('Trades key').fill(KEY);
-    await page.getByRole('button', { name: 'Open my portfolio' }).click();
-    await expect(page.locator('p[role=alert]')).toHaveText('Wrong trades key.');
-    await expect(page.getByLabel('Trades key')).toBeVisible();
+    await expect(page.getByLabel('Password')).toBeHidden();
+    await page.getByText('Sync with my Google Sheet').click();
+    await syncPanel(page).getByLabel('Password').fill(KEY);
+    await syncPanel(page).getByRole('button', { name: 'Connect' }).click();
+    await expect(syncPanel(page).getByRole('alert')).toHaveText('That password is not right.');
+    await expect(syncPanel(page).getByRole('button', { name: 'Connect' })).toBeVisible();
+    expect(await page.evaluate(() => localStorage.getItem('tradesKey'))).toBeNull();
   });
   test.use({ allowedConsole: [/status of 40[01]/] });
 
@@ -44,7 +48,7 @@ test.describe('/trades (API mocked)', () => {
     await page.route('**/api/trades**', (r) => json(r, r.request().headers()['x-trades-key'] === KEY ? 200 : 401, LIST));
     await page.goto('/portfolio');
     await expect(page.getByRole('heading', { name: 'All trades' })).toBeVisible();
-    await expect(page.getByLabel('Trades key')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Disconnect' })).toBeAttached();
   });
 
   test('list: holdings and trades table, sell amount = qty*price - fee', async ({ page }) => {
@@ -63,7 +67,7 @@ test.describe('/trades (API mocked)', () => {
     await unlock(page);
     await page.getByLabel('Choose broker file (.xlsx)').setInputFiles({ name: 'order_summary_2026-02-05.xlsx', mimeType: 'application/octet-stream', buffer: Buffer.from('x') });
     await expect(page.getByText(/Nothing new to add/)).toBeVisible();
-    await expect(page.getByText('0 to add, 1 already in the sheet.')).toBeVisible();
+    await expect(page.getByText('0 to add, 1 already in your trades.')).toBeVisible();
   });
 
   test('add-trade form posts the right JSON', async ({ page }) => {
@@ -135,10 +139,10 @@ test.describe('/trades (API mocked)', () => {
     await unlock(page);
     const file = page.getByLabel('Choose broker file (.xlsx)');
     await file.setInputFiles({ name: 'order_summary_2026-11-19.xlsx', mimeType: 'application/octet-stream', buffer: Buffer.from('x') });
-    await expect(page.getByText('0 to add, 0 already in the sheet.')).toBeVisible();
+    await expect(page.getByText('0 to add, 0 already in your trades.')).toBeVisible();
     await file.setInputFiles({ name: 'export.xlsx', mimeType: 'application/octet-stream', buffer: Buffer.from('x') });
     await expect(page.getByRole('alert').filter({ hasText: /trade date could not be read/ })).toBeVisible();
-    await expect(page.getByText('0 to add, 0 already in the sheet.')).toHaveCount(0);
+    await expect(page.getByText('0 to add, 0 already in your trades.')).toHaveCount(0);
   });
 
   test('practice account: banner, own list, no import, adds as paper, reset deletes only practice trades', async ({ page }) => {
@@ -215,18 +219,22 @@ test.describe('/trades (API mocked)', () => {
     await expect(page.getByRole('button', { name: 'Practice', exact: true })).toBeEnabled();
   });
 
-  test('telegram test button: shown after unlock, posts with the key and shows the result', async ({ page }) => {
+  test('telegram: browser mode says it needs the Sheet; after connecting, the test button posts with the key', async ({ page }) => {
     await page.route('**/api/trades**', (r) => json(r, 200, LIST));
     await page.route('**/api/notify/test', (r) => json(r, 200, { sent: true }));
     await page.goto('/portfolio');
+    await expect(page.getByText('Phone alerts need Google Sheet sync (below).')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Send test to Telegram' })).toHaveCount(0);
-    await page.getByLabel('Trades key').fill(KEY);
-    await page.getByRole('button', { name: 'Open my portfolio' }).click();
+    await page.getByText('Sync with my Google Sheet').click();
+    await syncPanel(page).getByLabel('Password').fill(KEY);
+    await syncPanel(page).getByRole('button', { name: 'Connect' }).click();
     await expect(page.getByRole('heading', { name: 'Phone alerts' })).toBeVisible();
     const req = page.waitForRequest((q) => q.method() === 'POST' && q.url().endsWith('/api/notify/test'));
     await page.getByRole('button', { name: 'Send test to Telegram' }).click();
     expect((await req).headers()['x-trades-key']).toBe(KEY);
     await expect(page.getByRole('status').filter({ hasText: 'Sent — check Telegram.' })).toBeVisible();
+    await syncPanel(page).getByRole('button', { name: 'Disconnect' }).click();
+    await expect(page.getByText('Phone alerts need Google Sheet sync (below).')).toBeVisible();
   });
 });
 
@@ -267,6 +275,7 @@ test.describe('dashboard: My holdings today (API mocked)', () => {
       localStorage.setItem('holdingChecks', JSON.stringify({ date: '2026-11-19', labels: { GP: 'Hold' } }));
     }, KEY);
     await page.route('**/api/trades', (r) => json(r, 200, LIST));
+    await page.route('**/api/plans', (r) => json(r, 200, { plans: [], badRows: [] }));
     await page.goto('/');
     const card = page.locator('section').filter({ has: page.getByRole('heading', { name: 'My holdings today' }) });
     await expect(card).toContainText('৳16,800.00');
@@ -276,8 +285,9 @@ test.describe('dashboard: My holdings today (API mocked)', () => {
     expect(JSON.parse((await page.evaluate(() => localStorage.getItem('holdingChecks')))!).labels).toEqual({ GP: 'Consider taking some profit' });
   });
 
-  test('hidden without a key, and hidden on a 401', async ({ page }) => {
+  test('hidden with nothing saved, and hidden on a 401', async ({ page }) => {
     await page.route('**/api/trades', (r) => json(r, 401, { error: 'Wrong trades key.' }));
+    await page.route('**/api/plans', (r) => json(r, 401, { error: 'Wrong trades key.' }));
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'My holdings today' })).toHaveCount(0);

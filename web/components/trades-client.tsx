@@ -1,14 +1,16 @@
 import type { Limits, LimitSettings, PositionCheck } from '@/lib/positions';
 import type { Holding, Trade } from '@/lib/trades';
+import { readStored, writeStored } from '@/components/useStored';
 
 // Shared by /portfolio and the dashboard card: the stored trades key, the keyed API call and the check badge.
-const KEY_STORE = 'tradesKey';
+export const KEY_STORE = 'tradesKey';
 
 export type Valued = Holding & { price: number | null; value: number | null; unrealised: number | null; limits?: Limits; check?: PositionCheck | null };
 export interface TradesList { trades: Trade[]; holdings: Valued[]; warnings: string[]; badRows: number[]; settings?: LimitSettings }
 
-export const readKey = () => { try { return localStorage.getItem(KEY_STORE) ?? ''; } catch { return ''; } };
-export const storeKey = (k: string) => { try { if (k) localStorage.setItem(KEY_STORE, k); else localStorage.removeItem(KEY_STORE); } catch (e) { console.warn('trades key not saved in this browser', e); } };
+export const readKey = (): string => readStored(KEY_STORE) ?? '';
+// Through the shared store so every page sees the switch between browser and Sheet at once.
+export const storeKey = (k: string): void => writeStored(KEY_STORE, k);
 
 // On the owner's own machine the dev server hands the key over (lib/dev-key.ts); one shared request per page load.
 let autoKey: Promise<string> | undefined;

@@ -5,7 +5,8 @@ import { useState, type FormEvent, type ReactNode } from 'react';
 import { fmt } from '@/components/format';
 import { useLang } from '@/components/i18n';
 import { Info } from '@/components/ui';
-import { call, ensureKey, readKey } from '@/components/trades-client';
+import { call, readKey } from '@/components/trades-client';
+import { holdingQuery, savePlan } from '@/components/portfolio-store';
 import { dhakaToday } from '@/lib/dhaka';
 import type { BuyPlan } from '@/lib/buy-planner';
 import { PlanForm, type PlanDraft } from './PlanForm';
@@ -56,13 +57,13 @@ function Result({ p, bar }: { p: BuyPlan; bar: ReactNode }) {
       {p.dividend ? <p className="small">{t('Dividend')}: {t('own it at the end of')} {p.dividend.lastBuyDate} ({p.dividend.tradingDaysLeft} {t('trading days left')}){p.dividend.cashPerShare != null ? ` · ৳${fmt(p.dividend.cashPerShare)} ${t('a share')}` : ''}.</p> : null}
       <p className="small">{t('Planned cost')}: <span className="mono">৳{fmt(p.totalWithCommission)}</span> = {p.quantity} {t('shares at an average')} ৳{fmt(p.avgPrice)} + ৳{fmt(p.commission)} {t('broker commission')}
         <Info text={`Commission is an estimate at ${p.commissionPct}% of the trade value (brokers charge about 0.3–0.5%, levies included). Ask your broker for the exact rate.`} /></p>
-      {p.afterBuy ? <p className="small">{t(p.later > 0 && p.alertPrice != null ? 'After this buy, if the alert price fills' : 'After this buy')}: {p.afterBuy.shares} {t('shares at an average')} ৳{fmt(p.afterBuy.avgCost)}{p.afterBuy.weightPct != null ? ` · ${fmt(p.afterBuy.weightPct, 0)}% ${t('of your holdings')}` : ` · ${t('enter your trades key to see its share of your holdings')}`}.</p> : null}
+      {p.afterBuy ? <p className="small">{t(p.later > 0 && p.alertPrice != null ? 'After this buy, if the alert price fills' : 'After this buy')}: {p.afterBuy.shares} {t('shares at an average')} ৳{fmt(p.afterBuy.avgCost)}{p.afterBuy.weightPct != null ? ` · ${fmt(p.afterBuy.weightPct, 0)}% ${t('of your holdings')}` : ` · ${t('add your trades on Portfolio to see its share of your holdings')}`}.</p> : null}
       <p className="why">{t('Rules on past prices: what happened before, never a forecast. Learning aid, not investment advice.')}</p>
     </div>
   );
 }
 
-// "Plan a buy" on the company page: shares or a budget → /api/plan; with the trades key it also counts the holding.
+// "Plan a buy" on the company page: shares or a budget → /api/plan, with the holding from the Sheet (key) or from this browser.
 export function BuyPlanner({ code, bar }: { code: string; bar: ReactNode }) {
   const { t } = useLang();
   const [mode, setMode] = useState<'qty' | 'budget'>('qty');
@@ -70,20 +71,20 @@ export function BuyPlanner({ code, bar }: { code: string; bar: ReactNode }) {
   const [plan, setPlan] = useState<BuyPlan | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [saving, setSaving] = useState<'form' | 'nokey' | 'saved' | null>(null);
+  const [saving, setSaving] = useState<'form' | 'saved' | null>(null);
 
   const ask = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setSaving(null);
     try {
-      setPlan(await call<BuyPlan>(readKey(), `/api/plan/${encodeURIComponent(code)}?${mode}=${encodeURIComponent(amount)}`));
+      setPlan(await call<BuyPlan>(readKey(), `/api/plan/${encodeURIComponent(code)}?${mode}=${encodeURIComponent(amount)}${await holdingQuery(code)}`));
       setError(null);
     } catch (err) { setPlan(null); setError(err instanceof Error ? err.message : 'Could not make a plan.'); } finally { setBusy(false); }
   };
 
   const save = async (d: PlanDraft) => {
-    await call(readKey(), '/api/plans', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(d) });
+    await savePlan(d);
     setSaving('saved');
   };
 
@@ -105,8 +106,7 @@ export function BuyPlanner({ code, bar }: { code: string; bar: ReactNode }) {
           <Result p={plan} bar={bar} />
           {saving === 'form' ? <PlanForm initial={draftFrom(plan)} submitLabel={t('Save plan')} onSubmit={save} onCancel={() => setSaving(null)} /> : (
             <div className={css.buttons}>
-              {saving === 'saved' ? null : <button className="btn primary" type="button" onClick={async () => setSaving((await ensureKey()) ? 'form' : 'nokey')}>{t('Save as plan')}</button>}
-              {saving === 'nokey' ? <span className="small" role="status">{t('Enter your trades key on')} <Link href="/portfolio">{t('Portfolio')}</Link> {t('first')}.</span> : null}
+              {saving === 'saved' ? null : <button className="btn primary" type="button" onClick={() => setSaving('form')}>{t('Save as plan')}</button>}
               {saving === 'saved' ? <span className="small t-good" role="status">{t('Saved.')} <Link href="/plans">{t('See my buy plans →')}</Link></span> : null}
             </div>
           )}

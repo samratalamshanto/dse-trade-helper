@@ -1,12 +1,12 @@
 import { planBuy, todaysPicks, type Holding } from './buy-planner.ts';
 import { dhakaToday } from './dhaka.ts';
 import { livePrices } from './dse.ts';
-import { boughtSince, planStatus, planToRow, plansFromRows, PLAN_COLUMNS, type SavedPlan, validatePlan } from './plans.ts';
+import { boughtSince, planCreatedAt, planStatus, planToRow, plansFromRows, PLAN_COLUMNS, type SavedPlan, validatePlan } from './plans.ts';
 import { companyDetail, listCompanies } from './service.ts';
 import { appendRows, deleteRow, readRows, SheetsError, writeRow, type TabSpec } from './sheets.ts';
 import { allCompanies } from './store.ts';
-import { holdingsFrom, fromRows } from './trades.ts';
-import { TradeInputError } from './trades-service.ts';
+import { holdingsFrom, fromRows, MAX_PRICE, type Trade } from './trades.ts';
+import { givenId, TradeInputError } from './trades-service.ts';
 import { randomUUID } from 'node:crypto';
 
 const PLANS: TabSpec = { title: 'plans', columns: PLAN_COLUMNS };
@@ -35,12 +35,27 @@ async function holdingFor(code: string): Promise<Holding | null> {
   return h ? { shares: h.shares, avgCost: h.avgCost, portfolioValue } : { shares: 0, avgCost: 0, portfolioValue };
 }
 
+const MAX_SHARES_HELD = 1_000_000_000;
+
+// Browser mode has no holdings on the server, so the page sends this company's holding: ?shares=&avgCost=&portfolioValue=
+export function holdingFromParams(params: URLSearchParams): Holding | null {
+  if (!params.has('shares')) return null;
+  const shares = Number(params.get('shares'));
+  const avgCost = Number(params.get('avgCost'));
+  const portfolioValue = Number(params.get('portfolioValue'));
+  if (!Number.isSafeInteger(shares) || shares < 0 || shares > MAX_SHARES_HELD) throw new TradeInputError('Shares held must be a whole number, 0 or more.');
+  if (!Number.isFinite(avgCost) || avgCost < 0 || avgCost > MAX_PRICE) throw new TradeInputError('Average cost must be an amount in taka.');
+  if (!Number.isFinite(portfolioValue) || portfolioValue < 0 || portfolioValue > MAX_SHARES_HELD * MAX_PRICE) throw new TradeInputError('Portfolio value must be an amount in taka.');
+  return { shares, avgCost, portfolioValue };
+}
+
 export async function buyPlanFor(code: string, params: URLSearchParams, withHolding: boolean) {
+  const given = withHolding ? null : holdingFromParams(params);
   const d = await companyDetail(code, false);
   const price = d.company.price;
   const quantity = quantityFrom(params, price);
   if (!price) throw new TradeInputError('No live price for this company right now.');
-  const holding = withHolding ? await holdingFor(code).catch((e: unknown) => { console.warn('planner: holding unavailable', e); return null; }) : null;
+  const holding = withHolding ? await holdingFor(code).catch((e: unknown) => { console.warn('planner: holding unavailable', e); return null; }) : given;
   const up = d.dividend.upcoming;
   return planBuy({
     code, quantity, price, series: d.company.series ?? [], weekLow52: d.company.weekLow52 ?? null, weekHigh52: d.company.weekHigh52 ?? null,
@@ -70,8 +85,12 @@ const checked = (input: unknown) => { const v = validatePlan(input); if (!v.ok) 
 
 export async function listPlans() {
   const { plans: saved, badRows } = plansFromRows(await readRows(PLANS));
+  return plansWithStatus(saved, fromRows(await readRows()).trades, badRows);
+}
+
+// Shared by the Sheet and by browser mode (lib/browser-data.ts). Pass real-account trades only.
+export async function plansWithStatus(saved: readonly SavedPlan[], trades: readonly Trade[], badRows: number[] = []) {
   // "Bought" comes from the real trades, so the plan, Portfolio and the dashboard always agree.
-  const { trades } = fromRows(await readRows());
   const plans = saved.map((p) => ({ ...p, boughtNow: boughtSince(p, trades) }));
   const live = await livePrices().catch((e: unknown) => { console.warn('plans: live prices unavailable', e); return {} as Record<string, { ltp: number }>; });
   const today = dhakaToday();
@@ -83,7 +102,11 @@ export async function listPlans() {
 }
 
 export const addPlan = (input: unknown) => serial(async () => {
-  const plan: SavedPlan = { ...checked(input), id: randomUUID(), createdAt: new Date().toISOString() };
+  const value = checked(input);
+  const id = givenId(input);
+  const existing = id ? plansFromRows(await readRows(PLANS)).plans.find((p) => p.id === id) : undefined;
+  if (existing) return existing;
+  const plan: SavedPlan = { ...value, id: id ?? randomUUID(), createdAt: planCreatedAt((input as { createdAt?: unknown }).createdAt) };
   await appendRows([planToRow(plan)], PLANS);
   return plan;
 });

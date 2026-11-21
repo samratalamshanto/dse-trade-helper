@@ -255,4 +255,5 @@ export const BN: Record<string, string> = {
   'No company matches the search.': 'খোঁজার সাথে কোনো কোম্পানি মেলেনি।', 'No sector or company matches the search.': 'খোঁজার সাথে কোনো খাত বা কোম্পানি মেলেনি।',
   'Loading dividends': 'লভ্যাংশ লোড হচ্ছে', 'Loading sectors': 'খাত লোড হচ্ছে', 'Loading dashboard': 'ড্যাশবোর্ড লোড হচ্ছে',
   'Loading scorecard': 'ফলাফল লোড হচ্ছে', 'Loading trades': 'লেনদেন লোড হচ্ছে',
+  'add your trades on Portfolio to see its share of your holdings': 'আপনার হোল্ডিংয়ে এর অংশ দেখতে পোর্টফোলিওতে আপনার লেনদেন যোগ করুন',
 };

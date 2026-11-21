@@ -74,17 +74,6 @@ test.describe('buy planner on the company page (API mocked)', () => {
   });
   test.use({ allowedConsole: [/status of 400/] });
 
-  test('save as plan without a key points to Portfolio', async ({ page }) => {
-    await page.route('**/api/plan/GP?**', (r) => json(r, 200, PLANS.split));
-    await page.goto('/c/GP');
-    const p = planner(page);
-    await p.getByLabel('How many shares').fill('10');
-    await p.getByRole('button', { name: 'Plan it' }).click();
-    await p.getByRole('button', { name: 'Save as plan' }).click();
-    await expect(p.getByRole('status')).toContainText('Enter your trades key on Portfolio first');
-    await expect(p.getByRole('link', { name: 'Portfolio' })).toHaveAttribute('href', '/portfolio');
-  });
-
   test('save as plan posts the prefilled plan with the key', async ({ page }) => {
     await withKey(page);
     let posted: Record<string, string> = {};
@@ -142,10 +131,11 @@ test.describe('/plans (API mocked)', () => {
     expect(calls[3].trim()).toBe(`DELETE /api/plans/${ID2}`);
   });
 
-  test('without a key it asks for the trades key', async ({ page }) => {
+  test('without a key it opens straight away with the empty list, saved in this browser', async ({ page }) => {
     await page.goto('/plans');
     await expect(page.getByRole('heading', { name: 'Buy plans' })).toBeVisible();
-    await expect(page.getByLabel('Trades key')).toBeVisible();
+    await expect(page.getByText('No plans yet.')).toBeVisible();
+    await expect(page.getByLabel('Password')).toHaveCount(0);
   });
 });
 

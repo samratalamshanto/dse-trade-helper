@@ -3,11 +3,12 @@ import { dhakaToday } from './dhaka.ts';
 import { livePrices } from './dse.ts';
 import { checkPosition, parseSettings, settingsFromRows, settingsToRows, type LimitSettings } from './positions.ts';
 import { companyDetail } from './service.ts';
+import { allCompanies } from './store.ts';
 import { appendRows, deleteRow, readRows, readSettingsRows, SheetsError, writeRow, writeSettingsRows } from './sheets.ts';
-import { dateFromFileName, fromRows, holdingsFrom, parseOrderSummary, splitNew, toRow, type Account, type Trade, type TradeInput, validateTrade } from './trades.ts';
+import { dateFromFileName, fromRows, TRADE_ID_RE, TradeInputError, holdingsFrom, parseOrderSummary, splitNew, toRow, type Account, type Trade, type TradeInput, validateTrade } from './trades.ts';
 import { readFirstSheet } from './xlsx.ts';
 
-export class TradeInputError extends Error {}
+export { TradeInputError };
 
 let queue: Promise<unknown> = Promise.resolve();
 // Sheet writes run one at a time so a duplicate check and the write that follows cannot interleave.
@@ -24,22 +25,35 @@ async function current(account: Account | 'all' = 'real') {
 }
 
 export async function listTrades(account: Account = 'real') {
-  const { trades, badRows } = await current(account);
+  // Limits are read beside the trades; a settings-tab failure falls back to the defaults instead of failing the list.
+  const [{ trades, badRows }, settings] = await Promise.all([
+    current(account),
+    readLimits().catch((e: unknown) => { console.warn('trades: limits unavailable, using defaults', e); return settingsFromRows([]); }),
+  ]);
+  return valueTrades(trades, settings, account, badRows);
+}
+
+const MAX_CHECKED = 150;
+
+// One valuation for both sources: the Google Sheet and the trades a browser sends (lib/browser-data.ts).
+export async function valueTrades(trades: readonly Trade[], settings: LimitSettings, account: Account, badRows: number[] = []) {
   const { holdings, warnings } = holdingsFrom(trades);
-  // Limits are read beside the prices; a settings-tab failure falls back to the defaults instead of failing the list.
-  const limitsOrDefaults = readLimits().catch((e: unknown) => { console.warn('trades: limits unavailable, using defaults', e); return settingsFromRows([]); });
   const live = await livePrices().catch((e: unknown) => { console.warn('trades: live prices unavailable', e); return {} as Record<string, { ltp: number }>; });
   const valued = holdings.filter((h) => h.shares > 0 || h.realised !== 0).map((h) => {
     const price = live[h.code]?.ltp || null;
     const value = price != null ? price * h.shares : null;
     return { ...h, price, value, unrealised: value != null ? value - h.invested : null };
   });
-  const settings = await limitsOrDefaults;
   const total = valued.reduce((a, h) => a + (h.value ?? 0), 0);
   const today = dhakaToday();
+  // A browser body can name thousands of codes: only listed companies are analysed, and at most MAX_CHECKED of them.
+  const stored = allCompanies();
+  const toCheck = new Set(valued.filter((h) => h.shares > 0 && (h.code in live || h.code in stored)).slice(0, MAX_CHECKED).map((h) => h.code));
+  const unchecked = valued.filter((h) => h.shares > 0 && !toCheck.has(h.code)).length;
+  const notes = unchecked ? [...warnings, `Checks are shown for ${toCheck.size} holdings; ${unchecked} more are not on the DSE list or past the first ${MAX_CHECKED}.`] : warnings;
   const checkedHoldings = await Promise.all(valued.map(async (h) => {
     const limits = settings.perCode[h.code] ?? settings.default;
-    if (h.shares <= 0) return { ...h, limits, check: null };
+    if (!toCheck.has(h.code)) return { ...h, limits, check: null };
     const detail = await companyDetail(h.code, false).catch((e: unknown) => { console.warn(`trades: no analysis for ${h.code}`, e); return null; });
     const up = detail?.dividend.upcoming;
     const check = checkPosition({
@@ -51,7 +65,7 @@ export async function listTrades(account: Account = 'real') {
     return { ...h, limits, check };
   }));
   const sorted = [...trades].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)).map((t) => ({ id: t.id, date: t.date, code: t.code, side: t.side, quantity: t.quantity, price: t.price, commission: t.commission, note: t.note, source: t.source, createdAt: t.createdAt, account: t.account }));
-  return { account, trades: sorted, holdings: checkedHoldings, warnings, badRows, settings };
+  return { account, trades: sorted, holdings: checkedHoldings, warnings: notes, badRows, settings };
 }
 
 function checked(input: unknown): TradeInput {
@@ -60,8 +74,18 @@ function checked(input: unknown): TradeInput {
   return v.value;
 }
 
+// A browser item moved to the Sheet keeps its id, so a repeated move (lost answer, two tabs) finds it and adds nothing.
+export const givenId = (input: unknown): string | null => {
+  const id = input && typeof input === 'object' ? (input as { id?: unknown }).id : null;
+  return typeof id === 'string' && TRADE_ID_RE.test(id) ? id : null;
+};
+
 export const addTrade = (input: unknown) => serial(async () => {
-  const trade = stamp(checked(input), 'manual');
+  const value = checked(input);
+  const id = givenId(input);
+  const existing = id ? (await current('all')).trades.find((t) => t.id === id) : undefined;
+  if (existing) return existing;
+  const trade = { ...stamp(value, 'manual'), ...(id ? { id } : {}) };
   await appendRows([toRow(trade)]);
   return trade;
 });
@@ -87,11 +111,15 @@ export const deleteTrade = (id: string) => serial(async () => {
 
 export interface ImportResult { date: string; added: TradeInput[]; skipped: TradeInput[]; errors: string[]; saved: boolean }
 
-export const importOrderSummary = (data: Uint8Array, fileName: string, dateOverride: string | null, save: boolean) => serial(async (): Promise<ImportResult> => {
+// Broker files are real trades: parseOrderSummary never sets an account, so validateTrade makes each one 'real'.
+export function parseBrokerFile(data: Uint8Array, fileName: string, dateOverride: string | null): { date: string; trades: TradeInput[]; errors: string[] } {
   const date = dateOverride || dateFromFileName(fileName);
   if (!date) throw new TradeInputError('The trade date could not be read from the file name. Pick the date and upload again.');
-  // Broker files are real trades: parseOrderSummary never sets an account, so validateTrade makes each one 'real'.
-  const { trades, errors } = parseOrderSummary(readFirstSheet(data), date);
+  return { date, ...parseOrderSummary(readFirstSheet(data), date) };
+}
+
+export const importOrderSummary = (data: Uint8Array, fileName: string, dateOverride: string | null, save: boolean) => serial(async (): Promise<ImportResult> => {
+  const { date, trades, errors } = parseBrokerFile(data, fileName, dateOverride);
   const { added, skipped } = splitNew(trades, (await current()).trades);
   if (save && added.length) await appendRows(added.map((t) => toRow(stamp(t, 'broker-xlsx'))));
   return { date, added, skipped, errors, saved: save && added.length > 0 };

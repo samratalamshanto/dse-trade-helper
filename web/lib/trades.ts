@@ -4,6 +4,12 @@ export const TRADE_COLUMNS = ['id', 'date', 'code', 'side', 'quantity', 'price',
 export const MAX_QUANTITY = 10_000_000;
 export const MAX_PRICE = 1_000_000;
 export const NOTE_MAX = 200;
+// Browser mode keeps everything in localStorage and sends it in one request; this keeps both small.
+export const MAX_BROWSER_TRADES = 5000;
+
+// A plain-message input error (400). Here, not in the service, so browser code can share the pure checks.
+export class TradeInputError extends Error {}
+export const TRADE_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 export type Side = 'BUY' | 'SELL';
 // 'paper' is the practice account; an empty sheet cell (rows from before the column existed) is 'real'.
@@ -83,6 +89,16 @@ export function toRow(t: Trade): string[] {
   return [t.id, t.date, t.code, t.side, String(t.quantity), String(t.price), t.commission == null ? '' : String(t.commission), t.note, t.source, t.createdAt, t.account ?? 'real'];
 }
 
+// A leading = + - @ tab or CR would run as a formula in Excel, so it gets a ' first.
+const csvCell = (raw: string) => {
+  const s = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+
+export function tradesCsv(trades: readonly Trade[]): string {
+  return [TRADE_COLUMNS.join(','), ...trades.map((t) => toRow(t).map(csvCell).join(','))].join('\n');
+}
+
 // Only one account's trades are returned (real by default); bad rows are reported whatever their account.
 export function fromRows(rows: string[][], account: Account | 'all' = 'real'): { trades: (Trade & { row: number })[]; badRows: number[] } {
   const trades: (Trade & { row: number })[] = [];
@@ -145,6 +161,7 @@ export function dateFromFileName(name: string): string | null {
   return isRealDate(iso) ? iso : null;
 }
 
+const MAX_IMPORT_ERRORS = 200;
 const BROKER_COLUMNS = { code: 'trade code', buyQty: 'bexecqty', buyPrice: 'bavgprice', sellQty: 'sexecqty', sellPrice: 'savgprice' } as const;
 
 // Reads a broker "order summary" sheet: one row per company with executed buy/sell quantity and average price. The BO code column is never read.
@@ -165,7 +182,7 @@ export function parseOrderSummary(rows: string[][], date: string, today = dhakaT
       if (!quantity) continue;
       const v = validateTrade({ date, code, side, quantity, price: p < 0 ? null : r[p], commission: null, note }, today);
       if (v.ok) trades.push(v.value);
-      else errors.push(`Row ${headerAt + i + 2} (${code} ${side}): ${v.error}`);
+      else if (errors.length < MAX_IMPORT_ERRORS) errors.push(`Row ${headerAt + i + 2} (${code} ${side}): ${v.error}`);
     }
   });
   return { trades, errors };

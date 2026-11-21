@@ -6,7 +6,8 @@ import { fmt } from '@/components/format';
 import { useLang } from '@/components/i18n';
 import { useStoredValue } from '@/components/useStored';
 import { Icon } from '@/components/ui';
-import { call, ensureKey } from '@/components/trades-client';
+import { call } from '@/components/trades-client';
+import { listPlans, useMode } from '@/components/portfolio-store';
 import type { Pick } from '@/lib/buy-planner';
 import { STATUS_PILL, type PlansList } from './plan-text';
 import css from './planner.module.css';
@@ -60,18 +61,20 @@ export function TodaysPicks() {
   );
 }
 
-// Only for a browser with the trades key and at least one open plan; reached plans come first from the API.
+// Only when there is at least one open plan (this browser or the Google Sheet); reached plans come first from the API.
 export function PlansMini() {
   const { t } = useLang();
   const [data, setData] = useState<PlansList | null>(null);
+  const { mode, ready } = useMode();
 
   useEffect(() => {
+    if (!ready) return;
     let active = true;
-    void ensureKey().then((key) => key ? call<PlansList>(key, '/api/plans')
+    listPlans()
       .then((d) => { if (active) setData(d); })
-      .catch((e: unknown) => console.warn('dashboard: buy plans not loaded', e)) : undefined);
+      .catch((e: unknown) => console.warn('dashboard: buy plans not loaded', e));
     return () => { active = false; };
-  }, []);
+  }, [ready, mode]);
 
   const open = data?.plans.filter((p) => p.live.status === 'reached' || p.live.status === 'waiting' || p.live.status === 'expired') ?? [];
   if (!open.length) return null;

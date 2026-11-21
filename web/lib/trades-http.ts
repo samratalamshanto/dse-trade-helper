@@ -1,7 +1,8 @@
 import { timingSafeEqual } from 'node:crypto';
 import { SheetsError } from './sheets.ts';
 import { TradeInputError } from './trades-service.ts';
-import { XlsxError } from './xlsx.ts';
+import { respond } from './http.ts';
+import { XLSX_MAX_BYTES, XlsxError } from './xlsx.ts';
 
 export const KEY_HEADER = 'x-trades-key';
 const json = (status: number, body: unknown) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
@@ -35,13 +36,44 @@ export async function tradesRoute(request: Request, label: string, work: () => P
   }
 }
 
-export const TRADE_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+export { TRADE_ID_RE } from './trades.ts';
 
 // A trade or a settings save is a few hundred bytes; anything far larger is refused before parsing.
 export const JSON_MAX_BYTES = 20_000;
 
-export async function readJson(request: Request): Promise<unknown> {
+// Browser mode sends all of its trades and plans in one body (lib/browser-data.ts caps the counts).
+export const BROWSER_JSON_MAX_BYTES = 3_000_000;
+
+export async function readJson(request: Request, maxBytes = JSON_MAX_BYTES): Promise<unknown> {
+  if (Number(request.headers.get('content-length') ?? 0) > maxBytes) throw new TradeInputError('The request is too large.');
   const text = await request.text();
-  if (Buffer.byteLength(text) > JSON_MAX_BYTES) throw new TradeInputError('The request is too large.');
+  if (Buffer.byteLength(text) > maxBytes) throw new TradeInputError('The request is too large.');
   try { return JSON.parse(text); } catch (e) { throw new TradeInputError('Send the trade as JSON.', { cause: e }); }
+}
+
+export interface ImportForm { data: Uint8Array; fileName: string; date: string | null; save: boolean }
+
+// multipart form: file (broker .xlsx order summary), date (optional YYYY-MM-DD), save ("1" to write, otherwise preview only)
+export async function readImportForm(request: Request): Promise<ImportForm> {
+  if (Number(request.headers.get('content-length') ?? 0) > XLSX_MAX_BYTES * 2) throw new TradeInputError('The file is too large.');
+  const form = await request.formData().catch((e: unknown) => { throw new TradeInputError('Upload the file as a form.', { cause: e }); });
+  const file = form.get('file');
+  if (!(file instanceof File)) throw new TradeInputError('Choose the broker order summary (.xlsx) file.');
+  // Chunked uploads carry no content-length, so the real size is checked again here.
+  if (file.size > XLSX_MAX_BYTES) throw new TradeInputError('The file is too large. Export one day or one month at a time.');
+  // Phones may upload the file under a storage id, so they send the real file name separately.
+  const named = form.get('fileName');
+  const fileName = typeof named === 'string' && named.trim() ? named.trim().slice(0, 200) : file.name;
+  if (!/\.xlsx$/i.test(fileName)) throw new TradeInputError('Only Excel .xlsx files can be imported for now.');
+  const date = typeof form.get('date') === 'string' && form.get('date') ? String(form.get('date')) : null;
+  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new TradeInputError('Date must look like 2026-11-19.');
+  return { data: new Uint8Array(await file.arrayBuffer()), fileName, date, save: form.get('save') === '1' };
+}
+
+// Keyless browser-mode endpoints: the caller's own data in, numbers out, nothing stored. Pages on other sites may not call them.
+export async function browserRoute(request: Request, label: string, work: () => Promise<unknown>): Promise<Response> {
+  if (request.headers.get('sec-fetch-site') === 'cross-site') return json(403, { error: 'Open this site to use your portfolio.' });
+  return respond(label, async () => {
+    try { return await work(); } catch (e) { throw e instanceof XlsxError ? new TradeInputError(e.message, { cause: e }) : e; }
+  });
 }

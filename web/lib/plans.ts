@@ -3,6 +3,7 @@ import { MAX_PRICE, MAX_QUANTITY, NOTE_MAX, parseAmount } from './trades.ts';
 
 export const PLAN_COLUMNS = ['id', 'code', 'quantity', 'bought_now', 'target_price', 'until', 'note', 'status', 'created_at'] as const;
 export const PLAN_STATES = ['active', 'done', 'cancelled'] as const;
+export const MAX_BROWSER_PLANS = 500;
 export type PlanState = (typeof PLAN_STATES)[number];
 
 export interface PlanInput { code: string; quantity: number; boughtNow: number; targetPrice: number | null; until: string | null; note: string; status: PlanState }
@@ -57,11 +58,19 @@ export function plansFromRows(rows: string[][]): { plans: (SavedPlan & { row: nu
   return { plans, badRows };
 }
 
+const EARLIEST_PLAN = Date.parse('2000-01-01T00:00:00Z');
+
+// A plan moved from a browser keeps its own day, so "bought since" does not change; anything odd becomes now.
+export function planCreatedAt(raw: unknown, now = Date.now()): string {
+  const at = typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(raw) ? Date.parse(raw) : NaN;
+  return new Date(Number.isFinite(at) && at >= EARLIEST_PLAN && at <= now ? at : now).toISOString();
+}
+
 const DHAKA_OFFSET_MS = 6 * 60 * 60 * 1000;
 
 // Shares of the plan's company bought on or after the plan day (Dhaka date), capped at the plan quantity.
 // Pass real-account trades only; "bought" is read from the trades, never typed by hand.
-export function boughtSince(p: { code: string; quantity: number; createdAt: string }, trades: { code: string; side: string; quantity: number; date: string }[]): number {
+export function boughtSince(p: { code: string; quantity: number; createdAt: string }, trades: readonly { code: string; side: string; quantity: number; date: string }[]): number {
   const at = Date.parse(p.createdAt);
   const from = Number.isFinite(at) ? new Date(at + DHAKA_OFFSET_MS).toISOString().slice(0, 10) : '';
   const bought = trades.filter((t) => t.code === p.code && t.side === 'BUY' && t.date >= from).reduce((a, t) => a + t.quantity, 0);

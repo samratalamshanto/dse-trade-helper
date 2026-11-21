@@ -13,8 +13,9 @@ for (const path of ROUTES) {
   });
 }
 
-test('no console errors on /trades key prompt (no API call)', async ({ page }) => {
+test('no console errors on /trades for a new visitor (no trades API call, no password box)', async ({ page }) => {
   await page.route('**/api/trades**', (r) => r.abort());
   await page.goto('/trades');
-  await expect(page.getByLabel('Trades key')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'All trades' })).toBeVisible();
+  await expect(page.getByLabel('Password')).toBeHidden();
 });

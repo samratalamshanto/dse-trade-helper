@@ -1,14 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { fmt, fmtDate } from '@/components/format';
-import { call, ensureKey, storeKey } from '@/components/trades-client';
+import { deletePlan, dropRefusedKey, listPlans, savePlan, useMode } from '@/components/portfolio-store';
 import { PlanForm, type PlanDraft } from '@/components/planner/PlanForm';
 import { STATUS_PILL, type LivePlan, type PlansList } from '@/components/planner/plan-text';
 import css from '@/components/planner/planner.module.css';
 import type { PlanStatus, SavedPlan } from '@/lib/plans';
 import { Tr } from '@/components/Tr';
+import { KeyStoppedNote, UnreadableNote } from '@/components/portfolio/MyData';
 
 const STATUS_WORD: Record<PlanStatus['status'], string> = { reached: 'Target reached', waiting: 'Waiting', expired: 'Expired', done: 'Done', cancelled: 'Cancelled' };
 
@@ -21,31 +22,31 @@ function statusWord(p: LivePlan): string {
 }
 
 export default function PlansPage() {
-  const [key, setKey] = useState('');
-  const [keyDraft, setKeyDraft] = useState('');
+  const { mode, ready } = useMode();
   const [data, setData] = useState<PlansList | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
 
-  const load = useCallback(async (k: string) => {
+  const load = useCallback(async () => {
     setBusy(true);
-    try { setData(await call<PlansList>(k, '/api/plans')); setError(null); } catch (e) {
+    try { setData(await listPlans()); setError(null); } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load plans.');
-      if ((e as { status?: number }).status === 401) { storeKey(''); setKey(''); }
+      if ((e as { status?: number }).status === 401) dropRefusedKey();
     } finally { setBusy(false); }
   }, []);
 
   useEffect(() => {
-    void ensureKey().then((k) => { if (k) { setKey(k); void load(k); } });
-  }, [load]);
+    if (!ready) return;
+    let active = true;
+    void Promise.resolve().then(() => { if (active) void load(); });
+    return () => { active = false; };
+  }, [ready, mode, load]);
 
-  const unlock = (e: FormEvent) => { e.preventDefault(); storeKey(keyDraft.trim()); setKey(keyDraft.trim()); void load(keyDraft.trim()); };
-
-  const put = async (id: string, body: unknown) => {
-    await call(key, `/api/plans/${id}`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const put = async (id: string, body: object) => {
+    await savePlan(body, id);
     setEditing(null);
-    await load(key);
+    await load();
   };
   const act = async (work: () => Promise<unknown>, failed: string) => {
     setBusy(true);
@@ -53,30 +54,18 @@ export default function PlansPage() {
   };
   const remove = (p: LivePlan) => {
     if (!window.confirm(`Delete the ${p.code} plan for ${p.quantity} shares?`)) return;
-    void act(async () => { await call(key, `/api/plans/${p.id}`, { method: 'DELETE' }); await load(key); }, 'Could not delete the plan.');
+    void act(async () => { await deletePlan(p.id); await load(); }, 'Could not delete the plan.');
   };
-
-  if (!key) {
-    return (
-      <>
-        <h1><Tr text="Buy plans" /></h1>
-        <p className="muted">Plans are saved in your own Google Sheet, next to your trades. Enter the trades key once on this device.</p>
-        <form className={`panel ${css.form}`} onSubmit={unlock}>
-          <label>Trades key<input type="password" autoComplete="off" value={keyDraft} onChange={(e) => setKeyDraft(e.target.value)} required minLength={16} /></label>
-          <div className={css.buttons}><button className="btn primary" type="submit">Open my plans</button></div>
-        </form>
-        {error ? <p className={css.error} role="alert">{error}</p> : null}
-      </>
-    );
-  }
 
   return (
     <>
       <h1><Tr text="Buy plans" /></h1>
       <p className="muted small">Make a plan from a company page with <b>Plan a buy</b>. A plan turns green when today&apos;s price is at or under your target. Learning aid, not investment advice.</p>
+      <KeyStoppedNote />
+      <UnreadableNote />
       {error ? <div className="note bad" role="alert">{error}</div> : null}
-      {data?.badRows.length ? <div className="note warn">Rows {data.badRows.join(', ')} in the plans sheet could not be read; fix them in the sheet.</div> : null}
-      {!data && busy ? <div className="skel" style={{ height: 120 }} aria-busy="true" aria-label="Loading plans" /> : null}
+      {data?.badRows.length ? <div className="note warn">Rows {data.badRows.join(', ')} in the plans tab of your Google Sheet could not be read; fix them in the Sheet.</div> : null}
+      {!data && (busy || !ready) ? <div className="skel" style={{ height: 120 }} aria-busy="true" aria-label="Loading plans" /> : null}
       {data && !data.plans.length ? <div className="panel empty">No plans yet. Open a company and use <b>Plan a buy</b>, then <b>Save as plan</b>.</div> : null}
       {data?.plans.map((p) => {
         const active = p.status === 'active';
