@@ -8,8 +8,10 @@ import { Icon, Skeleton } from '@/components/ui';
 import TelegramTestButton from '@/components/TelegramTestButton';
 import { CheckBadge, type TradesList as List } from '@/components/trades-client';
 import { deleteTrade, dropRefusedKey, importFile, listTrades, saveLimits, saveTrade, useBrowserData, useMode, type ImportResult } from '@/components/portfolio-store';
-import { tradesCsv, type Account, type Trade, type TradeInput } from '@/lib/trades';
+import { commissionFor, MAX_COMMISSION_PCT, tradesCsv, type Account, type Trade, type TradeInput } from '@/lib/trades';
 import { useApi } from '@/components/AppProvider';
+import { useStoredValue } from '@/components/useStored';
+import { BROKER_COMMISSION_PCT } from '@/lib/buy-planner';
 import { aggregateLots, type Lot } from '@/lib/portfolio';
 import { signed, Summary, tone } from '@/components/portfolio/Summary';
 import { LimitsPanel } from '@/components/portfolio/LimitsPanel';
@@ -48,6 +50,7 @@ export default function PortfolioPage() {
   const [account, setAccount] = useState<Account>('real');
   const paper = account === 'paper';
   const [addOpen, setAddOpen] = useState(false);
+  const [feePct, setFeePct] = useStoredValue('brokerCommissionPct', String(BROKER_COMMISSION_PCT));
   const addRef = useRef<HTMLDetailsElement>(null);
   const { data: compData } = useApi<Companies>('/api/companies');
   const { data: divData } = useApi<Dividends>('/api/dividends');
@@ -127,7 +130,7 @@ export default function PortfolioPage() {
     setBusy(true);
     setPreview(null);
     try {
-      const result = await importFile(file, importDate, saveIt);
+      const result = await importFile(file, importDate, saveIt, feePct);
       setPreview(saveIt ? null : { file, result }); setError(null);
       // A date typed for one file must not silently apply to the next one.
       if (saveIt) { setImportDate(''); await load(); } else setBusy(false);
@@ -137,6 +140,15 @@ export default function PortfolioPage() {
   if (!ready) return <><h1>Portfolio</h1><Skeleton label="Loading trades" rows={4} /></>;
 
   const set = (k: keyof ReturnType<typeof blank>) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  // The commission follows quantity, price and rate until the user types an amount of their own.
+  const isAuto = (f: ReturnType<typeof blank>) => f.commission === '' || f.commission === commissionFor(f.quantity, f.price, feePct);
+  const setAmount = (k: 'quantity' | 'price') => (e: { target: { value: string } }) => setForm((f) => {
+    const next = { ...f, [k]: e.target.value };
+    return isAuto(f) ? { ...next, commission: commissionFor(next.quantity, next.price, feePct) } : next;
+  });
+  const changePct = (v: string) => { setForm((f) => (isAuto(f) ? { ...f, commission: commissionFor(f.quantity, f.price, v) } : f)); setFeePct(v); };
+  const badPct = feePct.trim() !== '' && commissionFor('1', '1', feePct) === '';
+  const commissionPaid = (data?.trades ?? []).reduce((a, t) => a + (t.commission ?? 0), 0);
 
   return (
     <>
@@ -162,7 +174,7 @@ export default function PortfolioPage() {
       {data?.warnings.map((w) => <div key={w} className="note warn">{w}</div>)}
       {data?.badRows.length ? <div className="note warn">Rows {data.badRows.join(', ')} in your Google Sheet could not be read; fix them in the Sheet.</div> : null}
       {paper ? null : <OldLots busy={busy} postLot={postOldLot} onDone={oldLotsDone} />}
-      {data ? <Summary holdings={data.holdings} /> : busy ? <Skeleton label="Loading trades" rows={4} /> : null}
+      {data ? <Summary holdings={data.holdings} commissionPaid={commissionPaid} /> : busy ? <Skeleton label="Loading trades" rows={4} /> : null}
       {data?.holdings.length ? (
         <div className={`panel table-wrap ${css.section}`}><h2 className="h3">Holdings</h2>
         <p className="small muted">Checks use fixed rules on your numbers and public DSE data — a learning aid, not investment advice.</p>
@@ -192,7 +204,7 @@ export default function PortfolioPage() {
         <summary className="h3">{paper ? 'Add a practice trade' : 'Add or import trades'}</summary>
       {paper ? null : <div className={css.section}>
         <h3>Import from your broker (Excel order summary)</h3>
-        <p className="muted">Pick the day’s <b>order_summary_….xlsx</b>. You see what will be added first; trades you already have are skipped.</p>
+        <p className="muted">Pick the day’s <b>order_summary_….xlsx</b>. You see what will be added first; trades you already have are skipped. The file has no commission, so {feePct.trim() ? <>each trade gets your broker rate ({feePct}%) — set it in the form below.</> : <>set your broker rate in the form below, or trades come in with no commission.</>}</p>
         <div className={css.form}>
           <label className="btn"><Icon name="upload" />Choose broker file (.xlsx)<input className="sr-only" type="file" accept=".xlsx" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f, false); e.target.value = ''; }} /></label>
           <label>Trade date (only if the file name has none)<input type="date" value={importDate} max={dhakaToday()} onChange={(e) => setImportDate(e.target.value)} /></label>
@@ -200,7 +212,7 @@ export default function PortfolioPage() {
         {preview ? (
           <div className={css.section}>
             <p><b>{fmtDate(preview.result.date)}</b>: {preview.result.added.length} to add, {preview.result.skipped.length} already in your trades.</p>
-            <ul>{preview.result.added.map((t, i) => <li key={`${i}-${t.code}-${t.side}`}><span className={`${css.side} ${t.side === 'BUY' ? css.buy : css.sell}`}>{t.side}</span> {t.quantity} {t.code} @ ৳{fmt(t.price)}</li>)}</ul>
+            <ul>{preview.result.added.map((t, i) => <li key={`${i}-${t.code}-${t.side}`}><span className={`${css.side} ${t.side === 'BUY' ? css.buy : css.sell}`}>{t.side}</span> {t.quantity} {t.code} @ ৳{fmt(t.price)}{t.commission != null ? <span className="muted"> + ৳{fmt(t.commission)} commission</span> : null}</li>)}</ul>
             {preview.result.errors.map((e) => <p key={e} className={css.error}>{e}</p>)}
             {preview.result.added.length ? (
               <div className={css.actions}>
@@ -219,15 +231,18 @@ export default function PortfolioPage() {
           <label>Date<input type="date" value={form.date} max={dhakaToday()} onChange={set('date')} required /></label>
           <label>Code<input value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))} placeholder="GP" required /></label>
           <label>Side<select value={form.side} onChange={set('side')}><option>BUY</option><option>SELL</option></select></label>
-          <label>Quantity<input inputMode="numeric" value={form.quantity} onChange={set('quantity')} required /></label>
-          <label>Price ৳<input inputMode="decimal" value={form.price} onChange={set('price')} required /></label>
-          <label>Commission ৳<input inputMode="decimal" value={form.commission} onChange={set('commission')} /></label>
+          <label>Quantity<input inputMode="numeric" value={form.quantity} onChange={setAmount('quantity')} required /></label>
+          <label>Price ৳<input inputMode="decimal" value={form.price} onChange={setAmount('price')} required /></label>
+          <label>Broker rate %<input type="number" min={0} max={MAX_COMMISSION_PCT} step={0.01} value={feePct} onChange={(e) => changePct(e.target.value)} aria-describedby="fee-hint" /></label>
+          <label>Commission ৳<input inputMode="decimal" value={form.commission} onChange={set('commission')} aria-describedby="fee-hint" /></label>
           <label>Note<input value={form.note} onChange={set('note')} maxLength={200} /></label>
           <div className={css.actions}>
             <button className="btn primary" type="submit" disabled={busy}>{editing ? 'Save changes' : paper ? 'Add practice trade' : 'Add trade'}</button>
             {editing ? <button className="link-btn" type="button" onClick={() => { setEditing(null); setForm(blank()); }}>Cancel</button> : null}
           </div>
         </div>
+        {badPct ? <p className="note warn" role="alert">Broker rate must be a percentage from 0 to {MAX_COMMISSION_PCT}. Commission is not filled in until it is fixed.</p> : null}
+        <p id="fee-hint" className="small muted">Commission fills in at your broker rate (saved in this browser). Type the exact amount from your broker slip to replace it.</p>
       </form>
       </details>
       <div className={`panel table-wrap ${css.section}`}><h2 className="h3">All trades</h2>

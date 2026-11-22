@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { strToU8, zipSync } from 'fflate';
-import { dateFromFileName, dedupeKey, fromRows, holdingsFrom, parseOrderSummary, splitNew, toRow, TRADE_COLUMNS, validateTrade, type Trade } from '../lib/trades.ts';
+import { commissionFor, dateFromFileName, dedupeKey, fromRows, holdingsFrom, parseOrderSummary, splitNew, toRow, TRADE_COLUMNS, validateTrade, type Trade } from '../lib/trades.ts';
 import { readFirstSheet, XlsxError } from '../lib/xlsx.ts';
 
 const HEADER = ['BO Code', 'Trade Code', 'Cat', '#Buy', '#Sell', '#Orders', 'BSentQty', 'SSentQty', 'TSentQty', 'AvgPrice', 'BAvgPrice', 'SAvgPrice', 'BExecQty', 'SExecQty', 'BRemQty', 'SRemQty', 'TExecQty', 'NExecQty', 'BExecVal', 'SExecVal', 'TExecVal', 'NExecVal'];
@@ -191,4 +191,22 @@ test('holdings are kept per account: practice buys never change real holdings', 
 test('broker imports are always real trades', () => {
   const { trades } = parseOrderSummary(readFirstSheet(sample()), '2026-11-19');
   assert.ok(trades.length > 0 && trades.every((t) => t.account === 'real'));
+});
+
+test('commissionFor: rate of the trade value, rounded to paisa; empty until the numbers are valid', () => {
+  assert.equal(commissionFor('100', '226.70', '0.4'), '90.68');
+  assert.equal(commissionFor('1', '227', '0.4'), '0.91');
+  assert.equal(commissionFor('10', '50', '0'), '0.00');
+  assert.equal(commissionFor('', '50', '0.4'), '');
+  assert.equal(commissionFor('10', 'abc', '0.4'), '');
+  assert.equal(commissionFor('10', '50', '-1'), '');
+  assert.equal(commissionFor('10', '50', '6'), '');
+  assert.equal(commissionFor('10', '50', ''), '');
+});
+
+test('parseOrderSummary adds the broker rate as commission; no rate keeps it empty', () => {
+  const rows = [['Trade Code', 'BExecQty', 'BAvgPrice', 'SExecQty', 'SAvgPrice'], ['GP', '100', '226.70', '10', '230']];
+  const withFee = parseOrderSummary(rows, '2026-11-19', '2026-11-19', '0.4').trades;
+  assert.deepEqual(withFee.map((t) => [t.side, t.commission]), [['BUY', 90.68], ['SELL', 9.2]]);
+  assert.deepEqual(parseOrderSummary(rows, '2026-11-19', '2026-11-19').trades.map((t) => t.commission), [null, null]);
 });

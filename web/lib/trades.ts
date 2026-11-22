@@ -4,6 +4,14 @@ export const TRADE_COLUMNS = ['id', 'date', 'code', 'side', 'quantity', 'price',
 export const MAX_QUANTITY = 10_000_000;
 export const MAX_PRICE = 1_000_000;
 export const NOTE_MAX = 200;
+export const MAX_COMMISSION_PCT = 5;
+
+// Broker commission in taka at pct % of the trade value; '' until quantity and price are positive numbers.
+export function commissionFor(quantity: string, price: string, pct: string): string {
+  const q = Number(quantity), p = Number(price), r = pct.trim() ? Number(pct) : NaN;
+  if (!(q > 0) || !(p > 0) || !(r >= 0) || r > MAX_COMMISSION_PCT) return '';
+  return (Math.round(q * p * r) / 100).toFixed(2);
+}
 // Browser mode keeps everything in localStorage and sends it in one request; this keeps both small.
 export const MAX_BROWSER_TRADES = 5000;
 
@@ -165,7 +173,8 @@ const MAX_IMPORT_ERRORS = 200;
 const BROKER_COLUMNS = { code: 'trade code', buyQty: 'bexecqty', buyPrice: 'bavgprice', sellQty: 'sexecqty', sellPrice: 'savgprice' } as const;
 
 // Reads a broker "order summary" sheet: one row per company with executed buy/sell quantity and average price. The BO code column is never read.
-export function parseOrderSummary(rows: string[][], date: string, today = dhakaToday()): { trades: TradeInput[]; errors: string[] } {
+// The file has no commission column; commissionPct ('' for none) adds the broker rate to every trade.
+export function parseOrderSummary(rows: string[][], date: string, today = dhakaToday(), commissionPct = ''): { trades: TradeInput[]; errors: string[] } {
   const headerAt = rows.findIndex((r) => r.some((c) => c.toLowerCase() === BROKER_COLUMNS.code) && r.some((c) => c.toLowerCase() === BROKER_COLUMNS.buyQty));
   if (headerAt < 0) return { trades: [], errors: ['This is not a broker order summary: the "Trade Code" and "BExecQty" columns were not found.'] };
   const header = rows[headerAt].map((c) => c.toLowerCase());
@@ -181,7 +190,10 @@ export function parseOrderSummary(rows: string[][], date: string, today = dhakaT
       const quantity = parseAmount(r[q] ?? '');
       if (!quantity) continue;
       const v = validateTrade({ date, code, side, quantity, price: p < 0 ? null : r[p], commission: null, note }, today);
-      if (v.ok) trades.push(v.value);
+      if (v.ok) {
+        const fee = commissionFor(String(v.value.quantity), String(v.value.price), commissionPct);
+        trades.push(fee ? { ...v.value, commission: Number(fee) } : v.value);
+      }
       else if (errors.length < MAX_IMPORT_ERRORS) errors.push(`Row ${headerAt + i + 2} (${code} ${side}): ${v.error}`);
     }
   });

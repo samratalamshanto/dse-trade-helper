@@ -132,11 +132,12 @@ export async function saveLimits(s: LimitSettings): Promise<void> {
 }
 
 // Browser mode: the server only reads the file; a trade already in this browser cancels one identical row (same rule as the Sheet).
-export async function importFile(file: File, date: string, save: boolean): Promise<ImportResult> {
+export async function importFile(file: File, date: string, save: boolean, commissionPct = ''): Promise<ImportResult> {
   const key = readKey();
   const body = new FormData();
   body.append('file', file);
   if (date) body.append('date', date);
+  if (commissionPct) body.append('commissionPct', commissionPct);
   if (key) {
     if (save) body.append('save', '1');
     return call<ImportResult>(key, '/api/trades/import', { method: 'POST', body });

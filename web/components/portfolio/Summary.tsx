@@ -13,7 +13,7 @@ export function signed(x: number | null): string {
   return `৳${fmt(0)}`;
 }
 
-export function Summary({ holdings }: { holdings: Valued[] }) {
+export function Summary({ holdings, commissionPaid }: { holdings: Valued[]; commissionPaid: number }) {
   const invested = holdings.reduce((a, h) => a + h.invested, 0);
   const value = holdings.reduce((a, h) => a + (h.value ?? h.invested), 0);
   const realised = holdings.reduce((a, h) => a + h.realised, 0);
@@ -24,6 +24,7 @@ export function Summary({ holdings }: { holdings: Valued[] }) {
       <div><div className={css.label}>Invested</div><div className={css.value}>৳{fmt(invested)}</div></div>
       <div><div className={css.label}>Profit / loss now</div><div className={`${css.value} ${tone(pl)}`}>{signed(pl)}{invested ? ` (${fmt((pl / invested) * 100)}%)` : ''}</div></div>
       <div><div className={css.label}>Realised from sales</div><div className={`${css.value} ${tone(realised)}`}>{signed(realised)}</div></div>
+      <div><div className={css.label}>Commission paid</div><div className={css.value}>৳{fmt(commissionPaid)}</div></div>
     </div>
   );
 }

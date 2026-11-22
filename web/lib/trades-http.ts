@@ -3,6 +3,7 @@ import { SheetsError } from './sheets.ts';
 import { TradeInputError } from './trades-service.ts';
 import { respond } from './http.ts';
 import { XLSX_MAX_BYTES, XlsxError } from './xlsx.ts';
+import { commissionFor, MAX_COMMISSION_PCT } from './trades.ts';
 
 export const KEY_HEADER = 'x-trades-key';
 const json = (status: number, body: unknown) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
@@ -51,9 +52,10 @@ export async function readJson(request: Request, maxBytes = JSON_MAX_BYTES): Pro
   try { return JSON.parse(text); } catch (e) { throw new TradeInputError('Send the trade as JSON.', { cause: e }); }
 }
 
-export interface ImportForm { data: Uint8Array; fileName: string; date: string | null; save: boolean }
+export interface ImportForm { data: Uint8Array; fileName: string; date: string | null; save: boolean; commissionPct: string }
 
-// multipart form: file (broker .xlsx order summary), date (optional YYYY-MM-DD), save ("1" to write, otherwise preview only)
+// multipart form: file (broker .xlsx order summary), date (optional YYYY-MM-DD), save ("1" to write, otherwise preview only),
+// commissionPct (optional broker rate; the file has no commission column, so each trade gets this rate)
 export async function readImportForm(request: Request): Promise<ImportForm> {
   if (Number(request.headers.get('content-length') ?? 0) > XLSX_MAX_BYTES * 2) throw new TradeInputError('The file is too large.');
   const form = await request.formData().catch((e: unknown) => { throw new TradeInputError('Upload the file as a form.', { cause: e }); });
@@ -67,7 +69,10 @@ export async function readImportForm(request: Request): Promise<ImportForm> {
   if (!/\.xlsx$/i.test(fileName)) throw new TradeInputError('Only Excel .xlsx files can be imported for now.');
   const date = typeof form.get('date') === 'string' && form.get('date') ? String(form.get('date')) : null;
   if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new TradeInputError('Date must look like 2026-11-19.');
-  return { data: new Uint8Array(await file.arrayBuffer()), fileName, date, save: form.get('save') === '1' };
+  const pct = form.get('commissionPct');
+  const commissionPct = typeof pct === 'string' ? pct.trim() : '';
+  if (commissionPct && commissionFor('1', '1', commissionPct) === '') throw new TradeInputError(`Broker rate must be a percentage from 0 to ${MAX_COMMISSION_PCT}.`);
+  return { data: new Uint8Array(await file.arrayBuffer()), fileName, date, save: form.get('save') === '1', commissionPct };
 }
 
 // Keyless browser-mode endpoints: the caller's own data in, numbers out, nothing stored. Pages on other sites may not call them.

@@ -8,6 +8,6 @@ export const maxDuration = 10;
 export function POST(request: Request) {
   return browserRoute(request, 'portfolio import', async () => {
     const f = await readImportForm(request);
-    return parseBrokerFile(f.data, f.fileName, f.date);
+    return parseBrokerFile(f.data, f.fileName, f.date, f.commissionPct);
   });
 }

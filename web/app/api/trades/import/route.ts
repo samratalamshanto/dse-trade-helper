@@ -6,6 +6,6 @@ export const dynamic = 'force-dynamic';
 export function POST(request: Request) {
   return tradesRoute(request, 'import', async () => {
     const f = await readImportForm(request);
-    return importOrderSummary(f.data, f.fileName, f.date, f.save);
+    return importOrderSummary(f.data, f.fileName, f.date, f.save, f.commissionPct);
   });
 }

@@ -112,14 +112,14 @@ export const deleteTrade = (id: string) => serial(async () => {
 export interface ImportResult { date: string; added: TradeInput[]; skipped: TradeInput[]; errors: string[]; saved: boolean }
 
 // Broker files are real trades: parseOrderSummary never sets an account, so validateTrade makes each one 'real'.
-export function parseBrokerFile(data: Uint8Array, fileName: string, dateOverride: string | null): { date: string; trades: TradeInput[]; errors: string[] } {
+export function parseBrokerFile(data: Uint8Array, fileName: string, dateOverride: string | null, commissionPct = ''): { date: string; trades: TradeInput[]; errors: string[] } {
   const date = dateOverride || dateFromFileName(fileName);
   if (!date) throw new TradeInputError('The trade date could not be read from the file name. Pick the date and upload again.');
-  return { date, ...parseOrderSummary(readFirstSheet(data), date) };
+  return { date, ...parseOrderSummary(readFirstSheet(data), date, dhakaToday(), commissionPct) };
 }
 
-export const importOrderSummary = (data: Uint8Array, fileName: string, dateOverride: string | null, save: boolean) => serial(async (): Promise<ImportResult> => {
-  const { date, trades, errors } = parseBrokerFile(data, fileName, dateOverride);
+export const importOrderSummary = (data: Uint8Array, fileName: string, dateOverride: string | null, save: boolean, commissionPct = '') => serial(async (): Promise<ImportResult> => {
+  const { date, trades, errors } = parseBrokerFile(data, fileName, dateOverride, commissionPct);
   const { added, skipped } = splitNew(trades, (await current()).trades);
   if (save && added.length) await appendRows(added.map((t) => toRow(stamp(t, 'broker-xlsx'))));
   return { date, added, skipped, errors, saved: save && added.length > 0 };
