@@ -251,7 +251,7 @@ export default function PortfolioPage() {
           </div>
         </div>
         {badPct ? <p className="note warn" role="alert">Broker rate must be a percentage from 0 to {MAX_COMMISSION_PCT}. Commission is not filled in until it is fixed.</p> : null}
-        <p id="fee-hint" className="small muted">Picking a code fills in today’s price; commission fills in at your broker rate (saved in this browser). Check both, and type the exact amounts from your broker slip to replace them.</p>
+        <p id="fee-hint" className="small muted">Picking a code fills in today’s price; commission fills in at your broker rate (saved in {sheet ? 'your Google Sheet' : 'this browser'}). Check both, and type the exact amounts from your broker slip to replace them.</p>
       </form>
       </details>
       <div className={`panel table-wrap ${css.section}`}><h2 className="h3">All trades</h2>

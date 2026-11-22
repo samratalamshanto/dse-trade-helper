@@ -7,6 +7,8 @@ import { useApi } from '@/components/AppProvider';
 import { ChangeText } from '@/components/CompanyCard';
 import { LastBuy } from '@/components/LastBuy';
 import { useWatchlist, WatchButton } from '@/components/Watchlist';
+import { useStoredValue } from '@/components/useStored';
+import { KEY_STORE } from '@/components/trades-client';
 import { fmt, fmtDate, pctNum, sectorName } from '@/components/format';
 import { FraudPill, Icon, SignalPill, type FraudLevel, type Signal } from '@/components/ui';
 import type { CalendarRow, CompanyRow } from '@/lib/service';
@@ -17,6 +19,7 @@ interface Calendar { upcoming: CalendarRow[]; session: MarketSession | null }
 
 export default function WatchlistPage() {
   const { codes } = useWatchlist();
+  const [tradesKey] = useStoredValue(KEY_STORE, '');
   const router = useRouter();
   const { data, error } = useApi<Companies>('/api/companies');
   const { data: cal } = useApi<Calendar>('/api/dividends');
@@ -26,7 +29,7 @@ export default function WatchlistPage() {
   return (
     <>
       <h1><Tr text="Watchlist" /></h1>
-      <p className="muted">Companies you saved. They are stored in this browser only, so they do not appear on your other devices.</p>
+      <p className="muted">{tradesKey ? 'Companies you saved. They are kept in your Google Sheet, so every device shows the same list.' : 'Companies you saved. They are stored in this browser only, so they do not appear on your other devices.'}</p>
       {error && !data ? <div className="note bad">Could not load prices: {error}. Your saved list is safe; try Refresh.</div> : null}
       {!codes.length ? (
         <div className="panel empty-state">

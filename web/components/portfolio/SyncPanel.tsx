@@ -32,10 +32,10 @@ export function SyncPanel({ mode, onChanged }: { mode: Mode; onChanged: () => vo
   return (
     <details className={`panel ${css.section}`} open={open || pending} onToggle={(e) => setOpen(e.currentTarget.open)}>
       <summary className="h3">Sync with my Google Sheet</summary>
-      <p className="small muted">Keep your trades and plans in your own Google Sheet so they show on every device and Telegram alerts can use them. Only for the site owner: needs the site&apos;s sync password.</p>
+      <p className="small muted">Keep your trades, plans, watchlist and broker rate in your own Google Sheet so they show on every device and Telegram alerts can use them. Only for the site owner: needs the site&apos;s sync password.</p>
       {sheet ? (
         <>
-          <p className="small" role="status">Connected: your trades and plans are saved in your Google Sheet.</p>
+          <p className="small" role="status">Connected: your trades, plans, watchlist and broker rate are saved in your Google Sheet.</p>
           {pending ? (
             <div className="note warn" role="status">
               <b>{plural(trades.good.length, 'trade', 'trades')} and {plural(plans.good.length, 'plan', 'plans')}{hasLimits ? ' and your limits' : ''} are still saved only in this browser.</b> Move them into your Google Sheet so every device shows them. Each one leaves this browser once it is saved.{hasLimits ? ' Your limits here replace the limits saved in the Sheet.' : ''}

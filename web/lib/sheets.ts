@@ -109,17 +109,20 @@ async function setUpTab(title: string, columns: readonly string[]): Promise<numb
   return found;
 }
 
-export async function readSettingsRows(): Promise<string[][]> {
-  await ensureTab(SETTINGS_TAB, SETTINGS_COLUMNS);
-  return (await call<{ values?: string[][] }>(`/values/${SETTINGS_TAB}!A2:${lastCol(SETTINGS_COLUMNS)}`)).values ?? [];
+const SETTINGS: TabSpec = { title: SETTINGS_TAB, columns: SETTINGS_COLUMNS };
+
+// Small whole-tab tables (limits, preferences): read every row below the header.
+export async function readSettingsRows(tab: TabSpec = SETTINGS): Promise<string[][]> {
+  await ensureTab(tab.title, tab.columns);
+  return (await call<{ values?: string[][] }>(`/values/${tab.title}!A2:${lastCol(tab.columns)}`)).values ?? [];
 }
 
 // Write the new rows first, then clear only the rows left below them, so a failure never leaves the tab empty.
-export async function writeSettingsRows(rows: string[][]): Promise<void> {
-  await ensureTab(SETTINGS_TAB, SETTINGS_COLUMNS);
-  const col = lastCol(SETTINGS_COLUMNS);
-  if (rows.length) await call(`/values/${SETTINGS_TAB}!A2:${col}${rows.length + 1}?valueInputOption=RAW`, { method: 'PUT', body: { values: rows } });
-  await call(`/values/${SETTINGS_TAB}!A${rows.length + 2}:${col}:clear`, { method: 'POST', body: {} });
+export async function writeSettingsRows(rows: string[][], tab: TabSpec = SETTINGS): Promise<void> {
+  await ensureTab(tab.title, tab.columns);
+  const col = lastCol(tab.columns);
+  if (rows.length) await call(`/values/${tab.title}!A2:${col}${rows.length + 1}?valueInputOption=RAW`, { method: 'PUT', body: { values: rows } });
+  await call(`/values/${tab.title}!A${rows.length + 2}:${col}:clear`, { method: 'POST', body: {} });
 }
 
 // Another device or a hand edit in the sheet can move rows; refuse to touch a row whose id changed.

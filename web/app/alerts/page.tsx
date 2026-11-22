@@ -1,5 +1,6 @@
 'use client';
 
+import { KEY_STORE } from '@/components/trades-client';
 import { useState, useSyncExternalStore } from 'react';
 import { useApi } from '@/components/AppProvider';
 import { useStoredValue } from '@/components/useStored';
@@ -57,6 +58,7 @@ export default function AlertsPage() {
   const { data: cal } = useApi<Calendar>('/api/dividends');
   const { codes: watchlistCodes } = useWatchlist();
   const [raw, setRaw] = useStoredValue('alerts', '{}');
+  const [tradesKey] = useStoredValue(KEY_STORE, '');
   const store = parseAlertStore(raw);
 
   const [formType, setFormType] = useState<RuleType | ''>('');
@@ -206,7 +208,7 @@ export default function AlertsPage() {
     <>
       <h1><Tr text="Alerts" /></h1>
       <p className="muted">Rules are checked only while a page of this site is open in this browser, and each rule fires at most once a day.
-        Price and move rules use the current trading session only. All settings are saved in this browser only.</p>
+        Price and move rules use the current trading session only. {tradesKey ? 'Your rules are kept in your Google Sheet, so every device has them; what already fired stays per browser.' : 'All settings are saved in this browser only.'}</p>
 
       {/* Browser notifications */}
       <section>

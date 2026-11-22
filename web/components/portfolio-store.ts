@@ -10,6 +10,7 @@ import { mergeData, toBackup, type Backup, type MyData } from '@/lib/backup';
 import { splitPlans, splitTrades, type Split } from '@/lib/browser-data';
 import { MAX_BROWSER_PLANS, validatePlan, type SavedPlan } from '@/lib/plans';
 import { parseWatchlist } from '@/lib/watchlist';
+import { PREFS_SYNCED_STORE } from '@/lib/prefs';
 import { parseSettings, settingsFromRows, type LimitSettings } from '@/lib/positions';
 import { MAX_BROWSER_TRADES, splitNew, validateTrade, type Account, type Trade, type TradeInput } from '@/lib/trades';
 
@@ -197,9 +198,11 @@ export async function connectSheet(key: string): Promise<void> {
   await call<TradesList>(key, '/api/trades');
   writeStored(KEY_STORE, key);
   writeStored(STOPPED_STORE, '');
+  writeStored(PREFS_SYNCED_STORE, '');
 }
 
-export const disconnectSheet = (): void => writeStored(KEY_STORE, '');
+// A later connect (maybe to another Sheet) merges the watchlist again instead of replacing it.
+export const disconnectSheet = (): void => { writeStored(KEY_STORE, ''); writeStored(PREFS_SYNCED_STORE, ''); };
 
 // A key the Sheet now refuses (401): back to this browser, with a note so it does not look like lost data.
 const STOPPED_STORE = 'sheetKeyStopped';

@@ -4,8 +4,9 @@ import { livePrices } from './dse.ts';
 import { checkPosition, parseSettings, settingsFromRows, settingsToRows, type LimitSettings } from './positions.ts';
 import { companyDetail } from './service.ts';
 import { allCompanies } from './store.ts';
-import { appendRows, deleteRow, readRows, readSettingsRows, SheetsError, writeRow, writeSettingsRows } from './sheets.ts';
-import { dateFromFileName, fromRows, TRADE_ID_RE, TradeInputError, holdingsFrom, parseOrderSummary, splitNew, toRow, type Account, type Trade, type TradeInput, validateTrade } from './trades.ts';
+import { appendRows, deleteRow, readRows, readSettingsRows, SheetsError, writeRow, writeSettingsRows, type TabSpec } from './sheets.ts';
+import { parsePrefs, PREFS_COLUMNS, prefsFromRows, prefsToRows, type Prefs } from './prefs.ts';
+import { dateFromFileName, fromRows, MAX_COMMISSION_PCT, TRADE_ID_RE, TradeInputError, holdingsFrom, parseOrderSummary, splitNew, toRow, type Account, type Trade, type TradeInput, validateTrade } from './trades.ts';
 import { readFirstSheet } from './xlsx.ts';
 
 export { TradeInputError };
@@ -134,4 +135,17 @@ export const saveLimits = (input: unknown) => serial(async () => {
   if (!settings) throw new TradeInputError('Stop-loss and target must be percentages between 1 and 95.');
   await writeSettingsRows(settingsToRows(settings));
   return settings;
+});
+
+const PREFS_TAB: TabSpec = { title: 'prefs', columns: PREFS_COLUMNS };
+
+export async function readPrefs(): Promise<Prefs> {
+  return prefsFromRows(await readSettingsRows(PREFS_TAB));
+}
+
+export const savePrefs = (input: unknown) => serial(async () => {
+  const prefs = parsePrefs(input);
+  if (!prefs) throw new TradeInputError(`The watchlist and alert rules must be lists and the broker rate a percentage from 0 to ${MAX_COMMISSION_PCT}.`);
+  await writeSettingsRows(prefsToRows(prefs), PREFS_TAB);
+  return prefs;
 });
