@@ -146,6 +146,14 @@ export default function PortfolioPage() {
     const next = { ...f, [k]: e.target.value };
     return isAuto(f) ? { ...next, commission: commissionFor(next.quantity, next.price, feePct) } : next;
   });
+  // For a trade dated today, a known code fills in today's price until the user types a price of their own.
+  const livePrice = (code: string) => { const p = companies.find((c) => c.code === code)?.price; return p == null ? '' : String(p); };
+  const setCode = (v: string) => setForm((f) => {
+    const code = v.toUpperCase();
+    if (f.date !== dhakaToday() || (f.price !== '' && f.price !== livePrice(f.code))) return { ...f, code };
+    const price = livePrice(code);
+    return { ...f, code, price, commission: isAuto(f) ? commissionFor(f.quantity, price, feePct) : f.commission };
+  });
   const changePct = (v: string) => { setForm((f) => (isAuto(f) ? { ...f, commission: commissionFor(f.quantity, f.price, v) } : f)); setFeePct(v); };
   const badPct = feePct.trim() !== '' && commissionFor('1', '1', feePct) === '';
   const commissionPaid = (data?.trades ?? []).reduce((a, t) => a + (t.commission ?? 0), 0);
@@ -229,7 +237,8 @@ export default function PortfolioPage() {
         <h3>{editing ? 'Edit trade' : 'Add a trade'}{paper ? ' (practice)' : ''}</h3>
         <div className={css.form}>
           <label>Date<input type="date" value={form.date} max={dhakaToday()} onChange={set('date')} required /></label>
-          <label>Code<input value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))} placeholder="GP" required /></label>
+          <label>Code<input list="trade-codes" value={form.code} onChange={(e) => setCode(e.target.value)} placeholder="GP" required /></label>
+          <datalist id="trade-codes">{companies.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}</datalist>
           <label>Side<select value={form.side} onChange={set('side')}><option>BUY</option><option>SELL</option></select></label>
           <label>Quantity<input inputMode="numeric" value={form.quantity} onChange={setAmount('quantity')} required /></label>
           <label>Price ৳<input inputMode="decimal" value={form.price} onChange={setAmount('price')} required /></label>
@@ -242,7 +251,7 @@ export default function PortfolioPage() {
           </div>
         </div>
         {badPct ? <p className="note warn" role="alert">Broker rate must be a percentage from 0 to {MAX_COMMISSION_PCT}. Commission is not filled in until it is fixed.</p> : null}
-        <p id="fee-hint" className="small muted">Commission fills in at your broker rate (saved in this browser). Type the exact amount from your broker slip to replace it.</p>
+        <p id="fee-hint" className="small muted">Picking a code fills in today’s price; commission fills in at your broker rate (saved in this browser). Check both, and type the exact amounts from your broker slip to replace them.</p>
       </form>
       </details>
       <div className={`panel table-wrap ${css.section}`}><h2 className="h3">All trades</h2>
