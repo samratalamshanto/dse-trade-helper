@@ -98,6 +98,15 @@ test.describe('/range', () => {
     }
   });
 
+  test('My watchlist shows only watched companies, and an empty watchlist says so', async ({ page }) => {
+    await page.getByRole('button', { name: 'My watchlist' }).click();
+    await expect(page).toHaveURL(/who=watchlist/);
+    await expect(page.locator('#view').getByText('Your watchlist is empty.')).toBeVisible();
+    await page.evaluate(() => localStorage.setItem('watchlist', JSON.stringify(['ROBI'])));
+    await page.reload();
+    await expect.poll(() => codes(page)).toEqual(['ROBI']);
+  });
+
   test('no holdings shows the empty state with a Portfolio link', async ({ page }) => {
     await page.getByRole('button', { name: 'My holdings' }).click();
     await expect(page.locator('td').filter({ hasText: /No holdings yet/ })).toBeVisible();

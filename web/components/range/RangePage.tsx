@@ -97,7 +97,8 @@ export function RangePage() {
   const [holdingsState, setHoldingsState] = useState<'loading' | 'ready' | 'failed'>('loading');
 
   const view = params.get('view') === 'risen' ? 'risen' : 'low';
-  const who = params.get('who') === 'holdings' ? 'holdings' : '';
+  const whoParam = params.get('who');
+  const who = whoParam === 'holdings' || whoParam === 'watchlist' ? whoParam : '';
   const within = Number(params.get('within') || '');
   const withinActive = Number.isFinite(within) && within > 0;
 
@@ -127,7 +128,8 @@ export function RangePage() {
 
   const rows = useMemo<TableRow[]>(() => {
     const source = data?.rows ?? [];
-    const subset = who === 'holdings' ? source.filter((r) => holdingsByCode.has(r.code)) : source;
+    const watched = new Set(watchlistCodes);
+    const subset = who === 'holdings' ? source.filter((r) => holdingsByCode.has(r.code)) : who === 'watchlist' ? source.filter((r) => watched.has(r.code)) : source;
     return subset.map((r) => {
       const stats = rangeStats({ code: r.code, price: r.price, weekLow52: r.weekLow52, weekHigh52: r.weekHigh52 });
       const owned = holdingsByCode.get(r.code);
@@ -140,7 +142,7 @@ export function RangePage() {
         ...(owned ? { shares: owned.shares, avgCost: owned.avgCost, gainPct: gainFromBuyPct(r.price, owned.avgCost) } : {}),
       };
     });
-  }, [data, who, holdingsByCode]);
+  }, [data, who, holdingsByCode, watchlistCodes]);
 
   const shown = useMemo(() => {
     let list = rows;
@@ -193,6 +195,11 @@ export function RangePage() {
             aria-pressed={who === ''}
             onClick={() => setParams({ who: '' })}>
             <Tr text="All companies" />
+          </button>
+          <button type="button" className={`btn${who === 'watchlist' ? ' primary' : ''}`}
+            aria-pressed={who === 'watchlist'}
+            onClick={() => setParams({ who: 'watchlist' })}>
+            <Tr text="My watchlist" />
           </button>
           <button type="button" className={`btn${who === 'holdings' ? ' primary' : ''}`}
             aria-pressed={who === 'holdings'}
@@ -248,6 +255,10 @@ export function RangePage() {
               <tr><td colSpan={showHoldings ? 10 : 7} className="empty">{t('Loading…')}</td></tr>
             ) : showHoldings && holdingsState !== 'ready' ? (
               <tr><td colSpan={10} className="empty">{holdingsState === 'failed' ? t('Could not load your holdings. Try again in a minute.') : t('Loading…')}</td></tr>
+            ) : who === 'watchlist' && watchlistCodes.length === 0 ? (
+              <tr><td colSpan={7} className="empty">
+                <Tr text="Your watchlist is empty." />{' '}<Link href="/all"><Tr text="Browse companies" /></Link>.
+              </td></tr>
             ) : showHoldings && holdingCount === 0 ? (
               <tr><td colSpan={10} className="empty">
                 <Tr text="No holdings yet. Add trades on" />{' '}
