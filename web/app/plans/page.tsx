@@ -66,7 +66,7 @@ export default function PlansPage() {
       {error ? <div className="note bad" role="alert">{error}</div> : null}
       {data?.badRows.length ? <div className="note warn">Rows {data.badRows.join(', ')} in the plans tab of your Google Sheet could not be read; fix them in the Sheet.</div> : null}
       {!data && (busy || !ready) ? <div className="skel" style={{ height: 120 }} aria-busy="true" aria-label="Loading plans" /> : null}
-      {data && !data.plans.length ? <div className="panel empty">No plans yet. Open a company and use <b>Plan a buy</b>, then <b>Save as plan</b>.</div> : null}
+      {data && !data.plans.length ? <div className="panel empty"><p>No plans yet. Open a company and use <b>Plan a buy</b>, then <b>Save as plan</b>.</p><p><Link className="btn primary" href="/all"><Tr text="Browse companies" /></Link></p></div> : null}
       {data?.plans.map((p) => {
         const active = p.status === 'active';
         return (

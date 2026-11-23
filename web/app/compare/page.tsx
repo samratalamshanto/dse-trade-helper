@@ -115,7 +115,7 @@ function Compare() {
       {loaded.length > 1 ? <p className="small muted scroll-hint">{t('Swipe the table sideways to see every company →')}</p> : null}
       {loaded.length ? (
         <div className="panel table-wrap"><table className="compare">
-          <thead><tr><th><Tr text="Measure" /></th>{loaded.map(([c, d]) => <th key={c}><Link href={'/c/' + encodeURIComponent(c)} className="mono">{c}</Link><div className="small muted">{sectorName(d.company.sector)}</div></th>)}</tr></thead>
+          <thead><tr><th><Tr text="Measure" /></th>{loaded.map(([c, d]) => <th key={c}><Link href={'/c/' + encodeURIComponent(c)} className="mono link-btn">{c}</Link><div className="small muted">{sectorName(d.company.sector)}</div></th>)}</tr></thead>
           <tbody>{ROWS.map((def) => {
             const best = bestCode(def, loaded);
             return <tr key={def.label}><th scope="row"><Tr text={def.label} /></th>{loaded.map(([c, d]) => <td key={c} className={best === c ? 'best' : ''}>{def.show(d)}{best === c ? <span className="best-tag"><Icon name="check" /><Tr text="best" /></span> : null}</td>)}</tr>;

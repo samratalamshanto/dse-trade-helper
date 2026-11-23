@@ -1,4 +1,4 @@
-# DSE Trade Helper
+# Trade Helper
 
 A learning aid for the Dhaka Stock Exchange (DSE): market dashboard, company checks, watchlist, buy plans, portfolio and Telegram alerts. It is not investment advice.
 
@@ -32,7 +32,7 @@ The app has three modes. The page picks one by itself.
 | Mode | Who | Data is in | How it starts |
 |---|---|---|---|
 | Browser | Anyone, not signed in | This browser only (`localStorage`) | Default |
-| Google sign-in | Anyone with a Google account | A Sheet named **DSE Trade Helper** in the user's own Google Drive | Portfolio → "Sync with my Google Sheet" → **Continue with Google** |
+| Google sign-in | Anyone with a Google account | A Sheet named **Trade Helper** in the user's own Google Drive | Portfolio → "Sync with my Google Sheet" → **Continue with Google** |
 | Owner key | The site owner | The owner's Sheet, through a service account | Same panel → "Site owner: sync password" |
 
 How Google sign-in works:
@@ -65,7 +65,7 @@ Do this once in [Google Cloud Console](https://console.cloud.google.com/).
 2. **APIs & Services → Library:** turn on **Google Sheets API** and **Google Drive API**.
 3. **APIs & Services → OAuth consent screen:**
    - User type: **External**.
-   - App name `DSE Trade Helper`, your support email, the privacy policy URL.
+   - App name `Trade Helper`, your support email, the privacy policy URL.
    - Scopes: `openid`, `email`, `profile`, `https://www.googleapis.com/auth/drive.file`.
    - While the app is in **Testing**, add each Google account that may sign in under **Test users**.
 4. **APIs & Services → Credentials → Create credentials → OAuth client ID:**

@@ -138,9 +138,11 @@ select { padding: 8px 10px; border-radius: 8px; font: inherit; }
 .tabs button { border: 1px solid var(--control-border); background: none; color: var(--muted); padding: 10px 14px; min-height: 44px; border-radius: 9px; cursor: pointer; font: inherit; white-space: nowrap; }
 .tabs button[aria-selected="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--text); font-weight: 600; box-shadow: inset 0 -3px 0 var(--accent); }
 .info { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--muted); color: var(--muted); font-size: 10px; font-weight: 700; font-style: normal; cursor: help; position: relative; text-transform: none; letter-spacing: 0; vertical-align: 1px; }
+/* The circle stays 16 px; an invisible ring around it makes a 44 px tap target on phones. */
+.info::before { content: ''; position: absolute; inset: -14px; }
 .info:hover::after, .info:focus::after { content: attr(data-tip); position: absolute; left: 50%; bottom: 140%; transform: translateX(-50%); width: max-content; max-width: 240px; background: var(--text); color: var(--bg); padding: 8px 10px; border-radius: 8px; font-size: 12px; font-weight: 400; line-height: 1.4; z-index: 10; white-space: normal; }
 .brand { position: relative; }
-.collapse { margin-left: auto; width: 44px; height: 44px; border: 1px solid var(--control-border); background: var(--panel); color: var(--muted); border-radius: 8px; display: grid; place-items: center; cursor: pointer; }
+.collapse { flex: none; margin-left: auto; width: 44px; height: 44px; border: 1px solid var(--control-border); background: var(--panel); color: var(--muted); border-radius: 8px; display: grid; place-items: center; cursor: pointer; }
 aside a { gap: 10px; }
 aside a .ic { width: 18px; height: 18px; color: var(--muted); }
 aside a.active .ic { color: var(--accent); }
@@ -183,7 +185,7 @@ th[data-sort] .sort-btn::after { content: " ↕"; opacity: .6; }
 th[data-sort][aria-sort="ascending"] .sort-btn::after { content: " ▲"; color: var(--accent); }
 th[data-sort][aria-sort="descending"] .sort-btn::after { content: " ▼"; color: var(--accent); }
 th[aria-sort="ascending"], th[aria-sort="descending"] { color: var(--text); font-weight: 700; box-shadow: inset 0 -2px 0 var(--accent); }
-.sort-btn { all: unset; cursor: pointer; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; white-space: nowrap; padding: 4px 8px; border: 1px solid var(--control-border); border-radius: 6px; }
+.sort-btn { all: unset; display: inline-flex; align-items: center; gap: 4px; min-height: 36px; cursor: pointer; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; white-space: nowrap; padding: 4px 8px; border: 1px solid var(--control-border); border-radius: 6px; }
 .sort-btn:hover { border-color: var(--accent); color: var(--text); }
 .sort-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 .skel { background: linear-gradient(90deg, var(--panel-2), var(--border), var(--panel-2)); background-size: 200% 100%; animation: shimmer 1.2s infinite; border-radius: 12px; }
@@ -322,7 +324,7 @@ table.compare td.best { background: var(--good-soft); box-shadow: inset 4px 0 0 
 .signal-split { display: flex; height: 10px; border-radius: 6px; overflow: hidden; margin: 6px 0 2px; }
 .signal-split .seg-research { background: var(--up); } .signal-split .seg-neutral { background: var(--muted); }
 .signal-split .seg-caution { background: var(--warn); } .signal-split .seg-avoid { background: var(--down); }
-.sector-top { margin: 4px 0 8px; padding-left: 18px; } .sector-top li { display: flex; justify-content: space-between; padding: 2px 0; }
+.sector-top { margin: 4px 0 8px; padding-left: 18px; } .sector-top li { display: flex; justify-content: space-between; align-items: center; padding: 2px 0; } .sector-top li a { display: inline-flex; align-items: center; min-height: 44px; }
 
 /* Dashboard: my stocks and trust card */
 .my-stocks { margin-bottom: 14px; border-left: 4px solid var(--warn); }

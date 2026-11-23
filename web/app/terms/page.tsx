@@ -7,10 +7,10 @@ export default function TermsPage() {
   return (
     <>
       <h1>Terms of service</h1>
-      <p className="muted">These terms apply when you use DSE Trade Helper. Last updated 23 November 2026.</p>
+      <p className="muted">These terms apply when you use Trade Helper. Last updated 23 November 2026.</p>
       <div className="panel">
         <h2 className="h3">Not investment advice</h2>
-        <p>DSE Trade Helper is a free learning aid. Signals, checks and plans come from fixed rules on public Dhaka Stock Exchange data. They are not advice to buy or sell. You make your own trading decisions, and you carry their risk.</p>
+        <p>Trade Helper is a free learning aid. Signals, checks and plans come from fixed rules on public Dhaka Stock Exchange data. They are not advice to buy or sell. You make your own trading decisions, and you carry their risk.</p>
       </div>
       <div className="panel" style={{ marginTop: 14 }}>
         <h2 className="h3">Data can be wrong or late</h2>
@@ -19,7 +19,7 @@ export default function TermsPage() {
       <div className="panel" style={{ marginTop: 14 }}>
         <h2 className="h3">Your data</h2>
         <ul>
-          <li>What you enter stays in your browser, or in the &quot;DSE Trade Helper&quot; Sheet in your own Google Drive when you sign in with Google. You own it. See the <a href="/privacy">privacy policy</a>.</li>
+          <li>What you enter stays in your browser, or in the &quot;Trade Helper&quot; Sheet in your own Google Drive when you sign in with Google. You own it. See the <a href="/privacy">privacy policy</a>.</li>
           <li>Keep a copy of anything important. Use &quot;Export my data&quot; on the Portfolio page, or the Sheet itself.</li>
           <li>Your use of Google sign-in and Google Drive also follows Google&apos;s own terms.</li>
         </ul>

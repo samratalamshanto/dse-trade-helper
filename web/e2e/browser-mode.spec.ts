@@ -11,6 +11,8 @@ const trade = (id: string, code: string, quantity: number) => ({ id, date: '2026
 const holdingsPanel = (page: Page) => page.locator('.panel').filter({ has: page.getByRole('heading', { name: 'Holdings', exact: true }) });
 
 async function addBuy(page: Page, code: string, quantity: string, price: string) {
+  // On a phone the add form starts folded.
+  if (!(await page.getByLabel('Code').isVisible())) await page.getByText('Add or import trades').click();
   await page.getByLabel('Code').fill(code);
   await page.getByLabel('Quantity').fill(quantity);
   await page.getByLabel('Price ৳').fill(price);

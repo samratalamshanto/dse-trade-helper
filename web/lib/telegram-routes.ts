@@ -14,7 +14,7 @@ export const statusGet = (request: Request) => telegramUserRoute(request, 'statu
 
 const MAX_BYTES = 10_000;
 const ok = () => new Response(null, { status: 200 });
-const CONNECTED = 'Connected ✅ Your DSE Trade Helper alerts come here on trading days. Learning aid, not investment advice.';
+const CONNECTED = 'Connected ✅ Your Trade Helper alerts come here on trading days. Learning aid, not investment advice.';
 const UNKNOWN = 'This link has expired or was already used. Open Portfolio on the site and tap Connect Telegram again.';
 
 // At most one /start per chat every 5 s and 60 per minute per server, so bot spam cannot use up the owner's Sheets quota.

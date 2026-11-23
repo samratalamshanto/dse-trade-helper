@@ -36,6 +36,9 @@ function tradeAmount(t: Trade): number {
   return t.side === 'BUY' ? t.quantity * t.price + fee : t.quantity * t.price - fee;
 }
 
+// On a phone the long add form starts folded, so the rest of the page is not buried under it.
+const PHONE = typeof window === 'undefined' ? { matches: false } : window.matchMedia('(max-width: 640px)');
+
 export default function PortfolioPage() {
   const { mode, ready } = useMode();
   const sheet = mode === 'sheet';
@@ -73,7 +76,7 @@ export default function PortfolioPage() {
     try {
       const list = await listTrades(acc);
       // A slower answer for the other account must never replace the list now shown (Practice could show real trades).
-      if (seq === loadSeq.current) { setData(list); setError(null); if (!list.trades.length) setAddOpen(true); }
+      if (seq === loadSeq.current) { setData(list); setError(null); if (!list.trades.length && !PHONE.matches) setAddOpen(true); }
     } catch (e) {
       if (seq !== loadSeq.current) return;
       setError(e instanceof Error ? e.message : 'Could not load trades.');
@@ -170,7 +173,6 @@ export default function PortfolioPage() {
         <p className="muted">Your shares, worked out from your buys and sells. Saved in this browser only. Export a copy, or turn on Google Sheet sync to use it on other devices.
           {browserTrades.length ? <> <a href={'data:text/csv;charset=utf-8,' + encodeURIComponent(tradesCsv(browserTrades))} download="my-trades.csv">Trades as a spreadsheet (CSV)</a></> : null}</p>
       )}
-      <BackupPanel mode={mode} onChanged={() => void load(account)} />
       <KeyStoppedNote />
       <UnreadableNote />
       <div className={`${css.actions} ${css.switch}`} role="group" aria-label="Account">
@@ -247,7 +249,7 @@ export default function PortfolioPage() {
           <label>Side<select value={form.side} onChange={set('side')}><option>BUY</option><option>SELL</option></select></label>
           <label>Quantity<input inputMode="numeric" value={form.quantity} onChange={setAmount('quantity')} required /></label>
           <label>Price ৳<input inputMode="decimal" value={form.price} onChange={setAmount('price')} required /></label>
-          <label>Broker rate %<input type="number" min={0} max={MAX_COMMISSION_PCT} step={0.01} value={feePct} onChange={(e) => changePct(e.target.value)} aria-describedby="fee-hint" /></label>
+          <label>Commission % (broker fee)<input type="number" min={0} max={MAX_COMMISSION_PCT} step={0.01} value={feePct} onChange={(e) => changePct(e.target.value)} aria-describedby="fee-hint" /></label>
           <label>Commission ৳<input inputMode="decimal" value={form.commission} onChange={set('commission')} aria-describedby="fee-hint" /></label>
           <label>Note<input value={form.note} onChange={set('note')} maxLength={200} /></label>
           <div className={css.actions}>
@@ -255,8 +257,8 @@ export default function PortfolioPage() {
             {editing ? <button className="link-btn" type="button" onClick={() => { setEditing(null); setForm(blank()); }}>Cancel</button> : null}
           </div>
         </div>
-        {badPct ? <p className="note warn" role="alert">Broker rate must be a percentage from 0 to {MAX_COMMISSION_PCT}. Commission is not filled in until it is fixed.</p> : null}
-        <p id="fee-hint" className="small muted">Picking a code fills in today’s price; commission fills in at your broker rate (saved in {sheet ? 'your Google Sheet' : 'this browser'}). Check both, and type the exact amounts from your broker slip to replace them.</p>
+        {badPct ? <p className="note warn" role="alert">Commission % must be from 0 to {MAX_COMMISSION_PCT}. Commission is not filled in until it is fixed.</p> : null}
+        <p id="fee-hint" className="small muted">Picking a code fills in today’s price; commission fills in at your commission % (saved in {sheet ? 'your Google Sheet' : 'this browser'}). Check both, and type the exact amounts from your broker slip to replace them.</p>
       </form>
       </details>
       <div className={`panel table-wrap ${css.section}`}><h2 className="h3">All trades</h2>
@@ -281,7 +283,7 @@ export default function PortfolioPage() {
         <h2 className="h3">Phone alerts</h2>
         {ownerMode ? (
           <>
-            <p className="small muted">Get a Telegram message when a plan reaches its price or a holding needs a look.</p>
+            <p className="small muted">Get a Telegram message when a plan reaches its price, a holding hits your stop-loss or target, or a dividend&apos;s last buy day is near.</p>
             <TelegramTestButton />
           </>
         ) : signedIn === '1' ? (
@@ -290,6 +292,10 @@ export default function PortfolioPage() {
           <p className="small">Sign in with Google (in the panel below) to get Telegram alerts from your own Sheet. For price alerts in this browser, use the <Link href="/alerts">Alerts page</Link>.</p>
         )}
       </div>
+      </div>
+      <div className={`panel ${css.section}`}>
+        <h2 className="h3">My data</h2>
+        <BackupPanel mode={mode} onChanged={() => void load(account)} />
       </div>
       <SyncPanel mode={mode} onChanged={() => void load(account)} />
     </>

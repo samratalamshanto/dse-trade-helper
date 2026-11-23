@@ -5,7 +5,7 @@ const DRIVE_FILES = 'https://www.googleapis.com/drive/v3/files';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const TIMEOUT_MS = 10_000;
 const TOKEN_EARLY_MS = 60_000;
-export const SHEET_NAME = 'DSE Trade Helper';
+export const SHEET_NAME = 'Trade Helper';
 // Private to this app (Drive appProperties), so a later sign-in on any device finds the same Sheet.
 const MARK = { dseTradeHelper: '1' };
 export const SIGN_IN_AGAIN = 'Sign in with Google again to reach your Sheet.';

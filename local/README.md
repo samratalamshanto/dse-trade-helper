@@ -1,4 +1,4 @@
-# DSE Trade Helper
+# Trade Helper
 
 A local website that helps you research any company on the Dhaka Stock Exchange (DSE) before you trade.
 

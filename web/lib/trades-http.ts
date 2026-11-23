@@ -64,7 +64,7 @@ export async function readJson(request: Request, maxBytes = JSON_MAX_BYTES): Pro
 export interface ImportForm { data: Uint8Array; fileName: string; date: string | null; save: boolean; commissionPct: string }
 
 // multipart form: file (broker .xlsx order summary), date (optional YYYY-MM-DD), save ("1" to write, otherwise preview only),
-// commissionPct (optional broker rate; the file has no commission column, so each trade gets this rate)
+// commissionPct (optional broker commission %; the file has no commission column, so each trade gets this rate)
 export async function readImportForm(request: Request): Promise<ImportForm> {
   if (Number(request.headers.get('content-length') ?? 0) > XLSX_MAX_BYTES * 2) throw new TradeInputError('The file is too large.');
   const form = await request.formData().catch((e: unknown) => { throw new TradeInputError('Upload the file as a form.', { cause: e }); });
@@ -80,7 +80,7 @@ export async function readImportForm(request: Request): Promise<ImportForm> {
   if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new TradeInputError('Date must look like 2026-11-19.');
   const pct = form.get('commissionPct');
   const commissionPct = typeof pct === 'string' ? pct.trim() : '';
-  if (commissionPct && commissionFor('1', '1', commissionPct) === '') throw new TradeInputError(`Broker rate must be a percentage from 0 to ${MAX_COMMISSION_PCT}.`);
+  if (commissionPct && commissionFor('1', '1', commissionPct) === '') throw new TradeInputError(`Commission % must be from 0 to ${MAX_COMMISSION_PCT}.`);
   return { data: new Uint8Array(await file.arrayBuffer()), fileName, date, save: form.get('save') === '1', commissionPct };
 }
 

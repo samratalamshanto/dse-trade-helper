@@ -43,8 +43,8 @@ function StartGuide() {
     <section className="panel start" aria-label="Start here">
       <div><b>New here? Start in 3 steps.</b>
         <ol>
-          <li><Link href="/learn">Read &quot;How it works&quot;</Link> (2 minutes): what the signals and words mean.</li>
-          <li><Link href="/all?signal=research">Open the shortlist</Link>: companies that pass every check.</li>
+          <li><Link className="link-btn" href="/learn">Read &quot;How it works&quot;</Link> (2 minutes): what the signals and words mean.</li>
+          <li><Link className="link-btn" href="/all?signal=research">Open the shortlist</Link>: companies that pass every check.</li>
           <li>Open one company and read its <b>four answers</b> at the top. Then check its Dividends tab.</li>
         </ol>
         <p className="small muted">This site helps you choose what to research. It does not tell you what to buy.</p></div>

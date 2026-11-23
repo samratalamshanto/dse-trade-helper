@@ -1,4 +1,4 @@
-# DSE Trade Helper — mobile app (Expo)
+# Trade Helper — mobile app (Expo)
 
 The app reads all market data from the web app's API (`../web`); it never scrapes DSE itself.
 

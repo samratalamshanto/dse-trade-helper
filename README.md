@@ -1,4 +1,4 @@
-# DSE Trade Helper
+# Trade Helper
 
 A free learning aid for the Dhaka Stock Exchange (DSE). It helps you research a company before you trade, plan your buys, and keep track of your own portfolio. It is **not investment advice**.
 
@@ -15,12 +15,12 @@ A free learning aid for the Dhaka Stock Exchange (DSE). It helps you research a 
 | Fraud alerts | Companies that show warning patterns |
 | Signal scorecard | How past signals turned out, graded after each trading day |
 | Watchlist | Companies you saved |
-| Portfolio | Your trades, holdings, limits, What-if calculator, Telegram alerts, Google Sheet sync |
+| Portfolio | Your trades, holdings, limits, dividend estimate for a new buy, Telegram alerts, Google Sheet sync |
 | Buy plans | Plan a buy with a target price and an end date |
 | Alerts | Price and move alerts in this browser |
 | How it works / Start investing | Every rule and term in plain words |
 
-Your data stays in your browser, or, if you sign in with Google, in one "DSE Trade Helper" Sheet in your own Google Drive. Connect Telegram to get alerts on your phone. See the [privacy policy](https://dse-trade-helper.vercel.app/privacy) and [terms](https://dse-trade-helper.vercel.app/terms).
+Your data stays in your browser, or, if you sign in with Google, in one "Trade Helper" Sheet in your own Google Drive. Connect Telegram to get alerts on your phone. See the [privacy policy](https://dse-trade-helper.vercel.app/privacy) and [terms](https://dse-trade-helper.vercel.app/terms).
 
 ## Repository
 

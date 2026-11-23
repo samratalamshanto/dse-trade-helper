@@ -48,7 +48,7 @@ export function SyncPanel({ mode, onChanged }: { mode: Mode; onChanged: () => vo
       <summary className="h3">Sync with my Google Sheet</summary>
       {sheet ? (
         <>
-          <p className="small" role="status">{google ? 'Signed in with Google: your trades, plans, watchlist and broker rate are saved in the "DSE Trade Helper" Sheet in your Google Drive.' : 'Connected: your trades, plans, watchlist and broker rate are saved in your Google Sheet.'}</p>
+          <p className="small" role="status">{google ? 'Signed in with Google: your trades, plans, watchlist and commission % are saved in the "Trade Helper" Sheet in your Google Drive.' : 'Connected: your trades, plans, watchlist and commission % are saved in your Google Sheet.'}</p>
           {pending ? (
             <div className="note warn" role="status">
               <b>{leftText} {single ? 'is' : 'are'} still saved only in this browser.</b> Move {single ? 'it' : 'them'} into your Google Sheet so every device shows {single ? 'it' : 'them'}. Each one leaves this browser once it is saved.{hasLimits ? ' Your limits here replace the limits saved in the Sheet.' : ''}

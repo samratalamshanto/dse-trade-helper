@@ -1,6 +1,6 @@
 # Maestro UI flows (Android, Expo Go)
 
-The flows drive "DSE Trade Helper" in Expo Go (`host.exp.exponent`) through deep links
+The flows drive "Trade Helper" in Expo Go (`host.exp.exponent`) through deep links
 `exp://192.168.10.206:8081/--/<route>`. Each flow stops Expo Go, opens its deep link and waits for a known text.
 
 Requires: Maestro (`~/.maestro/bin/maestro`), an Android emulator with Expo Go, the Expo dev server on :8081,

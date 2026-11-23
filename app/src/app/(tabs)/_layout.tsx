@@ -36,7 +36,7 @@ export default function TabLayout() {
         sceneStyle: { backgroundColor: colors.bg },
       }}
     >
-      <Tabs.Screen name="index" options={tab('Home', 'home-outline', 'DSE Trade Helper')} />
+      <Tabs.Screen name="index" options={tab('Home', 'home-outline', 'Trade Helper')} />
       <Tabs.Screen name="companies" options={tab('Companies', 'search-outline')} />
       <Tabs.Screen name="watchlist" options={tab('Watchlist', 'star-outline')} />
       <Tabs.Screen name="trades" options={tab('Trades', 'swap-horizontal-outline', 'My trades')} />

@@ -65,7 +65,7 @@ export function TelegramConnect() {
         </div>
       ) : (
         <>
-          <p className="small">Get a Telegram message when a plan reaches its price or a holding needs a look.</p>
+          <p className="small">Get a Telegram message when a plan reaches its price, a holding hits your stop-loss or target, or a dividend&apos;s last buy day is near.</p>
           <p><button className="btn primary" type="button" disabled={busy} onClick={() => void connect()}>Connect Telegram</button></p>
         </>
       )}

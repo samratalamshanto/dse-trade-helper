@@ -30,8 +30,8 @@ export function WhatIfCalc({ companies, dividends }: Props) {
   const noDividend = shares == null ? '—' : <span className="muted small">{t('No dividend data')}</span>;
 
   return (
-    <section aria-label={t('What-if calculator')}>
-      <h3 className={styles.whatIfTitle}>{t('What-if calculator')}</h3>
+    <section aria-label={t('Dividend from a new buy')}>
+      <h3 className={styles.whatIfTitle}>{t('Dividend from a new buy')}</h3>
       <p className={`small muted ${styles.whatIfIntro}`}>{t('Pick a company and an investment amount to estimate dividend income.')}</p>
 
       <div className={styles.whatIfGrid}>

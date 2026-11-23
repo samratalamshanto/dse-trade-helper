@@ -79,7 +79,7 @@ test('first sign-in reuses the marked Sheet, or makes one with the mark', async 
   files = [];
   assert.equal(await findOrCreateSheet('tok'), 'new-sheet');
   const made = JSON.parse(seen.at(-1)!.body);
-  assert.deepEqual(made, { name: 'DSE Trade Helper', mimeType: 'application/vnd.google-apps.spreadsheet', appProperties: { dseTradeHelper: '1' } });
+  assert.deepEqual(made, { name: 'Trade Helper', mimeType: 'application/vnd.google-apps.spreadsheet', appProperties: { dseTradeHelper: '1' } });
 });
 
 // A real Auth.js session cookie (same encoding and salt as next-auth uses on http).
