@@ -200,8 +200,10 @@ export async function dashboard() {
   const last = daily.at(-1);
   const eq = Object.values(await livePrices()).filter((p) => p.assetType === 'EQ' && p.ltp > 0);
   const byPct = eq.filter((p) => p.trades > 0 && isNum(p.percent)).sort((a, b) => (b.percent as number) - (a.percent as number));
-  const brief = (p: SnapshotRow) => ({ code: p.code, price: p.ltp, percent: p.percent as number });
-  const fromTop = (x: { code: string; closep: number; pct: number }) => ({ code: x.code, price: x.closep, percent: x.pct });
+  const fraudMap = new Map(list.rows.map((r) => [r.code, { fraud: r.fraud, flags: r.flags }]));
+  const withFraud = (code: string) => { const f = fraudMap.get(code); return { fraud: (f?.fraud ?? 'clean') as string, flags: (f?.flags ?? []) as string[] }; };
+  const brief = (p: SnapshotRow) => ({ code: p.code, price: p.ltp, percent: p.percent as number, ...withFraud(p.code) });
+  const fromTop = (x: { code: string; closep: number; pct: number }) => ({ code: x.code, price: x.closep, percent: x.pct, ...withFraud(x.code) });
   const sectors: Record<string, number[]> = {};
   if (traded) for (const p of byPct) (sectors[p.sector] ||= []).push(p.percent as number);
   else for (const c of Object.values(allCompanies())) if (isNum(c.changePct)) (sectors[c.sector] ||= []).push(c.changePct);
@@ -211,7 +213,7 @@ export async function dashboard() {
     const s = c.series || [];
     const prev = s.slice(-61, -1).map((x) => x.volume);
     const avg = prev.length >= 20 ? prev.reduce((a, b) => a + b, 0) / prev.length : 0;
-    return { code: c.code, name: c.name, x: avg > 0 && s.length ? (s.at(-1)?.volume ?? 0) / avg : 0 };
+    return { code: c.code, name: c.name, x: avg > 0 && s.length ? (s.at(-1)?.volume ?? 0) / avg : 0, ...withFraud(c.code) };
   }).filter((u) => u.x >= UNUSUAL_VOLUME_X).sort((a, b) => b.x - a.x);
   const warned = list.rows.filter((r) => r.fraud !== 'clean' && r.category !== 'Z');
   return {

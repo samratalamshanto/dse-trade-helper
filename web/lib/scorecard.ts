@@ -2,6 +2,9 @@ import { CODE_RE, DHAKA_OFFSET_MS } from './dhaka.ts';
 
 // Pure scorecard logic: what the app said on each trading day, graded later against the DSEX index.
 export const HORIZONS = [1, 5, 20] as const;
+// Percent-right figures need this many trading days of results before they mean anything.
+export const SCORECARD_MIN_DAYS = 20;
+export const scorecardTooEarly = (days: number | null | undefined): boolean => (days ?? 0) < SCORECARD_MIN_DAYS;
 export const GRADED_SIGNALS = ['research', 'caution', 'avoid'] as const;
 export type GradedSignal = (typeof GRADED_SIGNALS)[number];
 const SIGNALS = new Set(['research', 'neutral', 'caution', 'avoid']);

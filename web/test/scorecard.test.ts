@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { gradeAll, isRight, scorecard, snapshotDue, validSnapshot, weakestGroup, type DaySnapshot } from '../lib/scorecard.ts';
+import { gradeAll, isRight, scorecard, scorecardTooEarly, snapshotDue, validSnapshot, weakestGroup, type DaySnapshot } from '../lib/scorecard.ts';
 
 const call = (code: string, signal: string, price: number) => ({ code, signal, score: 50, fraud: 'clean', price });
 const day = (date: string, dsex: number, calls: ReturnType<typeof call>[]): DaySnapshot => ({ date, dsex, calls });
@@ -84,6 +84,13 @@ test('snapshot validation rejects bad headers and drops bad calls', () => {
   assert.deepEqual(s?.calls.map((c) => c.code), ['GP']);
 });
 
+test('scorecard.days is below 20 for fewer than 20 snapshots and 20+ when enough exist', () => {
+  const make = (n: number) => Array.from({ length: n }, (_, i) => day(`2026-10-${String(i + 1).padStart(2, '0')}`, 1000, []));
+  assert.ok(scorecard(make(19)).days < 20, '19 days is too early');
+  assert.ok(scorecard(make(20)).days >= 20, '20 days is enough');
+  assert.equal(scorecard(make(0)).days, 0);
+});
+
 test('snapshot is due Sunday to Thursday from 14:45 Dhaka time', () => {
   const at = (iso: string) => Date.parse(iso); // UTC; Dhaka = UTC+6
   assert.equal(snapshotDue(at('2026-11-19T08:44:00Z')), false); // Thu 14:44
@@ -118,4 +125,11 @@ test('laptop dev reads scorecard days from its own cache and the committed data/
     else (process.env as Record<string, string>).NODE_ENV = env;
     fs.rmSync(tmp, { recursive: true, force: true });
   }
+});
+
+test('scorecard figures wait for 20 trading days', () => {
+  assert.equal(scorecardTooEarly(undefined), true);
+  assert.equal(scorecardTooEarly(0), true);
+  assert.equal(scorecardTooEarly(19), true);
+  assert.equal(scorecardTooEarly(20), false);
 });

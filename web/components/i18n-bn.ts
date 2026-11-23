@@ -539,4 +539,10 @@ export const BN: Record<string, string> = {
   'In watchlist': 'ওয়াচলিস্টে আছে',
   'Already in watchlist': 'ইতিমধ্যে ওয়াচলিস্টে',
   'Added {code} to your watchlist': '{code} ওয়াচলিস্টে যোগ হয়েছে',
+  'Dividends with a record date ahead': 'সামনে রেকর্ড তারিখ আছে এমন লভ্যাংশ',
+  'last day to buy': 'কেনার শেষ দিন',
+  'Too early:': 'এখনো সময় হয়নি:',
+  'of 20 trading days so far': 'টি লেনদেন দিন হয়েছে ২০-এর মধ্যে',
+  'Percentages and best/worst calls appear after 20 trading days.': 'শতাংশ এবং সেরা/খারাপ কল ২০ লেনদেন দিনের পর দেখা যাবে।',
+  'The 5 calls that best and worst matched the market, by excess return at their longest graded horizon.': 'সবচেয়ে ভালো ও খারাপ ৫টি কল, দীর্ঘতম মূল্যায়িত মেয়াদে বাজারের বিপরীতে অতিরিক্ত রিটার্ন অনুযায়ী।',
 };
