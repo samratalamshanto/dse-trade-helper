@@ -6,6 +6,7 @@ import { fmt, fmtDate } from '@/components/format';
 import { dhakaToday } from '@/lib/dhaka';
 import { Icon, Skeleton } from '@/components/ui';
 import TelegramTestButton from '@/components/TelegramTestButton';
+import { TelegramConnect } from '@/components/TelegramConnect';
 import { CheckBadge, KEY_STORE, SIGNED_IN_STORE, type TradesList as List } from '@/components/trades-client';
 import { deleteTrade, dropRefusedKey, importFile, listTrades, saveLimits, saveTrade, useBrowserData, useMode, type ImportResult } from '@/components/portfolio-store';
 import { commissionFor, MAX_COMMISSION_PCT, tradesCsv, type Account, type Trade, type TradeInput } from '@/lib/trades';
@@ -283,8 +284,10 @@ export default function PortfolioPage() {
             <p className="small muted">Get a Telegram message when a plan reaches its price or a holding needs a look.</p>
             <TelegramTestButton />
           </>
+        ) : signedIn === '1' ? (
+          <TelegramConnect />
         ) : (
-          <p className="small">Telegram alerts are run by the site owner for now. For price alerts on companies you watch, use the <Link href="/alerts">Alerts page</Link>.</p>
+          <p className="small">Sign in with Google (in the panel below) to get Telegram alerts from your own Sheet. For price alerts in this browser, use the <Link href="/alerts">Alerts page</Link>.</p>
         )}
       </div>
       </div>

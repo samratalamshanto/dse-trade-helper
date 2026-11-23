@@ -226,7 +226,7 @@ test.describe('/trades (API mocked)', () => {
     await page.route('**/api/trades**', (r) => json(r, 200, LIST));
     await page.route('**/api/notify/test', (r) => json(r, 200, { sent: true }));
     await page.goto('/portfolio');
-    await expect(page.getByText('Telegram alerts are run by the site owner for now.')).toBeVisible();
+    await expect(page.getByText('Sign in with Google (in the panel below) to get Telegram alerts from your own Sheet.', { exact: false })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Send test to Telegram' })).toHaveCount(0);
     await page.getByText('Sync with my Google Sheet').click();
     await syncPanel(page).getByText('For the site owner').click();
@@ -238,7 +238,7 @@ test.describe('/trades (API mocked)', () => {
     expect((await req).headers()['x-trades-key']).toBe(KEY);
     await expect(page.getByRole('status').filter({ hasText: 'Sent — check Telegram.' })).toBeVisible();
     await syncPanel(page).getByRole('button', { name: 'Disconnect' }).click();
-    await expect(page.getByText('Telegram alerts are run by the site owner for now.')).toBeVisible();
+    await expect(page.getByText('Sign in with Google (in the panel below) to get Telegram alerts from your own Sheet.', { exact: false })).toBeVisible();
   });
 });
 
@@ -303,3 +303,24 @@ test.describe('dashboard: My holdings today (API mocked)', () => {
   });
   test.use({ allowedConsole: [/status of 401/] });
 });
+
+test.describe('telegram for every user (session and Telegram API mocked)', () => {
+  test('signed in: Connect shows the bot link and a QR code, then turns to Connected after Start', async ({ page }) => {
+    let connected = false;
+    await page.route('**/api/auth/session', (r) => json(r, 200, { user: { name: 'Demo' }, expires: '2099-01-01T00:00:00Z', sheetUrl: 'https://docs.google.com/spreadsheets/d/1DemoSheetId000000/edit' }));
+    await page.route('**/api/trades**', (r) => json(r, 200, { account: 'real', trades: [], holdings: [], warnings: [], badRows: [] }));
+    await page.route('**/api/telegram/status', (r) => json(r, 200, { connected }));
+    await page.route('**/api/telegram/link', (r) => (r.request().method() === 'POST'
+      ? json(r, 200, { url: 'https://t.me/DseTestBot?start=k7Qm2xV9aB3dE5fGhJ1q0w', expiresAt: new Date(Date.now() + 600_000).toISOString() })
+      : json(r, 200, { disconnected: true })));
+    await page.goto('/portfolio');
+    await page.getByRole('button', { name: 'Connect Telegram' }).click();
+    await expect(page.getByRole('link', { name: 'Open Telegram (opens in a new tab)' })).toHaveAttribute('href', 'https://t.me/DseTestBot?start=k7Qm2xV9aB3dE5fGhJ1q0w');
+    await expect(page.locator('.tg-connect svg title')).toHaveText('Scan to connect Telegram');
+    connected = true;
+    await expect(page.getByText('Connected ✓', { exact: false })).toBeVisible({ timeout: 10_000 });
+    await page.getByRole('button', { name: 'Disconnect Telegram' }).click();
+    await expect(page.getByRole('button', { name: 'Connect Telegram' })).toBeVisible();
+  });
+});
+

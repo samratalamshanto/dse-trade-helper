@@ -1,6 +1,13 @@
 import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
 import { findOrCreateSheet, sheetUrl } from './lib/google-user.ts';
+import { tokenBoxReady } from './lib/token-box.ts';
+
+// Best effort: a registry problem must never block sign-in. Loaded on use, so sign-in alone does not load the alert code.
+async function renewTelegramToken(user: { sub: string; sheetId: string; refreshToken: string }): Promise<void> {
+  if (!tokenBoxReady() || !process.env.GOOGLE_SHEET_ID) return;
+  try { await (await import('./lib/telegram-registry.ts')).renewMemberToken(user); } catch (e) { console.warn('sign-in: could not renew the Telegram alert token; the user can tap Connect Telegram again', e); }
+}
 
 // Google sign-in. No database: the encrypted session cookie (JWT) holds the Google id, the user's Sheet id and the refresh token.
 // The session the browser can read: name, email, picture and the link to the user's own Sheet; tokens never leave the server.
@@ -14,10 +21,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, account }) {
       if (account?.provider !== 'google') return token;
       if (!account.access_token) throw new Error('Google sign-in returned no access token');
+      const sheetId = await findOrCreateSheet(account.access_token);
+      if (account.refresh_token) await renewTelegramToken({ sub: account.providerAccountId, sheetId, refreshToken: account.refresh_token });
       return {
         ...token,
         sub: account.providerAccountId,
-        sheetId: await findOrCreateSheet(account.access_token),
+        sheetId,
         accessToken: account.access_token,
         expiresAt: account.expires_at,
         // Google sends a refresh token only with consent; keep the old one when none comes.

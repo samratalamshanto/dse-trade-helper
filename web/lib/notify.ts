@@ -4,7 +4,7 @@ import { DHAKA_OFFSET_MS } from './dhaka.ts';
 import { livePrices } from './dse.ts';
 import { listPlans, picksFor } from './planner-service.ts';
 import { companyDetail } from './service.ts';
-import { escapeHtml, OFF_TEXT, sendMessage, telegramEnabled } from './telegram.ts';
+import { escapeHtml, OFF_TEXT, sendMessage, telegramEnabled, type SendResult } from './telegram.ts';
 import { listTrades } from './trades-service.ts';
 
 const TICK_MS = 5 * 60_000;
@@ -57,6 +57,8 @@ export interface NotifyState {
   lastSent: string | null;
   pending: number;
   lastError?: { at: string; text: string } | null;
+  // Per-user alerts: when the user was told their Google sign-in ended.
+  signInAsked?: string;
 }
 
 export const emptyState = (): NotifyState => ({ sent: {}, actions: {}, lastRun: null, lastSent: null, pending: 0 });
@@ -161,24 +163,34 @@ async function gather(clock: Clock, budget: number | null | undefined): Promise<
   };
 }
 
-export async function runNotifier(now = new Date()): Promise<{ sent: number; pending: number }> {
-  const state = readState();
+// One alert check for whichever Sheet is active (owner's, or a user's inside withSheet); the caller keeps the state.
+export async function checkOnce(state: NotifyState, send: (text: string) => Promise<SendResult>, now = new Date()): Promise<{ state: NotifyState; sent: number; pending: number }> {
   let input: Awaited<ReturnType<typeof gather>>;
   try {
     input = await gather(dhakaClock(now), state.budget);
   } catch (e) {
-    writeState({ ...state, lastError: { at: now.toISOString(), text: 'Could not read your plans or holdings. The next check tries again.' } });
-    throw e;
+    throw Object.assign(e as Error, { state: { ...state, lastError: { at: now.toISOString(), text: 'Could not read your plans or holdings. The next check tries again.' } } });
   }
   const { due, held } = decide(input, state);
   const sentKeys: string[] = [];
   const unsent = [...held];
   for (const a of due) {
-    if ((await sendMessage(a.text)).ok) sentKeys.push(a.key);
+    if ((await send(a.text)).ok) sentKeys.push(a.key);
     else unsent.push(a);
   }
-  writeState({ ...nextState(state, input, sentKeys, unsent, now.toISOString()), lastError: null });
-  return { sent: sentKeys.length, pending: unsent.length };
+  return { state: { ...nextState(state, input, sentKeys, unsent, now.toISOString()), lastError: null }, sent: sentKeys.length, pending: unsent.length };
+}
+
+export async function runNotifier(now = new Date()): Promise<{ sent: number; pending: number }> {
+  try {
+    const r = await checkOnce(readState(), (text) => sendMessage(text), now);
+    writeState(r.state);
+    return { sent: r.sent, pending: r.pending };
+  } catch (e) {
+    const failed = (e as { state?: NotifyState }).state;
+    if (failed) writeState(failed);
+    throw e;
+  }
 }
 
 export function notifyStatus() {

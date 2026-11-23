@@ -8,6 +8,7 @@ Live: <https://dse-trade-helper.vercel.app/>
 - Run it on your computer
 - Where your data is kept
 - Set up Google sign-in
+- Set up Telegram alerts for every user
 - Environment variables
 - Tests
 - Deploy on Vercel
@@ -45,7 +46,16 @@ GET /api/trades   (cookie: authjs.session-token=…)
 → 401 {"error":"Sign in with Google again to reach your Sheet."}   when Google refuses the refresh token
 ```
 
-Telegram alerts (the 15-minute job) still go to the owner's chat only. They do not read signed-in users' Sheets yet. See `../release-plan/topics/2026-11-22-google-sign-in/plan.md` for the next steps.
+Telegram alerts: a signed-in user taps **Connect Telegram** in Portfolio → Phone alerts. On a phone they tap **Open Telegram**; on a computer they scan the QR code with the phone camera. In Telegram they tap **Start**. From then on the 15-minute job sends them alerts from their own Sheet.
+
+```
+POST /api/telegram/link    (cookie)  → 200 {"url":"https://t.me/<bot>?start=k7Qm2xV9aB3dE5fGhJ1q0w","expiresAt":"…"}
+Telegram → POST /api/telegram/webhook  {"message":{"chat":{"id":123456789,"type":"private"},"text":"/start k7Qm…"}}
+GET  /api/telegram/status  (cookie)  → 200 {"connected":true}
+DELETE /api/telegram/link  (cookie)  → 200 {"disconnected":true}
+```
+
+The job cannot read a cookie, so a user who connects Telegram gets one row in the `telegram_users` tab of the owner's Sheet: Google id, Sheet id, Telegram chat id, the Google refresh token (AES-256-GCM with `TOKEN_ENC_KEY`), and the alerts already sent. Disconnect deletes the row. The owner's own alerts (`TELEGRAM_CHAT_ID`) work as before.
 
 ## Set up Google sign-in
 
@@ -69,6 +79,26 @@ Do this once in [Google Cloud Console](https://console.cloud.google.com/).
 5. Copy the **Client ID** and **Client secret** into `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` (below).
 6. Make `AUTH_SECRET`: `openssl rand -base64 33`. It encrypts the sign-in cookie. Keep it secret; changing it signs everybody out.
 
+## Set up Telegram alerts for every user
+
+1. Keep the bot you already have (see `docs/telegram-setup.md`). Note its username, without `@`.
+2. Make two secrets: `openssl rand -base64 32` for `TOKEN_ENC_KEY`, and `openssl rand -hex 24` for `TELEGRAM_WEBHOOK_SECRET`.
+3. Vercel → Settings → Environment Variables (Production): `TOKEN_ENC_KEY`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_WEBHOOK_SECRET`, plus the existing `TELEGRAM_BOT_TOKEN`, `GOOGLE_SHEET_ID`, `GOOGLE_SERVICE_ACCOUNT_JSON`. Redeploy.
+4. GitHub → repo Settings → Secrets → Actions: add `TOKEN_ENC_KEY`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` (same values as Vercel).
+5. Tell Telegram where to send `/start`, once:
+   ```bash
+   curl -s "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
+     --data-urlencode "url=https://dse-trade-helper.vercel.app/api/telegram/webhook" \
+     --data-urlencode "secret_token=<TELEGRAM_WEBHOOK_SECRET>" \
+     --data-urlencode 'allowed_updates=["message"]'
+   # → {"ok":true,"result":true,"description":"Webhook was set"}
+   ```
+   Undo with `…/deleteWebhook`. A bot can have a webhook or `getUpdates`, not both.
+
+Keep `TOKEN_ENC_KEY` the same everywhere: changing it makes every saved token unreadable, and users must connect again.
+
+While the Google app is in **Testing**, Google ends refresh tokens after 7 days (developers.google.com/identity/protocols/oauth2, "Refresh token expiration"). Users' alerts then pause, and the bot sends them one message: "Sign in again … to turn them back on". Publishing the app removes this limit.
+
 ## Environment variables
 
 Put them in `web/.env.local` for local runs, and in Vercel → Project → Settings → Environment Variables for the live site.
@@ -81,7 +111,10 @@ Put them in `web/.env.local` for local runs, and in Vercel → Project → Setti
 | `GOOGLE_SHEET_ID` | Owner key mode, alert job | id from the owner's Sheet URL |
 | `GOOGLE_SERVICE_ACCOUNT_FILE` or `GOOGLE_SERVICE_ACCOUNT_JSON` | Owner key mode, alert job | path to the key file, or its JSON |
 | `TRADES_API_KEY` | Owner key mode | 32+ random characters |
-| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | Telegram alerts | see `docs/telegram-setup.md` |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | Telegram alerts (owner chat) | see `docs/telegram-setup.md` |
+| `TELEGRAM_BOT_USERNAME` | Telegram for every user | `DseHelperBot` |
+| `TELEGRAM_WEBHOOK_SECRET` | Telegram for every user | output of `openssl rand -hex 24` |
+| `TOKEN_ENC_KEY` | Telegram for every user (Vercel and GitHub) | output of `openssl rand -base64 32` |
 
 - Without the three `AUTH_*` values, the Google button does not work, and browser mode and owner key mode work as before.
 - `npm start` (production mode) off Vercel also needs `AUTH_URL=http://localhost:3000` or `AUTH_TRUST_HOST=true`. Vercel does not need it.
@@ -117,4 +150,8 @@ The daily data scan and the 15-minute alert job run in GitHub Actions (`../.gith
 | `lib/sheets.ts` | Google Sheets calls; `withSheet()` picks the user's Sheet or the owner's |
 | `lib/trades-http.ts` | `tradesRoute()`: signed-in user first, else the owner key |
 | `components/portfolio-store.ts` | Browser or Sheet mode in the page |
-| `components/portfolio/SyncPanel.tsx` | Continue with Google, sign out, owner password |
+| `components/portfolio/SyncPanel.tsx` | Continue with Google, Open my Google Sheet, sign out, owner password |
+| `components/TelegramConnect.tsx` | Connect Telegram: button, QR code, status, disconnect |
+| `lib/telegram-registry.ts` | The `telegram_users` tab: link codes, chat ids, encrypted tokens, alert state |
+| `lib/telegram-routes.ts` | `/api/telegram/link`, `/status`, `/webhook` |
+| `lib/notify-members.ts` | The 15-minute job for every connected user |

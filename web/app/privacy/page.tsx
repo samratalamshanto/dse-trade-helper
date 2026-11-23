@@ -18,6 +18,7 @@ export default function PrivacyPage() {
           <li>Google gives us your name, email address and profile picture, and access to files this app makes in your Google Drive (the <code>drive.file</code> permission). We cannot see or open any other file in your Drive.</li>
           <li>The app makes one Google Sheet named &quot;DSE Trade Helper&quot; in your Drive. Your trades, plans, limits, watchlist and alert rules are saved there. You own that Sheet, and the Portfolio page shows you a link to it.</li>
           <li>We keep no database of users. Your Google account id, the id of your Sheet and the Google access tokens are kept in an encrypted sign-in cookie in your browser. It ends after 7 days or when you sign out. To save time, the server also keeps the short-lived access token (valid at most one hour) in its memory, never on disk.</li>
+          <li>Only if you tap &quot;Connect Telegram&quot;: we keep one row for you in the site owner&apos;s Google Sheet so the alert check can run while you are away. It holds your Google account id, your Sheet id, your Telegram chat id and your Google refresh token, encrypted. &quot;Disconnect Telegram&quot; deletes the row.</li>
           <li>We do not sell, share or show your data to anyone, and we use it only to run the features you use.</li>
         </ul>
       </div>
@@ -25,6 +26,7 @@ export default function PrivacyPage() {
         <h2 className="h3">Remove your data</h2>
         <ul>
           <li>Sign out on the Portfolio page. This removes the sign-in cookie.</li>
+          <li>Tap &quot;Disconnect Telegram&quot; on the Portfolio page. This deletes your row in the Telegram list.</li>
           <li>Remove the app&apos;s access at <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.</li>
           <li>Delete the &quot;DSE Trade Helper&quot; Sheet in your Google Drive. We keep no copy.</li>
         </ul>

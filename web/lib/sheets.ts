@@ -47,6 +47,8 @@ let token: { value: string; until: number } | null = null;
 export interface SheetTarget { sheetId: string; accessToken: () => Promise<string>; dropToken: () => void }
 const target = new AsyncLocalStorage<SheetTarget>();
 export const withSheet = <T>(t: SheetTarget, work: () => Promise<T>): Promise<T> => target.run(t, work);
+// Always the owner's Sheet, even inside a user's withSheet: the Telegram registry lives there.
+export const onSiteSheet = <T>(work: () => Promise<T>): Promise<T> => target.exit(work);
 export const currentSheetKey = (): string => target.getStore()?.sheetId ?? 'site';
 
 // A write queue per Sheet: one user's slow Sheet never holds up another user's writes. An idle queue is dropped.

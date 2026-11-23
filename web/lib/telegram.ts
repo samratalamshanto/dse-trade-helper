@@ -22,9 +22,9 @@ function refusalText(status: number): string {
   return 'Telegram did not accept the message. Try again later.';
 }
 
-export async function sendMessage(text: string, fetchImpl: typeof fetch = fetch): Promise<SendResult> {
+// chatId: the owner's chat by default; a connected user's chat for per-user alerts (lib/notify-members.ts).
+export async function sendMessage(text: string, fetchImpl: typeof fetch = fetch, chatId: string = process.env.TELEGRAM_CHAT_ID ?? ''): Promise<SendResult> {
   const token = process.env.TELEGRAM_BOT_TOKEN ?? '';
-  const chatId = process.env.TELEGRAM_CHAT_ID ?? '';
   if (!token || !chatId) return { ok: false, error: OFF_TEXT };
   const post = () => fetchImpl(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: 'POST',
