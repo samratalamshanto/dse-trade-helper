@@ -1,7 +1,7 @@
 import { directorActivity, isEmptyDeclaration } from './announcements.ts';
 import { DHAKA_OFFSET_MS, dhakaToday } from './dhaka.ts';
 import { bonusFactor, pbAtYearEnd, payoutPct, roePct, trendChange } from './financial-trends.ts';
-import { lastYearOf, traded, yearAgoClose } from './price-history.ts';
+import { lastYearOf, oneYearChange, traded } from './price-history.ts';
 import type { Company, Declaration, Metrics, Analysis, Check, FraudFlag, Reason, Summary, SummaryYear, PricePosition, PriceBand, PriceHistoryPoint, DividendStatus, Question, DividendRecordRow } from './types.ts';
 
 export { dividendStatus } from './announcements.ts';
@@ -146,7 +146,6 @@ export function metrics(c: Company, now = new Date()): Metrics {
   const yearWindow = lastYearOf(s);
   let peak = -Infinity, maxDrawdown = 0;
   for (const p of yearWindow) { peak = Math.max(peak, p.price); maxDrawdown = Math.min(maxDrawdown, (p.price - peak) / peak); }
-  const yearAgo = yearAgoClose(s);
   const usualPe = usualPeYears(c.years, epsNow).map((y) => y.pe as number);
   const recentDividends = c.dividends.filter((d) => (d.year ?? 0) > expectedLatestYear(now) - 5 && (((d.cash ?? 0) > 0) || ((d.stock ?? 0) > 0))).slice(0, 5);
   // Bonus-adjusted EPS, so a bonus issue does not read as a fall in earnings.
@@ -184,7 +183,7 @@ export function metrics(c: Company, now = new Date()): Metrics {
     change1m: round(pct(priceNow, back(TRADING_DAYS_MONTH))),
     change3m: round(pct(priceNow, back(TRADING_DAYS_QUARTER))),
     // A series that does not reach back 365 days (new listing, partial history) gives no 1-year change.
-    change1y: yearAgo && !illiquid ? round(pct(priceNow, yearAgo.price)) : null,
+    change1y: round(oneYearChange(s, priceNow)?.pct),
     maxDrawdown: round(maxDrawdown * 100),
     avgDailyValue: values20.length ? mean(values20) : null,
     volumeSpike: prevVolumes.length >= 20 && mean(prevVolumes)! > 0 ? (s.at(-1)?.volume ?? 0) / mean(prevVolumes)! : null,
@@ -437,10 +436,13 @@ export function pricePosition(c: Company, m: Metrics): PricePosition {
     change: round(pct(yearEnd[i + 1].price, y.price))!,
   }));
   const usualPe = pe ? median(yearEnd.map((y) => y.pe)) : null;
+  const pes = yearEnd.map((y) => y.pe), eps = m.epsNow ?? 0;
+  const usualPeBand = eps > 0 && pes.length >= MIN_YEAR_END_PRICES && !m.illiquid
+    ? { eps, low: round(Math.min(...pes) * eps, 2)!, avg: round(mean(pes)! * eps, 2)!, high: round(Math.max(...pes) * eps, 2)!, years: pes.length } : null;
   const cheapYears = usualPe == null ? [] : historyRows.filter((h) => h.pe <= usualPe);
   return {
     price, pe, zone, verdict: verdictKey ? { key: verdictKey, ...VALUATION[verdictKey] } : null, history: historyRows,
-    cheapYears: cheapYears.length, cheapYearsUp: cheapYears.filter((h) => h.change > 0).length, usualPe: round(usualPe, 1),
+    cheapYears: cheapYears.length, cheapYearsUp: cheapYears.filter((h) => h.change > 0).length, usualPe: round(usualPe, 1), usualPeBand,
   };
 }
 

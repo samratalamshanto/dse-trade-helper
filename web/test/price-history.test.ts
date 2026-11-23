@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { priceHistory, yearAgoClose } from '../lib/price-history.ts';
+import { cashInWindow, oneYearChange, priceHistory, yearAgoClose } from '../lib/price-history.ts';
 
 const day = (i: number) => new Date(Date.UTC(2026, 0, 1) + i * 86_400_000).toISOString().slice(0, 10);
 const series = (prices: number[]) => prices.map((price, i) => ({ date: day(i), price, volume: 100, open: price, high: price + 1, low: price - 1, trades: 5 }));
@@ -138,4 +138,30 @@ test('since 1 Jan, 5% swings and partial edge months', () => {
   assert.deepStrictEqual(h.months.map((m) => m.partial), [true, true]);
   const full = tradingSeries('2026-01-01', Array(21).fill(100));
   assert.strictEqual(priceHistory(full)!.months.at(-1)!.partial, false, 'January ends on its last trading day');
+});
+
+test('cash in the window: record date after the year-ago close and on or before the last day, one per record date', () => {
+  const decls = [
+    { recordDate: '2025-11-20', cashPct: 50 }, // on the year-ago day: before the window
+    { recordDate: '2026-03-03', cashPct: 105 },
+    { recordDate: '2026-03-03', cashPct: 105 }, // same notice twice
+    { recordDate: '2026-08-12', cashPct: 105, interim: true },
+    { recordDate: '2026-09-01', stockPct: 10 }, // bonus shares are not cash
+    { recordDate: '2026-10-01', noDividend: true, cashPct: 5 },
+    { recordDate: '2026-12-01', cashPct: 40 }, // after the last day
+  ];
+  assert.strictEqual(cashInWindow(decls, '2025-11-20', '2026-11-19', 10), 21);
+});
+
+test('1-year total return adds the cash dividends to the price change (GP: price −17.3%, with ৳21 cash −9.6%)', () => {
+  const pts = Array.from({ length: 300 }, (_, i) => ({ date: new Date(Date.UTC(2025, 9, 1) + i * 1.5 * 86_400_000).toISOString().slice(0, 10), price: 274, volume: 100, trades: 5 }));
+  pts[pts.length - 1].price = 226.7;
+  const decls = [{ recordDate: '2026-08-12', cashPct: 105, interim: true }, { recordDate: '2026-03-03', cashPct: 105 }];
+  const h = priceHistory(pts, decls, 10)!;
+  assert.strictEqual(h.dividendCash, 21);
+  assert.strictEqual(h.changePct!.toFixed(1), '-17.3');
+  assert.strictEqual(h.totalReturnPct!.toFixed(1), '-9.6');
+  assert.strictEqual(priceHistory(pts, decls, 10, 230)!.changePct!.toFixed(1), '-16.1', 'a live price replaces the last close');
+  assert.strictEqual(oneYearChange(pts, 230)!.yearAgo.price, 274);
+  assert.strictEqual(priceHistory(pts, [{ recordDate: pts.at(-1)!.date.replace(/^\d{4}/, (y) => String(Number(y) - 2)), cashPct: 105 }], 10)!.totalReturnPct, h.changePct, 'an old record date adds nothing');
 });

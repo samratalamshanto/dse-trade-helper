@@ -4,16 +4,19 @@ import { useState, type ReactNode } from 'react';
 import { Line } from 'react-chartjs-2';
 import { ChartBox, dateTicks, useChartColors } from '@/components/charts';
 import { ShareholdingDonut } from '@/components/company/SafetyOwners';
-import { BuyPlanner } from '@/components/planner/BuyPlanner';
+import { BuyPlanner, SellEase } from '@/components/planner/BuyPlanner';
 import { Tr } from '@/components/Tr';
 import { useLang } from '@/components/i18n';
 import { fmt, moneyPerDay, sectorName, signed, tone } from '@/components/format';
 import { Icon, Info, type IconName } from '@/components/ui';
+import { sellEase } from '@/lib/buy-planner';
+import { oneYearChange } from '@/lib/price-history';
 import type { CompanyDetail } from '@/lib/service';
 
 type Company = CompanyDetail['company'];
 
 const CRORE = 1e7;
+const LAKH = 1e5;
 const RANGES = [['1W', 7], ['1M', 30], ['3M', 91], ['6M', 182], ['1Y', 365]] as const;
 type Range = (typeof RANGES)[number][0];
 const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
@@ -21,8 +24,8 @@ const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : n
 export const HINTS = {
   freeFloat: 'Free float: the share of all shares that ordinary investors can trade. Shares held by sponsors and the government are not counted.',
   freeFloatCap: 'Free-float market cap: price × the shares that are free to trade. It shows how much of the company the market can really buy.',
-  peAudited: 'Audited P/E: price ÷ EPS of the last audited (checked) full year.',
-  peUnaudited: 'P/E from latest results: price ÷ EPS from the newest quarterly results. These are not yet audited, so they can change.',
+  peAudited: "DSE's audited P/E: price ÷ EPS of the last audited (checked) full year in DSE's own table.",
+  peUnaudited: "DSE's P/E from latest results: price ÷ EPS from the newest quarterly results. These are not yet audited, so they can change.",
 };
 const TONE_ICON: Record<string, [IconName, string]> = { good: ['check', 't-good'], warn: ['info', 't-warn'], bad: ['cross', 't-bad'], neutral: ['neutral', 't-neutral'] };
 
@@ -79,8 +82,9 @@ function KeyFacts({ d }: { d: CompanyDetail }) {
         <Fact label="Listed">{c.listingYear ?? '—'}</Fact>
         <Fact label="NAV per share">{taka(c.nav)}</Fact>
         <Fact label="EPS (last year)">{taka(m.epsNow)}</Fact>
-        <Fact label="P/E (audited)" hint={HINTS.peAudited}>{fmt(pl?.audited ?? m.pe, 1)}</Fact>
-        <Fact label="P/E (latest results)" hint={HINTS.peUnaudited}>{fmt(pl?.unaudited, 1)}</Fact>
+        <Fact label="P/E (used by the signal)" hint={`Price ÷ EPS of ${m.peBasis ?? 'the last year'}. The signal, the checks, the Valuation verdict and the company lists use this P/E.`}>{fmt(m.pe, 1)}</Fact>
+        <Fact label="DSE P/E (audited)" hint={HINTS.peAudited}>{fmt(pl?.audited, 1)}</Fact>
+        <Fact label="DSE P/E (latest results)" hint={HINTS.peUnaudited}>{fmt(pl?.unaudited, 1)}</Fact>
         <Fact label="12-month cash yield" hint={"Cash dividends of the last 12 months ÷ today's price. " + (m.yieldBasis || 'No cash dividend in the last 12 months.') + (m.yieldNote ? ' ' + m.yieldNote + '.' : '')}>{m.latestYield != null ? fmt(m.latestYield, 2) + '%' : '—'}</Fact>
         <Fact label="Shares outstanding">{shares != null ? fmt(shares / CRORE, 2) + ' cr' : '—'}</Fact>
         <Fact label="Paid-up capital">{crore(c.paidUpCapital)}</Fact>
@@ -89,6 +93,7 @@ function KeyFacts({ d }: { d: CompanyDetail }) {
         <Fact label="Free-float market cap" hint={HINTS.freeFloatCap}>{crore(num(det.freeFloatMarketCap), 1)}</Fact>
         <Fact label="Sector P/E" hint="Median P/E of profitable companies in the same sector. Compare it with this company's P/E above.">{fmt(d.sectorPe, 1)}</Fact>
         <Fact label="Traded a day" hint="Average value traded per day, last 20 days. Higher = easier to sell.">{moneyPerDay(m.avgDailyValue)}</Fact>
+        <Fact label="How easy to sell"><SellEase what="৳1 lakh" ease={sellEase(LAKH, m.avgDailyValue)} /></Fact>
         <Fact label="Website">{href ? <a href={href} target="_blank" rel="noopener noreferrer">{c.website} ↗</a> : (c.website || '—')}</Fact>
       </div>
     </div>
@@ -103,8 +108,10 @@ function PriceChart({ c }: { c: Company }) {
   const days = RANGES.find(([k]) => k === range)?.[1] ?? 365;
   const from = new Date(Date.parse(c.series.at(-1)!.date + 'T00:00:00Z') - days * 86_400_000).toISOString().slice(0, 10);
   const pts = c.series.filter((x) => x.date >= from);
-  const first = pts[0]?.price, last = pts.at(-1)?.price;
-  const diff = first != null && last != null ? last - first : null;
+  // 1Y is the one 1-year change the lists and Price history show.
+  const year = range === '1Y' ? oneYearChange(c.series, c.price) : null;
+  const first = year ? year.yearAgo.price : pts[0]?.price, last = year ? c.price : pts.at(-1)?.price;
+  const diff = range === '1Y' && !year ? null : first != null && last != null ? last - first : null;
   const pct = diff != null && first ? (diff / first) * 100 : null;
   const line = colors ? colors[(diff ?? 0) >= 0 ? '--up' : '--down'] : '';
   return (

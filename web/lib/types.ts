@@ -246,6 +246,8 @@ export interface PricePosition {
   cheapYears: number;
   cheapYearsUp: number;
   usualPe: number | null;
+  // EPS now × the low / mean / high of its own year-end P/Es: arithmetic, not a forecast. Null for EPS ≤ 0 or under 3 years.
+  usualPeBand: { eps: number; low: number; avg: number; high: number; years: number } | null;
 }
 
 export interface DividendStatus {

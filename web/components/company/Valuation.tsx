@@ -23,6 +23,21 @@ function RangeBar({ title, band, unit, hint }: { title: string; band: Band; unit
   );
 }
 
+// Arithmetic on its own past P/Es; never called a value or a goal for the price.
+function UsualPeBand({ b }: { b: NonNullable<Position['usualPeBand']> }) {
+  return (
+    <div style={{ marginTop: 14 }}>
+      <b><Tr text="Price at its usual P/E" /></b>
+      <div className="facts">
+        <div className="fact"><div className="k"><Tr text="Price if P/E were at its year-end low" /></div><div className="v mono">৳{fmt(b.low)}</div></div>
+        <div className="fact"><div className="k"><Tr text="Price if P/E were at its year-end average" /></div><div className="v mono">৳{fmt(b.avg)}</div></div>
+        <div className="fact"><div className="k"><Tr text="Price if P/E were at its year-end high" /></div><div className="v mono">৳{fmt(b.high)}</div></div>
+      </div>
+      <p className="why">EPS ৳{fmt(b.eps)} × <Tr text="the lowest, average and highest of its own year-end P/Es" /> ({b.years} <Tr text="years" />). <Tr text="This is arithmetic on past P/Es, not a forecast. The P/E can stay outside its usual range." /></p>
+    </div>
+  );
+}
+
 const NOTE_TONE: Record<string, string> = { good: 'good', bad: 'bad', warn: 'warn', neutral: '' };
 
 function PeTrend({ points }: { points: NonNullable<CompanyDetail['company']['peTrend']> }) {
@@ -33,8 +48,8 @@ function PeTrend({ points }: { points: NonNullable<CompanyDetail['company']['peT
       {colors ? (
         <ChartBox label={'P/E by day: ' + points.map((x) => `${x.date} audited ${fmt(x.audited, 2)}, latest results ${fmt(x.unaudited, 2)}`).join('; ')}>
           <Line data={{ labels: points.map((x) => x.date), datasets: [
-            { label: 'P/E (audited)', data: points.map((x) => x.audited ?? null), borderColor: colors['--accent'], pointRadius: 0, pointHoverRadius: 5, borderWidth: 2, tension: 0.2 },
-            { label: 'P/E (latest results)', data: points.map((x) => x.unaudited ?? null), borderColor: colors['--warn'], borderDash: [5, 4], pointRadius: 0, pointHoverRadius: 5, borderWidth: 2, tension: 0.2 },
+            { label: 'DSE P/E (audited)', data: points.map((x) => x.audited ?? null), borderColor: colors['--accent'], pointRadius: 0, pointHoverRadius: 5, borderWidth: 2, tension: 0.2 },
+            { label: 'DSE P/E (latest results)', data: points.map((x) => x.unaudited ?? null), borderColor: colors['--warn'], borderDash: [5, 4], pointRadius: 0, pointHoverRadius: 5, borderWidth: 2, tension: 0.2 },
           ] }} options={{ maintainAspectRatio: false, plugins: { tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label} ${fmt(ctx.parsed.y, 2)}` } } }, scales: { x: { ticks: dateTicks } } }} />
         </ChartBox>) : null}
       <p className="why"><Tr text="Audited = price ÷ EPS of the last audited year. Latest results = price ÷ EPS from the latest unaudited quarters. Source: DSE." /></p>
@@ -55,6 +70,7 @@ export function Valuation({ p, peTrend }: { p: Position | null; peTrend: NonNull
           hint="Green end = near its 5-year low. Year-end prices are approximate (P/E × EPS) and not adjusted for bonus shares, so the P/E bar is the fairer test." />
         <RangeBar title="P/E vs last 5 years" band={p.pe} unit={(x) => fmt(x, 1)} hint="P/E is a fairer test than price, because it allows for profit growth." />
       </div>
+      {p.usualPeBand ? <UsualPeBand b={p.usualPeBand} /> : null}
       {p.history.length ? (
         <>
           <div className="table-wrap"><table className="cards">

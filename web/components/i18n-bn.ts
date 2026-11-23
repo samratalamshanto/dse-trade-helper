@@ -545,4 +545,14 @@ export const BN: Record<string, string> = {
   'of 20 trading days so far': 'টি লেনদেন দিন হয়েছে ২০-এর মধ্যে',
   'Percentages and best/worst calls appear after 20 trading days.': 'শতাংশ এবং সেরা/খারাপ কল ২০ লেনদেন দিনের পর দেখা যাবে।',
   'The 5 calls that best and worst matched the market, by excess return at their longest graded horizon.': 'সবচেয়ে ভালো ও খারাপ ৫টি কল, দীর্ঘতম মূল্যায়িত মেয়াদে বাজারের বিপরীতে অতিরিক্ত রিটার্ন অনুযায়ী।',
+  // Company decision facts: total return, ease of selling, usual-P/E price band, P/E sources
+  '1-year change with cash dividends': 'নগদ লভ্যাংশসহ ১ বছরের পরিবর্তন', 'cash a share': 'প্রতি শেয়ারে নগদ',
+  'no trades in the last 20 days': 'গত ২০ দিনে কোনো লেনদেন নেই', 'How easy to sell': 'বিক্রি কত সহজ', 'days of its normal trading': 'দিনের স্বাভাবিক লেনদেনের সমান', 'Thin trading': 'কম লেনদেন', 'shares': 'শেয়ার',
+  'Days of normal trading = the value of the shares ÷ the average value traded a day over the last 20 days. More days means selling takes longer or moves the price more.':
+    'স্বাভাবিক লেনদেনের দিন = শেয়ারের মূল্য ÷ গত ২০ দিনের গড় দৈনিক লেনদেন। দিন বেশি হলে বিক্রিতে বেশি সময় লাগে বা দাম বেশি নড়ে।',
+  'P/E (used by the signal)': 'P/E (সংকেত এটি ব্যবহার করে)', 'DSE P/E (audited)': 'DSE-এর P/E (নিরীক্ষিত)', 'DSE P/E (latest results)': 'DSE-এর P/E (সর্বশেষ ফলাফল)',
+  'Price at its usual P/E': 'স্বাভাবিক P/E-তে দাম', 'Price if P/E were at its year-end low': 'P/E বছর-শেষের সর্বনিম্নে থাকলে দাম',
+  'Price if P/E were at its year-end average': 'P/E বছর-শেষের গড়ে থাকলে দাম', 'Price if P/E were at its year-end high': 'P/E বছর-শেষের সর্বোচ্চে থাকলে দাম',
+  'the lowest, average and highest of its own year-end P/Es': 'এর নিজের বছর-শেষ P/E-র সর্বনিম্ন, গড় ও সর্বোচ্চ', 'years': 'বছর',
+  'This is arithmetic on past P/Es, not a forecast. The P/E can stay outside its usual range.': 'এটি অতীত P/E দিয়ে হিসাব, পূর্বাভাস নয়। P/E তার স্বাভাবিক সীমার বাইরে থেকে যেতে পারে।',
 };
