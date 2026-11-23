@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { afterBuying, BROKER_COMMISSION_PCT, moveFrequency, planBuy, position52, sma, todaysPicks, toTick, trendOf, type PlannerInput } from '../lib/buy-planner.ts';
+import { afterBuying, BROKER_COMMISSION_PCT, sellEase, THIN_TRADING_BDT, moveFrequency, planBuy, position52, sma, todaysPicks, toTick, trendOf, type PlannerInput } from '../lib/buy-planner.ts';
 
 const day = (i: number) => new Date(Date.UTC(2026, 0, 1) + i * 86_400_000).toISOString().slice(0, 10);
 const series = (prices: number[]) => prices.map((price, i) => ({ date: day(i), price }));
@@ -122,4 +122,16 @@ test('a share with no trades in 52 weeks is never a buy', () => {
   assert.equal(p.action, 'avoid');
   assert.equal(p.buyNow, 0);
   assert.ok(p.warnings.some((w) => /No trades in the last 52 weeks/.test(w)));
+});
+
+test('ease of selling: the planned shares at today\'s price as days of normal trading', () => {
+  // 1,000 AMBEEPHA at ৳703.5 against ৳4,13,698 traded a day ≈ 1.7 days, and that is thin trading.
+  const e = planBuy({ ...base, code: 'AMBEEPHA', quantity: 1000, price: 703.5, avgDailyValue: 413_698 }).sellEase!;
+  assert.equal(e.days.toFixed(1), '1.7');
+  assert.equal(e.thin, true);
+  assert.deepEqual(sellEase(100_000, 50_000_000), { days: 0.002, thin: false });
+  assert.equal(sellEase(100_000, THIN_TRADING_BDT - 1)!.thin, true);
+  assert.equal(sellEase(100_000, null), null, 'no trading figure: no answer');
+  assert.deepEqual(sellEase(100_000, 0), { days: Infinity, thin: true }, 'no trades in 20 days: the thinnest case, still marked');
+  assert.equal(sellEase(0, 50_000_000), null);
 });

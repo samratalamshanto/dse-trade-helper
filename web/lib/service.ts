@@ -292,7 +292,8 @@ export async function companyDetail(code: string, fresh: boolean) {
     dividendRecord: dividendRecord(current),
     questions: fourQuestions(current, analysis, position, dividend), sectorPe: sectorPe ?? null, freshSkipped, dataStale: isStale(company),
     today: todayTrading(live[code], company.details, session, analysis.metrics.lastTradeDate),
-    priceHistory: priceHistory(company.series ?? [], company.events?.declarations ?? [], company.faceValue ?? null),
+    // Live price, like the lists, so the 1-year change is the same number everywhere.
+    priceHistory: priceHistory(company.series ?? [], company.events?.declarations ?? [], company.faceValue ?? null, analysis.metrics.priceNow),
     session, updatedAt: Date.now(),
   };
 }

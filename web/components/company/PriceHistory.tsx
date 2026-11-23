@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Line } from 'react-chartjs-2';
 import { ChartBox, dateTicks, useChartColors } from '@/components/charts';
 import { Tr } from '@/components/Tr';
+import { Info } from '@/components/ui';
 import { fmt, fmtDate, monthName, signed, tone } from '@/components/format';
 import type { CompanyDetail } from '@/lib/service';
 
@@ -22,6 +23,8 @@ function Summary({ h }: { h: History }) {
     <div className="facts">
       <div className="fact"><div className="k"><Tr text="Period" /></div><div className="v">{fmtDate(h.from)} – {fmtDate(h.to)} · {h.days} <Tr text="trading days" /></div></div>
       <div className="fact"><div className="k"><Tr text="1-year change" /></div><div className={`v ${tone(h.changePct)}`}>{signed(h.changePct)}</div></div>
+      {h.totalReturnPct != null && h.dividendCash > 0 ? <div className="fact"><div className="k"><Tr text="1-year change with cash dividends" /> <Info text="Price change plus the cash dividends whose record date fell in the last year, as a share of the price a year ago. Bonus shares are not counted." /></div>
+        <div className={`v ${tone(h.totalReturnPct)}`}>{signed(h.totalReturnPct)} <span className="small muted">(৳{fmt(h.dividendCash)} <Tr text="cash a share" />)</span></div></div> : null}
       {h.sinceJan != null ? <div className="fact"><div className="k"><Tr text="Since 1 Jan" /></div><div className={`v ${tone(h.sinceJan)}`}>{signed(h.sinceJan)}</div></div> : null}
       {h.noTradeDays ? <div className="fact"><div className="k"><Tr text="Days with no trades" /></div><div className="v">{h.noTradeDays}</div></div> : null}
       <div className="fact"><div className="k"><Tr text="Highest close" /></div><div className="v">{taka(h.high.price)} · {fmtDate(h.high.date)}</div></div>
