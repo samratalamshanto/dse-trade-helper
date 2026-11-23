@@ -28,9 +28,14 @@ const ok = (x: number | null | undefined): x is number => x != null && Number.is
 const RESERVED_IDS = new Set(['__proto__', 'constructor', 'prototype']);
 const EPS = 1e-9;
 
-// null when the price or the range is missing or broken (low above high, price outside a stale range is still shown).
+// DSE keeps an old 52-week range for shares that stopped trading (SIBL: price ৳3, low ৳245); such a range is wrong.
+const WRONG_RANGE_FACTOR = 2;
+export const rangeLooksWrong = (r: RangeRow): boolean =>
+  ok(r.price) && ok(r.weekLow52) && ok(r.weekHigh52) && (r.price * WRONG_RANGE_FACTOR < r.weekLow52 || r.price > r.weekHigh52 * WRONG_RANGE_FACTOR);
+
+// null when the price or the range is missing or broken (low above high, or rangeLooksWrong); a price a little outside a stale range is still shown.
 export function rangeStats(r: RangeRow): RangeStats | null {
-  if (!ok(r.price) || !ok(r.weekLow52) || !ok(r.weekHigh52) || r.weekLow52 > r.weekHigh52) return null;
+  if (!ok(r.price) || !ok(r.weekLow52) || !ok(r.weekHigh52) || r.weekLow52 > r.weekHigh52 || rangeLooksWrong(r)) return null;
   const span = r.weekHigh52 - r.weekLow52;
   return {
     aboveLowPct: round1((r.price / r.weekLow52 - 1) * 100),
@@ -85,6 +90,7 @@ export function rangeFeed(rules: readonly RangeRule[], input: FeedInput): RangeM
     for (const row of input.rows) {
       if (scope === 'holdings' && !owned.has(row.code)) continue;
       if (scope === 'watchlist' && !watched.has(row.code)) continue;
+      if (rangeLooksWrong(row)) continue;
       // A rule with a pick but no company list matches nothing: it never falls open to every company.
       if (rule.pick) {
         const company = companyMap?.get(row.code);

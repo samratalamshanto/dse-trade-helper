@@ -476,6 +476,7 @@ export const BN: Record<string, string> = {
   'No holdings yet. Add trades on': 'এখনো হোল্ডিং নেই। লেনদেন যোগ করুন',
   'Your avg price': 'আপনার গড় দাম',
   'Your gain %': 'আপনার লাভ %',
+  'Data looks wrong: the price is far outside its 52-week range.': 'তথ্য ভুল মনে হচ্ছে: দাম ৫২-সপ্তাহের সীমার অনেক বাইরে।',
   'Loading 52-week range…': '৫২ সপ্তাহের সীমা লোড হচ্ছে…',
   'A price near its low can fall further. Automatic figures and your own rules, not advice.': 'সর্বনিম্নের কাছের দাম আরো কমতে পারে। স্বয়ংক্রিয় তথ্য ও আপনার নিয়ম, পরামর্শ নয়।',
 };
