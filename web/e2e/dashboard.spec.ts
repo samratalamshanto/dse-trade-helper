@@ -8,7 +8,7 @@ test.describe('dashboard', () => {
     await expect(page.getByText('DSEX index')).toBeVisible();
     await expect(page.getByRole('link', { name: /Shortlist/ })).toHaveAttribute('href', '/all?signal=research');
     await expect(page.getByRole('link', { name: /Dividends coming/ })).toHaveAttribute('href', '/dividends');
-    await expect(page.getByRole('link', { name: /Fraud alerts/ }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /Warning signs/ }).first()).toBeVisible();
   });
 
   test('signal slices on the doughnut link to /all?signal=', async ({ page }) => {
@@ -66,7 +66,7 @@ test.describe('dashboard', () => {
     expect(calls).toEqual([]);
   });
 
-  test('Fraud alerts menu item counts flagged stocks in the watchlist', async ({ page }, info) => {
+  test('Warning signs menu item counts flagged stocks in the watchlist', async ({ page }, info) => {
     const body = await (await page.request.get('/api/companies')).json() as { rows: { code: string; fraud: string; category: string }[] };
     const flagged = body.rows.find((r) => r.fraud !== 'clean' && r.category !== 'Z')!.code;
     const clean = body.rows.find((r) => r.fraud === 'clean')!.code;
@@ -74,7 +74,7 @@ test.describe('dashboard', () => {
     await page.evaluate((list) => localStorage.setItem('watchlist', JSON.stringify(list)), [flagged, clean]);
     await page.reload();
     if (isPhone(info.project.name)) await page.getByRole('button', { name: /^Menu/ }).click();
-    await expect(page.getByRole('link', { name: 'Fraud alerts 1 of your watchlist flagged' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Warning signs 1 of your watchlist flagged' })).toBeVisible();
   });
 
   test('a panel that starts without a path still shows the data another part already loaded', async ({ page }) => {

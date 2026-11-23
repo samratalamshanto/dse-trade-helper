@@ -19,7 +19,7 @@ import { CATEGORY_TEXT } from '@/lib/glossary';
 import { FRAUD, Icon, Info, SIGNALS, SignalPill, type FraudLevel, type IconName, type Signal } from '@/components/ui';
 import type { CompanyDetail } from '@/lib/service';
 
-const TABS = [['overview', 'Overview'], ['history', 'Price history (52 weeks)'], ['valuation', 'Cheap or expensive'], ['financials', '5-year financials'], ['dividends', 'Dividends'], ['news', 'News'], ['safety', 'Safety checks'], ['owners', 'Owners'], ['details', 'Company details']] as const;
+const TABS = [['overview', 'Overview'], ['history', 'Price history (52 weeks)'], ['valuation', 'Price vs own history'], ['financials', '5-year financials'], ['dividends', 'Dividends'], ['news', 'News'], ['safety', 'Safety checks'], ['owners', 'Owners'], ['details', 'Company details']] as const;
 type Tab = (typeof TABS)[number][0];
 
 const ANSWER_UI: Record<string, [string, string, IconName]> = {
@@ -27,7 +27,7 @@ const ANSWER_UI: Record<string, [string, string, IconName]> = {
 };
 const NO_DIVIDEND_UI: [string, string, IconName] = ['No', 't-neutral', 'calendar'];
 // The fraud answer uses the same Clean / Suspicious / High risk words as every other screen.
-const FRAUD_QUESTION = 'Any fraud warning signs?';
+const FRAUD_QUESTION = 'Any warning signs?';
 const NOT_RATED = 'Not rated — no EPS published';
 const NOTE_TONE: Record<Signal, string> = { research: 'good', avoid: 'bad', caution: 'warn', neutral: '' };
 
@@ -79,9 +79,9 @@ export function CompanyView({ code }: { code: string }) {
           <Link href="/learn#signals" className="signal-link" aria-label={`${t(a.notRated ? NOT_RATED : SIGNALS[signal].label)}: ${t('what the signals mean')}`}>
             {a.notRated ? <span className="pill s-neutral big-pill"><Icon name="neutral" /> {t(NOT_RATED)}</span> : <SignalPill signal={signal} big />}</Link>{' '}
 {a.notRated ? null : (
-          <span className="mono small muted">{t('Score')} {a.score}/100 <Info text="Each signal has its own range. Avoid 0–30, Caution 31–60, No strong signal 61–75, Worth researching 76–100." /></span>)}
+          <span className="mono small muted">{t('Score')} {a.score}/100 <Info text="Each signal has its own range. High risk 0–30, Caution 31–60, No strong signal 61–75, Passes the checks 76–100." /></span>)}
         </div>
-        <div className={`note ${NOTE_TONE[signal]}`}><b>{t('Suggestion')}:</b> {t(a.suggestion).split(/(disclosures)/).map((part, i) => (part === 'disclosures'
+        <div className={`note ${NOTE_TONE[signal]}`}><b>{t('What the rules show')}:</b> {t(a.suggestion).split(/(disclosures)/).map((part, i) => (part === 'disclosures'
           ? <button key={i} type="button" className="link-btn" onClick={() => { show('news', false); tablist.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>{part}</button>
           : part))}</div>
       </div>

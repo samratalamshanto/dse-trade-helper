@@ -18,15 +18,15 @@ interface CompaniesResponse { rows: CompanyRow[]; codes: { code: string; sector:
 const LIQUID_BDT = 1_000_000;
 type Medians = Record<string, number | null>;
 const PRESETS: { key: string; label: string; icon: IconName; tone: string; hint: string; sort: string; dir: number; test: (r: CompanyRow, m: Medians) => boolean }[] = [
-  { key: 'good', label: 'Good companies', icon: 'research', tone: 'accent', hint: 'Passes every quality check, at any price.', sort: 'score', dir: -1,
+  { key: 'good', label: 'Good companies', icon: 'research', tone: 'accent', hint: 'Passes all quality checks, at any price.', sort: 'score', dir: -1,
     test: (r) => r.signal === 'research' },
-  { key: 'cheap', label: 'Good and cheap', icon: 'tag', tone: 'accent', hint: 'Worth researching, with a P/E at or below its sector median.', sort: 'pe', dir: 1,
+  { key: 'cheap', label: 'Low P/E vs sector', icon: 'tag', tone: 'accent', hint: 'Passes the checks, with a P/E at or below its sector median.', sort: 'pe', dir: 1,
     test: (r, m) => r.signal === 'research' && r.pe != null && m[r.sector] != null && r.pe <= (m[r.sector] as number) },
-  { key: 'dividend', label: 'High dividend', icon: 'coins', tone: 'up', hint: 'Yield 5%+ at today\'s price, no fraud flag, easy to trade.', sort: 'dividendYield', dir: -1,
+  { key: 'dividend', label: 'High dividend', icon: 'coins', tone: 'up', hint: 'Yield 5%+ at today\'s price, no warning sign, easy to trade.', sort: 'dividendYield', dir: -1,
     test: (r) => (r.dividendYield ?? 0) >= 5 && r.fraud === 'clean' && (r.dailyValue ?? 0) >= LIQUID_BDT },
-  { key: 'growth', label: 'Rising earnings', icon: 'trend', tone: 'up', hint: 'Earnings per share growing 15%+ a year, no fraud flag.', sort: 'epsCagr', dir: -1,
+  { key: 'growth', label: 'Rising earnings', icon: 'trend', tone: 'up', hint: 'Earnings per share growing 15%+ a year, no warning sign.', sort: 'epsCagr', dir: -1,
     test: (r) => (r.epsCagr ?? -Infinity) >= 15 && r.fraud === 'clean' },
-  { key: 'avoid', label: 'Risky — avoid', icon: 'caution', tone: 'down', hint: 'Loss-making, category Z or a high-risk fraud pattern.', sort: 'score', dir: 1, test: (r) => r.signal === 'avoid' },
+  { key: 'avoid', label: 'High-risk list', icon: 'caution', tone: 'down', hint: 'Loss-making, category Z or several warning-sign patterns.', sort: 'score', dir: 1, test: (r) => r.signal === 'avoid' },
 ];
 
 // Cheapest P/E and A–Z code are the natural first view; everything else starts with the biggest value.
@@ -116,7 +116,7 @@ function AllCompanies() {
         <div id="all-filters" className={`filter-grid all-filters${filtersOpen ? ' open' : ''}`}>
           {select('signal', 'Signal', 'research', [['', 'Any signal'], ...Object.entries(SIGNALS).map(([k, s]) => [k, s.label] as [string, string])])}
           {select('sector', 'Sector', 'grid', [['', 'All sectors'], ...sectors.map((s) => [s, sectorName(s)] as [string, string])])}
-          {select('fraud', 'Fraud check', 'clean', [['', 'Any fraud risk'], ...Object.entries(FRAUD) as [string, string][]])}
+          {select('fraud', 'Warning-sign check', 'clean', [['', 'Any warning sign'], ...Object.entries(FRAUD) as [string, string][]])}
           {select('cat', 'Category', 'list', [['', 'Any category'], ...['A', 'B', 'N', 'Z'].map((c) => [c, 'Category ' + c] as [string, string])])}
           {select('yield', 'Dividend yield', 'coins', [['', 'Any dividend yield'], ['3', 'Yield 3%+'], ['5', 'Yield 5%+'], ['8', 'Yield 8%+']])}
           {select('liquid', 'Trading', 'columns', [['', 'Any trading volume'], ['10', '৳0.1 cr+ a day'], ['100', '৳1 cr+ a day']])}
@@ -141,7 +141,7 @@ function AllCompanies() {
       <div className="panel table-wrap">
         <table className="cards">
           <thead><tr>
-            <SortHeader k="code" label="Company" sort={sort} onSort={onSort} /><SortHeader k="signalRank" label="Signal" sort={sort} onSort={onSort} /><th><Tr text="Fraud check" /></th>
+            <SortHeader k="code" label="Company" sort={sort} onSort={onSort} /><SortHeader k="signalRank" label="Signal" sort={sort} onSort={onSort} /><th><Tr text="Warning-sign check" /></th>
             <SortHeader k="score" label="Score" sort={sort} onSort={onSort} numeric /><SortHeader k="price" label="Price" sort={sort} onSort={onSort} numeric />
             <SortHeader k="pe" label="P/E" sort={sort} onSort={onSort} numeric /><SortHeader k="dividendYield" label="Yield" sort={sort} onSort={onSort} numeric />
             <SortHeader k="dailyValue" label="Traded / day" sort={sort} onSort={onSort} numeric /><SortHeader k="change1y" label="1 year" sort={sort} onSort={onSort} numeric />
@@ -152,7 +152,7 @@ function AllCompanies() {
                 <div className="small muted">{r.name}{r.sector ? ' · ' + sectorName(r.sector) : ''} · {t('Category')} {r.category}</div>
                 {r.stale ? <span className="pill s-neutral" title={t('Saved before the latest rule update; it refreshes in the background.')}>{t('old data')}</span> : null}</div></div></td>
               <td data-label="Signal"><SignalPill signal={r.signal as Signal} /></td>
-              <td data-label="Fraud check"><FraudPill level={r.fraud as FraudLevel} />{r.flags.length ? <div className="small muted">{r.flags.join(', ')}</div> : null}</td>
+              <td data-label="Warning-sign check"><FraudPill level={r.fraud as FraudLevel} />{r.flags.length ? <div className="small muted">{r.flags.join(', ')}</div> : null}</td>
               <td className="n mono" data-label="Score">{r.score}</td><td className="n mono" data-label="Price">৳{fmt(r.price)}</td>
               <td className="n mono" data-label="P/E">{fmt(r.pe, 1)}</td><td className="n mono" data-label="Yield">{r.dividendYield != null ? fmt(r.dividendYield, 1) + '%' : '—'}</td>
               <td className="n mono" data-label="Traded / day">{moneyPerDay(r.dailyValue)}</td>

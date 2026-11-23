@@ -22,7 +22,7 @@ const RULE_LABELS: Record<RuleType, string> = {
   price_above: 'Price at or above',
   price_below: 'Price at or below',
   dividend: 'Dividend coming up',
-  fraud_flag: 'New fraud flag',
+  fraud_flag: 'New warning sign',
   big_move: 'Big move today',
 };
 
@@ -30,7 +30,7 @@ const RULE_DESCS: Record<RuleType, string> = {
   price_above: 'Fires when the price reaches or exceeds your target.',
   price_below: 'Fires when the price drops to or below your target.',
   dividend: 'Fires N days before the last day to buy shares for a dividend payout.',
-  fraud_flag: 'Fires when a new fraud flag appears on the company since you set up this rule.',
+  fraud_flag: 'Fires when a new warning sign appears on the company since you set up this rule.',
   big_move: 'Fires when the price moves up or down by at least the threshold percentage in one day.',
 };
 
@@ -48,7 +48,7 @@ function ruleDesc(rule: AlertRule): string {
     case 'price_above': return `${rule.code} price ≥ ৳${rule.target.toFixed(2)}`;
     case 'price_below': return `${rule.code} price ≤ ৳${rule.target.toFixed(2)}`;
     case 'dividend': return `${rule.code}: dividend within ${rule.daysBefore} day${rule.daysBefore !== 1 ? 's' : ''} of last buy`;
-    case 'fraud_flag': return `${rule.code}: any new fraud flag`;
+    case 'fraud_flag': return `${rule.code}: any new warning sign`;
     case 'big_move': return `${rule.code}: move ≥ ${rule.threshold}% in a day`;
   }
 }
@@ -249,7 +249,7 @@ export default function AlertsPage() {
               Add default alerts for my watchlist ({watchlistCodes.length} companies)
             </button>
             <span className="small muted" style={{ marginLeft: 8 }}>
-              Adds dividend + new fraud flag rules for each watchlist company.
+              Adds dividend + new warning sign rules for each watchlist company.
             </span>
           </div>
         )}

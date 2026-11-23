@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
 
-const ROUTES = ['/', '/all', '/c/GP', '/dividends', '/sectors', '/compare?codes=BRACBANK,CITYBANK,EBL', '/watchlist', '/portfolio', '/trades', '/plans', '/alerts', '/fraud', '/learn', '/plan'];
+const ROUTES = ['/', '/all', '/c/GP', '/dividends', '/sectors', '/compare?codes=BRACBANK,CITYBANK,EBL', '/watchlist', '/portfolio', '/trades', '/plans', '/alerts', '/warning-signs', '/learn', '/plan'];
 const THEMES = ['dark', 'light'] as const;
 const slug = (r: string) => (r === '/' ? 'home' : r.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, ''));
 

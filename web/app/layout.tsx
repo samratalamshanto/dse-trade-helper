@@ -33,7 +33,7 @@ const mono = localFont({
 
 export const metadata: Metadata = {
   title: 'Trade Helper',
-  description: 'Research Dhaka Stock Exchange companies: signals, fraud checks, dividends and history from public DSE data.',
+  description: 'Research Dhaka Stock Exchange companies: signals, warning signs, dividends and history from public DSE data.',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -49,8 +49,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <Topbar />
               <div id="view" tabIndex={-1}>{children}</div>
               <footer>
-                Data: Dhaka Stock Exchange public website (dse.com.bd). Signals come from fixed rules on that data.
-                They are learning aids, not investment advice. A red flag shows a pattern, not proof of fraud.
+                Signals are automatic rule results, not advice. Not affiliated with, or endorsed by, Dhaka Stock Exchange or BSEC. Not a licensed investment adviser.
                 {' '}<a href="/privacy">Privacy</a> · <a href="/terms">Terms</a>
               </footer>
             </main>

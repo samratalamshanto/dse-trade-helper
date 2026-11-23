@@ -148,11 +148,11 @@ test.describe('dashboard planner cards (API mocked)', () => {
     await page.route('**/api/plans', (r) => json(r, 200, LIST));
     await page.route('**/api/trades**', (r) => json(r, 200, { trades: [], holdings: [], warnings: [], badRows: [] }));
     await page.goto('/');
-    const picks = page.locator('section').filter({ has: page.getByRole('heading', { name: "Today's picks" }) });
+    const picks = page.locator('section').filter({ has: page.getByRole('heading', { name: "Today's research list" }) });
     await expect(picks.getByRole('row').filter({ hasText: 'DHAKABANK' })).toContainText('1785');
     expect(asked[0]).toBe('?budget=20000');
     await picks.getByLabel('Your budget ৳').fill('50000');
-    await picks.getByRole('button', { name: 'Show picks' }).click();
+    await picks.getByRole('button', { name: 'Show list' }).click();
     await expect.poll(() => asked.at(-1)).toBe('?budget=50000');
     expect(await page.evaluate(() => localStorage.getItem('picksBudget'))).toBe('50000');
 

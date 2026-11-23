@@ -35,11 +35,11 @@ export function TodaysPicks() {
 
   return (
     <section className="panel" aria-labelledby="picks-title" style={{ marginTop: 14 }}>
-      <h2 className="h3" id="picks-title"><Icon name="star" /> {t("Today's picks")}</h2>
-      <p className="small muted">{t('Worth researching, no fraud flag, low in its 1-year range or under its 20-day average, and not sliding. Rules on past prices — a list to research, not a buy order.')}</p>
+      <h2 className="h3" id="picks-title"><Icon name="star" /> {t("Today's research list")}</h2>
+      <p className="small muted">{t('Passes the quality checks, no warning sign, low in its 1-year range or under its 20-day average, and not sliding. Rules on past prices — a list to research, not a buy order.')}</p>
       <form className={css.ask} onSubmit={submit}>
         <label>{t('Your budget ৳')}<input type="number" min={1} step="any" value={draft ?? budget} onChange={(e) => setDraft(e.target.value)} /></label>
-        <button className="btn" type="submit">{t('Show picks')}</button>
+        <button className="btn" type="submit">{t('Show list')}</button>
       </form>
       {error ? <div className="note bad" role="alert">{error}</div> : null}
       {!data && !error ? <div className="skel" style={{ height: 120, marginTop: 10 }} aria-busy="true" aria-label={t('Loading picks')} /> : null}

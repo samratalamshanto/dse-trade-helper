@@ -4,7 +4,7 @@ test('learn and plan render', async ({ page }) => {
   await page.goto('/learn');
   await expect(page.getByRole('heading', { level: 1, name: 'How it works' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'The four signals' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'The fraud check' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'The warning-sign check' })).toBeVisible();
   await page.goto('/plan');
   await expect(page.getByRole('heading', { level: 1, name: 'Start investing' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'First steps' })).toBeVisible();

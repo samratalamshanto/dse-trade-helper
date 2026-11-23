@@ -82,16 +82,16 @@ test('A10: without P/E history the cheap answer falls back to the 52-week range'
   assert.strictEqual(q.label, 'Near its 52-week low');
 });
 
-test('A10/B4: the fraud answer uses Clean / Suspicious / High risk', () => {
-  assert.strictEqual(questions(real('GP'))[2].label, 'Clean');
-  assert.strictEqual(questions(real('SHEPHERD'))[2].label, 'Suspicious');
-  assert.strictEqual(questions(real('GP', { category: 'Z' }))[2].label, 'High risk');
+test('A10/B4: the fraud answer uses No flags / 1 flag pattern / Several flags', () => {
+  assert.strictEqual(questions(real('GP'))[2].label, 'No flags');
+  assert.strictEqual(questions(real('SHEPHERD'))[2].label, '1 flag pattern');
+  assert.strictEqual(questions(real('GP', { category: 'Z' }))[2].label, 'Several flags');
 });
 
 test('A11: every signal carries a line for a holder', () => {
   const cases = [real('BRACBANK', { price: 66.6 }), real('GP'), real('DELTALIFE'), real('TITASGAS', { price: 23.4 })];
   assert.deepStrictEqual(cases.map((c) => run(c, 20).signal).sort(), ['avoid', 'caution', 'neutral', 'research']);
-  for (const c of cases) assert.ok(run(c, 20).suggestion.includes('If you own it:'), c.code);
+  for (const c of cases) assert.ok(run(c, 20).suggestion.includes('If you own it,'), c.code);
 });
 
 test('A15: "That is strong" needs EPS growth of 15% a year or more', () => {

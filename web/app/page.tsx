@@ -170,7 +170,7 @@ export default function DashboardPage() {
       <div className="grid g4 quick">
         <Link className="panel card quick-card" href="/all?signal=research"><Icon name="star" /><div><div className="small muted">{t('Shortlist')}</div><div className="stat mono">{d.counts.research}</div><div className="small muted">{t('pass every check')}</div></div></Link>
         <Link className="panel card quick-card" href="/dividends"><Icon name="calendar" /><div><div className="small muted">{t('Dividends coming')}</div><div className="stat mono">{d.upcomingCount}</div><div className="small muted">{t('upcoming record dates')}</div></div></Link>
-        <Link className="panel card quick-card" href="/fraud"><Icon name="high" /><div><div className="small muted">{t('Fraud alerts')}</div><div className="stat mono">{d.fraudCount}</div><div className="small muted">{t('companies with warnings')}</div></div></Link>
+        <Link className="panel card quick-card" href="/warning-signs"><Icon name="high" /><div><div className="small muted">{t('Warning signs')}</div><div className="stat mono">{d.fraudCount}</div><div className="small muted">{t('companies with warnings')}</div></div></Link>
         <Link className="panel card quick-card" href="/learn"><Icon name="help" /><div><div className="small muted">{t('New here?')}</div><div className="stat">{t('How it works')}</div><div className="small muted">{t('signals in plain words')}</div></div></Link>
       </div>
 
@@ -182,7 +182,7 @@ export default function DashboardPage() {
         <TodayItem icon="research" title="Dividends declared this week" count={d.declaredThisWeek.length} href="/dividends">
           {d.declaredThisWeek.slice(0, 5).map((r) => <Row key={r.code} code={r.code}>{pctNum(r.cashPct)}%{r.stockPct ? ` + ${pctNum(r.stockPct)}% bonus` : ''} · {fmtDate(r.announced)}{r.fraud !== 'clean' ? <> <FraudPill level={r.fraud as FraudLevel} /></> : null}</Row>)}
         </TodayItem>
-        <TodayItem icon="caution" title="Unusual trading volume" count={d.unusualCount} href="/fraud">
+        <TodayItem icon="caution" title="Unusual trading volume" count={d.unusualCount} href="/warning-signs">
           {d.unusual.map((u) => <Row key={u.code} code={u.code}>{fmt(u.x, 1)}× normal volume</Row>)}
         </TodayItem>
         <TodayItem icon="trend" title={liveNow ? 'Top gainers today' : "Last session's top gainers"} count={d.gainers.length} href="/all">
@@ -191,7 +191,7 @@ export default function DashboardPage() {
         <TodayItem icon="avoid" title={liveNow ? 'Top losers today' : "Last session's top losers"} count={d.losers.length} href="/all">
           {d.losers.map((g) => <Row key={g.code} code={g.code}><span className="down mono">{signed(g.percent, 2)}</span> · ৳{fmt(g.price)}</Row>)}
         </TodayItem>
-        <TodayItem icon="high" title="Fraud warnings (outside category Z)" count={d.fraudCount} href="/fraud">
+        <TodayItem icon="high" title="Warning signs (outside category Z)" count={d.fraudCount} href="/warning-signs">
           {d.fraudTop.map((f) => <Row key={f.code} code={f.code}><span className="small">{f.flags.join(', ')}</span></Row>)}
         </TodayItem>
       </div>

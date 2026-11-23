@@ -15,7 +15,7 @@ const NAV: { group: string; items: { href: string; label: string; icon: IconName
     { href: '/', label: 'Dashboard', icon: 'home' },
     { href: '/all', label: 'Companies', icon: 'list', also: ['/sectors', '/dividends'] },
     { href: '/compare', label: 'Compare', icon: 'columns' },
-    { href: '/fraud', label: 'Fraud alerts', icon: 'high' },
+    { href: '/warning-signs', label: 'Warning signs', icon: 'high' },
     { href: '/scorecard', label: 'Signal scorecard', icon: 'research' },
   ] },
   { group: 'MINE', items: [
@@ -46,7 +46,7 @@ export function Sidebar() {
   const collapsed = nav === 'collapsed';
   const { codes } = useWatchlist();
   const watched = codes.length;
-  // Same request the top bar makes, so this adds no API call. Z stocks are left out, as on the Fraud alerts page's default list.
+  // Same request the top bar makes, so this adds no API call. Z stocks are left out, as on the Warning signs page's default list.
   const { data } = useApi<{ rows: CompanyRow[]; session: null }>('/api/companies');
   const flagged = data ? data.rows.filter((r) => r.fraud !== 'clean' && r.category !== 'Z' && codes.includes(r.code)).length : 0;
   const { t } = useLang();
@@ -75,7 +75,7 @@ export function Sidebar() {
               aria-current={currentOf(path, it)}>
               <Icon name={it.icon} /><span className="nav-text">{t(it.label)}</span>
               {it.href === '/watchlist' && watched ? <span className="nav-count mono" aria-label={`${watched} saved`}>{watched}</span> : null}
-              {it.href === '/fraud' && flagged ? <span className="nav-count nav-alert mono">{flagged}<span className="sr-only"> {t('of your watchlist flagged')}</span></span> : null}
+              {it.href === '/warning-signs' && flagged ? <span className="nav-count nav-alert mono">{flagged}<span className="sr-only"> {t('of your watchlist flagged')}</span></span> : null}
             </Link>
           ))}
         </div>

@@ -65,7 +65,7 @@ export const emptyState = (): NotifyState => ({ sent: {}, actions: {}, lastRun: 
 
 const taka = (x: number) => `৳${x.toFixed(2)}`;
 const whole = (x: number) => `${x < 0 ? '-' : ''}৳${Math.round(Math.abs(x)).toLocaleString('en-US')}`;
-const ALERT_ACTIONS: Record<string, string> = { review: 'Review — consider selling', 'take-profit': 'Take profit' };
+const ALERT_ACTIONS: Record<string, string> = { review: 'Review: stop-loss or a warning', 'take-profit': 'Above your target' };
 
 export function alertsFor(input: NotifyInput, prevActions: Record<string, string>): Alert[] {
   const { clock } = input;
@@ -73,7 +73,7 @@ export function alertsFor(input: NotifyInput, prevActions: Record<string, string
   for (const p of input.plans) {
     const code = escapeHtml(p.code);
     if (p.live.status === 'reached' && p.targetPrice != null) {
-      out.push({ key: `plan:${p.id}:reached:${clock.date}`, text: `<b>${code}</b> reached ${taka(p.targetPrice)} — your plan says buy the other ${p.live.remaining}` });
+      out.push({ key: `plan:${p.id}:reached:${clock.date}`, text: `<b>${code}</b> reached your plan price; ${p.live.remaining} shares left in your plan` });
     }
     if ((p.live.status === 'reached' || p.live.status === 'waiting') && p.until === clock.tomorrow) {
       out.push({ key: `plan:${p.id}:expiring:${p.until}`, text: `Your <b>${code}</b> buy plan ends on the next trading day (${p.until}) — ${p.live.remaining} shares still to buy. Edit the date or cancel it.` });
@@ -101,11 +101,11 @@ export function summaryText(input: NotifyInput): string {
   const reached = input.plans.filter((p) => p.live.status === 'reached').length;
   const waiting = input.plans.filter((p) => p.live.status === 'waiting').length;
   const lines = [
-    `<b>DSE morning summary — ${input.clock.date}</b>`,
+    `<b>Morning summary (DSE data) — ${input.clock.date}</b>`,
     held.length ? `Holdings: ${whole(value)}${input.dayPl == null ? '' : ` (today ${input.dayPl >= 0 ? '+' : ''}${whole(input.dayPl)})`}` : 'Holdings: none',
     `Buy plans: ${reached} reached, ${waiting} waiting`,
   ];
-  if (input.picks.length) lines.push(`Picks to research: ${input.picks.map((p) => `${escapeHtml(p.code)} ${taka(p.price)}`).join(', ')}`);
+  if (input.picks.length) lines.push(`Research list: ${input.picks.map((p) => `${escapeHtml(p.code)} ${taka(p.price)}`).join(', ')}`);
   lines.push('<i>Learning aid, not investment advice.</i>');
   return lines.join('\n');
 }
