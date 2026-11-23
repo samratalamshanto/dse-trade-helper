@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import { AppProvider } from '@/components/AppProvider';
@@ -6,6 +8,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { Topbar } from '@/components/Topbar';
 import { AlertsWatcher } from '@/components/AlertsWatcher';
 import { PrefsSync } from '@/components/PrefsSync';
+import { UserGuide } from '@/components/UserGuide';
 import './globals.css';
 
 // Self-hosted (SIL OFL fonts) so pages never depend on a slow download from Google at build or dev time.
@@ -54,6 +57,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           </div>
           <AlertsWatcher />
           <PrefsSync />
+          <UserGuide hasPdf={existsSync(path.join(process.cwd(), 'public', 'user-guide.pdf'))} />
         </AppProvider>
         </LangProvider>
       </body>
