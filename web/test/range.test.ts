@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { describeMatch, describeRule, gainFromBuyPct, parseRangeRules, rangeFeed, rangeStats, type RangeRow } from '../lib/range.ts';
+import type { CompanyRow } from '../lib/service.ts';
 
 const row = (code: string, price: number | null, low: number | null, high: number | null): RangeRow => ({ code, price, weekLow52: low, weekHigh52: high });
 
@@ -108,4 +109,40 @@ test('rules from storage: odd ids and number formats are refused; the first of d
 test('rule wording names the threshold and the scope', () => {
   assert.equal(describeRule({ id: 'a', kind: 'nearHigh', pct: 5, scope: 'watchlist' }), 'within 5% of the 52-week high (your watchlist)');
   assert.equal(describeRule({ id: 'a', kind: 'downFromBuy', pct: 8, scope: 'holdings' }), 'down 8% or more from your buy (your holdings)');
+});
+
+const companyRow = (code: string, price: number | null, low: number | null, high: number | null, over: Partial<CompanyRow> = {}): CompanyRow => ({
+  code, name: code, sector: 'Banks', category: 'A', price, changePct: 0, signal: 'research', score: 50, quality: 'medium',
+  fraud: 'clean', flags: [], pe: 10, dividendYield: 2, epsCagr: 5, change1y: 0, dailyValue: 2_000_000,
+  weekHigh52: high, weekLow52: low, stale: false, ...over,
+} as CompanyRow);
+
+const companies: CompanyRow[] = [
+  companyRow('GP', 226.7, 221.9, 282, { signal: 'research' }),
+  companyRow('ROBI', 30, 25, 40, { signal: 'avoid' }),
+];
+
+test('pick filtering: a rule with pick=good only matches companies that pass the good pick', () => {
+  const rule = { id: 'r', kind: 'nearLow' as const, pct: 25, scope: 'all' as const, pick: 'good' as const };
+  const result = rangeFeed([rule], { rows: companies, watchlist: [], holdings: [], companies });
+  assert.deepEqual(result.map((m) => m.code), ['GP'], 'ROBI has signal=avoid and fails good');
+});
+
+test('pick filtering: without companies in FeedInput, pick is ignored and all pass', () => {
+  const rule = { id: 'r', kind: 'nearLow' as const, pct: 25, scope: 'all' as const, pick: 'good' as const };
+  const result = rangeFeed([rule], { rows: companies, watchlist: [], holdings: [] });
+  assert.equal(result.length, 2, 'both match when companies is not provided');
+});
+
+test('parseRangeRules: a valid pick is kept; an unknown pick is dropped from the field but the rule is kept', () => {
+  const good = parseRangeRules([{ id: 'r1', kind: 'nearLow', pct: 5, scope: 'all', pick: 'good' }]);
+  assert.deepEqual(good, [{ id: 'r1', kind: 'nearLow', pct: 5, scope: 'all', pick: 'good' }]);
+
+  const bogus = parseRangeRules([{ id: 'r2', kind: 'nearLow', pct: 5, scope: 'all', pick: 'bogus' }]);
+  assert.deepEqual(bogus, [{ id: 'r2', kind: 'nearLow', pct: 5, scope: 'all' }], 'rule kept, pick dropped');
+});
+
+test('describeRule mentions the pick label when present', () => {
+  assert.equal(describeRule({ id: 'a', kind: 'nearLow', pct: 10, scope: 'all', pick: 'good' }), 'within 10% of the 52-week low, Good companies (all companies)');
+  assert.equal(describeRule({ id: 'a', kind: 'nearLow', pct: 5, scope: 'all' }), 'within 5% of the 52-week low (all companies)', 'no pick: unchanged format');
 });

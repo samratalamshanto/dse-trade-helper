@@ -45,3 +45,11 @@ test('alert rules are capped and damaged rules dropped', () => {
   assert.equal(parsePrefs({ watchlist: [], brokerCommissionPct: '0.4', alertRules: many, rangeRules: [] })?.alertRules?.length, 100);
   assert.deepEqual(prefsFromRows([['alertRules', 'oops']]), {});
 });
+
+test('a range rule with a valid pick round-trips; an unknown pick is dropped from the field but the rule is kept', () => {
+  const withPick = { id: 'rr2', kind: 'nearLow' as const, pct: 5, scope: 'all' as const, pick: 'good' as const };
+  assert.deepEqual(prefsFromRows(prefsToRows({ watchlist: [], brokerCommissionPct: '0.4', alertRules: [], rangeRules: [withPick] }))?.rangeRules, [withPick]);
+
+  const withBogus = { id: 'rr3', kind: 'nearLow' as const, pct: 5, scope: 'all' as const, pick: 'bogus' as never };
+  assert.deepEqual(prefsFromRows(prefsToRows({ watchlist: [], brokerCommissionPct: '0.4', alertRules: [], rangeRules: [withBogus] }))?.rangeRules, [{ id: 'rr3', kind: 'nearLow', pct: 5, scope: 'all' }]);
+});

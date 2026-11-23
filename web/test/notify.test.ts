@@ -232,3 +232,20 @@ test('holdings-scope range rule ignores non-held codes', () => {
   assert.match(range[0].text, /ROBI/);
   assert.doesNotMatch(range[0].text, /GP/);
 });
+
+test('a rule with a pick excludes a company that fails the pick', () => {
+  const rule = { id: 'rp1', kind: 'nearLow' as const, pct: 20, scope: 'all' as const, pick: 'good' as const };
+  const rangeRows = [
+    { code: 'GP', price: 220, weekLow52: 200, weekHigh52: 300 },
+    { code: 'ROBI', price: 30, weekLow52: 28, weekHigh52: 50 },
+  ];
+  const companies = [
+    { code: 'GP', name: 'GP', sector: 'Telecom', category: 'A', price: 220, changePct: 0, signal: 'research', score: 60, quality: 'high', fraud: 'clean', flags: [], pe: 10, dividendYield: 3, epsCagr: 10, change1y: 5, dailyValue: 2_000_000, weekHigh52: 300, weekLow52: 200, stale: false },
+    { code: 'ROBI', name: 'ROBI', sector: 'Telecom', category: 'B', price: 30, changePct: 0, signal: 'avoid', score: 20, quality: 'low', fraud: 'warn', flags: [], pe: 5, dividendYield: 1, epsCagr: -5, change1y: -10, dailyValue: 500_000, weekHigh52: 50, weekLow52: 28, stale: false },
+  ];
+  const a = alertsFor(base({ rangeRules: [rule], rangeRows, companies: companies as never, owned: [] }), {});
+  const range = a.filter((x) => x.key.startsWith('range:'));
+  assert.equal(range.length, 1, 'one alert for the matching rule');
+  assert.match(range[0].text, /GP/, 'GP has signal=research so passes the good pick');
+  assert.doesNotMatch(range[0].text, /ROBI/, 'ROBI has signal=avoid so fails the good pick');
+});

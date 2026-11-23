@@ -4,6 +4,7 @@ import { DHAKA_OFFSET_MS } from './dhaka.ts';
 import { livePrices } from './dse.ts';
 import { listPlans, picksFor } from './planner-service.ts';
 import { rangeFeed, describeMatch, describeRule, type Owned, type RangeRow, type RangeRule } from './range.ts';
+import type { CompanyRow } from './service.ts';
 
 export const RANGE_DIGEST_MAX = 10;
 import { listCompanies, companyDetail } from './service.ts';
@@ -50,6 +51,7 @@ export interface NotifyInput {
   owned: readonly Owned[];
   rangeRules: readonly RangeRule[];
   rangeRows: readonly RangeRow[];
+  companies?: readonly CompanyRow[];
   watchlist: readonly string[];
   lastBuyDates: Record<string, string | null>;
   dayPl: number | null;
@@ -103,7 +105,7 @@ export function alertsFor(input: NotifyInput, prevActions: Record<string, string
     }
   }
   if (input.rangeRules.length > 0) {
-    const matches = rangeFeed(input.rangeRules, { rows: input.rangeRows, watchlist: input.watchlist, holdings: input.owned });
+    const matches = rangeFeed(input.rangeRules, { rows: input.rangeRows, watchlist: input.watchlist, holdings: input.owned, companies: input.companies });
     // One message per rule per day, listing the closest RANGE_DIGEST_MAX: a wide rule cannot flood the chat or the saved state.
     for (const rule of input.rangeRules) {
       const mine = matches.filter((m) => m.rule.id === rule.id);
@@ -185,6 +187,7 @@ async function gather(clock: Clock, budget: number | null | undefined): Promise<
     owned: held.map((h) => ({ code: h.code, shares: h.shares, avgCost: h.avgCost })),
     rangeRules: prefs?.rangeRules ?? [],
     rangeRows: companyResult?.rows ?? [],
+    companies: companyResult?.rows ?? [],
     watchlist: prefs?.watchlist ?? [],
     dayPl: moves.length && moves.every((m) => m != null) ? moves.reduce((a: number, m) => a + (m as number), 0) : null,
   };

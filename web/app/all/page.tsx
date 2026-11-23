@@ -12,22 +12,17 @@ import { compareNullsLast, fmt, moneyPerDay, sectorName, signed, tone } from '@/
 import { FRAUD, FraudPill, Icon, SIGNAL_ORDER, SIGNALS, SignalPill, Skeleton, type FraudLevel, type IconName, type Signal } from '@/components/ui';
 import type { CompanyRow } from '@/lib/service';
 import type { MarketSession } from '@/lib/dse';
+import { QUICK_PICKS, type QuickPickKey } from '@/lib/quick-picks';
 
 interface CompaniesResponse { rows: CompanyRow[]; codes: { code: string; sector: string }[]; medians: Record<string, number | null>; session: MarketSession | null }
 
-const LIQUID_BDT = 1_000_000;
-type Medians = Record<string, number | null>;
-const PRESETS: { key: string; label: string; icon: IconName; tone: string; hint: string; sort: string; dir: number; test: (r: CompanyRow, m: Medians) => boolean }[] = [
-  { key: 'good', label: 'Good companies', icon: 'research', tone: 'accent', hint: 'Passes all quality checks, at any price.', sort: 'score', dir: -1,
-    test: (r) => r.signal === 'research' },
-  { key: 'cheap', label: 'Low P/E vs sector', icon: 'tag', tone: 'accent', hint: 'Passes the checks, with a P/E at or below its sector median.', sort: 'pe', dir: 1,
-    test: (r, m) => r.signal === 'research' && r.pe != null && m[r.sector] != null && r.pe <= (m[r.sector] as number) },
-  { key: 'dividend', label: 'High dividend', icon: 'coins', tone: 'up', hint: 'Yield 5%+ at today\'s price, no warning sign, easy to trade.', sort: 'dividendYield', dir: -1,
-    test: (r) => (r.dividendYield ?? 0) >= 5 && r.fraud === 'clean' && (r.dailyValue ?? 0) >= LIQUID_BDT },
-  { key: 'growth', label: 'Rising earnings', icon: 'trend', tone: 'up', hint: 'Earnings per share growing 15%+ a year, no warning sign.', sort: 'epsCagr', dir: -1,
-    test: (r) => (r.epsCagr ?? -Infinity) >= 15 && r.fraud === 'clean' },
-  { key: 'avoid', label: 'High-risk list', icon: 'caution', tone: 'down', hint: 'Loss-making, category Z or several warning-sign patterns.', sort: 'score', dir: 1, test: (r) => r.signal === 'avoid' },
-];
+const PICK_UI: Record<QuickPickKey, { icon: IconName; tone: string }> = {
+  good: { icon: 'research', tone: 'accent' },
+  cheap: { icon: 'tag', tone: 'accent' },
+  dividend: { icon: 'coins', tone: 'up' },
+  growth: { icon: 'trend', tone: 'up' },
+  avoid: { icon: 'caution', tone: 'down' },
+};
 
 // Cheapest P/E and A–Z code are the natural first view; everything else starts with the biggest value.
 const ASCENDING_FIRST = new Set(['code', 'pe']);
@@ -75,7 +70,7 @@ function AllCompanies() {
   const onSort = (k: string) => setParams({ sort: k, dir: sort.key === k ? -sort.dir : ASCENDING_FIRST.has(k) ? 1 : -1 });
 
   const key = (r: CompanyRow): unknown => (sort.key === 'signalRank' ? SIGNAL_ORDER[r.signal as Signal] * 1000 + r.score : (r as unknown as Record<string, unknown>)[sort.key]);
-  const preset = PRESETS.find((p) => p.key === params.get('preset'));
+  const preset = QUICK_PICKS.find((p) => p.key === params.get('preset'));
   const shown = rows
     .filter((r) => !preset || preset.test(r, data?.medians || {}))
     .filter((r) => (!state.signal || r.signal === state.signal) && (!state.sector || r.sector === state.sector) && (!state.fraud || r.fraud === state.fraud)
@@ -105,10 +100,13 @@ function AllCompanies() {
       <div className="panel filter-panel">
         <div role="group" aria-label={t('Quick picks:')} className="presets">
           <span className="small muted"><Tr text="Quick picks:" /></span>
-          {PRESETS.map((p) => (
-            <button key={p.key} type="button" className={`btn chip chip-${p.tone}${preset?.key === p.key ? ' active' : ''}`} aria-pressed={preset?.key === p.key} title={t(p.hint)}
-              onClick={() => setParams(preset?.key === p.key ? { preset: '', sort: 'score', dir: -1 } : { preset: p.key, sort: p.sort, dir: p.dir })}><Icon name={p.icon} /><Tr text={p.label} /></button>
-          ))}
+          {QUICK_PICKS.map((p) => {
+            const ui = PICK_UI[p.key];
+            return (
+              <button key={p.key} type="button" className={`btn chip chip-${ui.tone}${preset?.key === p.key ? ' active' : ''}`} aria-pressed={preset?.key === p.key} title={t(p.hint)}
+                onClick={() => setParams(preset?.key === p.key ? { preset: '', sort: 'score', dir: -1 } : { preset: p.key, sort: p.sort, dir: p.dir })}><Icon name={ui.icon} /><Tr text={p.label} /></button>
+            );
+          })}
         </div>
         {preset ? <p className="small muted preset-hint"><Tr text={preset.label} />: {t(preset.hint)}</p> : null}
         {/* On a phone the six selects fold behind this button, so the list is visible without scrolling. */}
