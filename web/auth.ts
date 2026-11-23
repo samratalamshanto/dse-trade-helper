@@ -1,9 +1,9 @@
 import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
-import { findOrCreateSheet } from './lib/google-user.ts';
+import { findOrCreateSheet, sheetUrl } from './lib/google-user.ts';
 
 // Google sign-in. No database: the encrypted session cookie (JWT) holds the Google id, the user's Sheet id and the refresh token.
-// The session the browser can read keeps the default fields only (name, email, picture); tokens never leave the server.
+// The session the browser can read: name, email, picture and the link to the user's own Sheet; tokens never leave the server.
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [Google({
     authorization: { params: { scope: 'openid email profile https://www.googleapis.com/auth/drive.file', access_type: 'offline', prompt: 'consent' } },
@@ -24,8 +24,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         refreshToken: account.refresh_token ?? token.refreshToken,
       };
     },
+    session({ session, token }) {
+      return { ...session, sheetUrl: sheetUrl(token.sheetId) };
+    },
   },
 });
+
+declare module 'next-auth' {
+  interface Session { sheetUrl?: string }
+}
 
 declare module 'next-auth/jwt' {
   interface JWT { sheetId?: string; accessToken?: string; expiresAt?: number; refreshToken?: string }

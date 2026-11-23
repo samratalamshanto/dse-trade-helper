@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { signIn, signOut } from 'next-auth/react';
-import { SIGNED_IN_STORE } from '@/components/trades-client';
+import { SHEET_URL_STORE, SIGNED_IN_STORE } from '@/components/trades-client';
 import { useStoredValue, writeStored } from '@/components/useStored';
 import { connectSheet, disconnectSheet, moveBrowserDataToSheet, useBrowserData, type Mode } from '@/components/portfolio-store';
 import css from '@/app/portfolio/trades.module.css';
@@ -26,11 +26,16 @@ export function SyncPanel({ mode, onChanged }: { mode: Mode; onChanged: () => vo
   const sheet = mode === 'sheet';
   const [signedIn] = useStoredValue(SIGNED_IN_STORE, '');
   const google = signedIn === '1';
+  const [sheetLink] = useStoredValue(SHEET_URL_STORE, '');
   // The flag goes first, so the page never asks the Sheet with a session that is ending.
-  const leave = () => { writeStored(SIGNED_IN_STORE, ''); void signOut(); };
+  const leave = () => { writeStored(SIGNED_IN_STORE, ''); writeStored(SHEET_URL_STORE, ''); void signOut(); };
   // Also shown in owner-key mode: a Google sign-in then takes over with the user's own Sheet.
   const googleButton = <button className="btn primary" type="button" disabled={busy} onClick={() => void signIn('google')}>Continue with Google</button>;
   const pending = sheet && (trades.good.length + plans.good.length > 0 || hasLimits);
+  // "1 trade and your limits", "2 trades, 1 plan and your limits": zero counts are left out.
+  const left = [trades.good.length ? plural(trades.good.length, 'trade', 'trades') : '', plans.good.length ? plural(plans.good.length, 'plan', 'plans') : '', hasLimits ? 'your limits' : ''].filter(Boolean);
+  const leftText = left.length > 1 ? `${left.slice(0, -1).join(', ')} and ${left[left.length - 1]}` : left[0] ?? '';
+  const single = left.length === 1 && trades.good.length + plans.good.length === 1;
 
   const run = async (work: () => Promise<void>, failed: string) => {
     setBusy(true);
@@ -41,34 +46,40 @@ export function SyncPanel({ mode, onChanged }: { mode: Mode; onChanged: () => vo
   return (
     <details className={`panel ${css.section}`} open={open || pending} onToggle={(e) => setOpen(e.currentTarget.open)}>
       <summary className="h3">Sync with my Google Sheet</summary>
-      <p className="small muted">Keep your trades, plans, watchlist and broker rate in your own Google Sheet so they show on every device.</p>
       {sheet ? (
         <>
           <p className="small" role="status">{google ? 'Signed in with Google: your trades, plans, watchlist and broker rate are saved in the "DSE Trade Helper" Sheet in your Google Drive.' : 'Connected: your trades, plans, watchlist and broker rate are saved in your Google Sheet.'}</p>
           {pending ? (
             <div className="note warn" role="status">
-              <b>{plural(trades.good.length, 'trade', 'trades')} and {plural(plans.good.length, 'plan', 'plans')}{hasLimits ? ' and your limits' : ''} are still saved only in this browser.</b> Move them into your Google Sheet so every device shows them. Each one leaves this browser once it is saved.{hasLimits ? ' Your limits here replace the limits saved in the Sheet.' : ''}
+              <b>{leftText} {single ? 'is' : 'are'} still saved only in this browser.</b> Move {single ? 'it' : 'them'} into your Google Sheet so every device shows {single ? 'it' : 'them'}. Each one leaves this browser once it is saved.{hasLimits ? ' Your limits here replace the limits saved in the Sheet.' : ''}
               <div className={css.actions}><button className="btn primary" type="button" disabled={busy} onClick={() => void run(moveBrowserDataToSheet, 'Could not reach your Google Sheet. Nothing was lost: press Move again to carry on.')}>Move into my Google Sheet</button></div>
             </div>
           ) : null}
           {google ? (
-            <div className={css.actions}><button className="btn" type="button" disabled={busy} onClick={leave}>Sign out</button></div>
+            <div className={css.actions}>
+              {sheetLink ? <a className="btn primary" href={sheetLink} target="_blank" rel="noopener noreferrer" aria-label="Open my Google Sheet (opens in a new tab)">Open my Google Sheet ↗</a> : null}
+              <button className="btn" type="button" disabled={busy} onClick={leave}>Sign out</button>
+            </div>
           ) : (
             <div className={css.actions}>
               <button className="btn" type="button" disabled={busy} onClick={() => { disconnectSheet(); onChanged(); }}>Disconnect</button>
               {googleButton}
             </div>
           )}
-          <p className="small muted">{google ? 'Sign out' : 'Disconnect'} goes back to this browser. Nothing in the Sheet is deleted.</p>
+          <p className="small muted">{google ? 'Sign out' : 'Disconnect'} switches back to this browser. Nothing in the Sheet is deleted.</p>
         </>
       ) : (
         <>
+          <p className="small">Right now your trades stay in this browser. Sign in with Google to keep them in your own Google Sheet and see them on every device.</p>
           <p className="small muted">We only see the one Sheet we create for you. Your other Google Drive files stay private.</p>
           <div className={css.actions}>{googleButton}</div>
-          <form className={css.form} onSubmit={connect}>
-            <label>Site owner: sync password<input type="password" autoComplete="off" value={draft} onChange={(e) => setDraft(e.target.value)} required minLength={16} /></label>
-            <div className={css.actions}><button className="btn" type="submit" disabled={busy}>Connect</button></div>
-          </form>
+          <details className={css.section}>
+            <summary className="small muted">For the site owner</summary>
+            <form className={css.form} onSubmit={connect}>
+              <label>Sync password<input type="password" autoComplete="off" value={draft} onChange={(e) => setDraft(e.target.value)} required minLength={16} /></label>
+              <div className={css.actions}><button className="btn" type="submit" disabled={busy}>Connect</button></div>
+            </form>
+          </details>
         </>
       )}
       {error ? <p className={css.error} role="alert">{error}</p> : null}

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { signOut } from 'next-auth/react';
-import { call, checkSignIn, ensureKey, KEY_STORE, sheetKey, SIGNED_IN_STORE, type TradesList } from '@/components/trades-client';
+import { call, checkSignIn, ensureKey, KEY_STORE, SHEET_URL_STORE, sheetKey, SIGNED_IN_STORE, type TradesList } from '@/components/trades-client';
 import { readStored, useStoredValue, writeStored } from '@/components/useStored';
 import type { PlansList } from '@/components/planner/plan-text';
 import { dhakaToday } from '@/lib/dhaka';
@@ -211,7 +211,7 @@ export const disconnectSheet = (): void => { writeStored(KEY_STORE, ''); writeSt
 const STOPPED_STORE = 'sheetKeyStopped';
 export function dropRefusedKey(): void {
   // Google refused the saved sign-in: end the session so the page offers "Continue with Google" again.
-  if (readStored(SIGNED_IN_STORE) === '1') { writeStored(SIGNED_IN_STORE, ''); void signOut({ redirect: false }); return; }
+  if (readStored(SIGNED_IN_STORE) === '1') { writeStored(SIGNED_IN_STORE, ''); writeStored(SHEET_URL_STORE, ''); void signOut({ redirect: false }); return; }
   writeStored(STOPPED_STORE, '1');
   disconnectSheet();
 }

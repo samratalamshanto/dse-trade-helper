@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test, type TestContext } from 'node:test';
 import { encode } from 'next-auth/jwt';
 import { readRows, serialPerSheet, withSheet, type SheetTarget } from '../lib/sheets.ts';
-import { findOrCreateSheet, SIGN_IN_AGAIN, userTarget } from '../lib/google-user.ts';
+import { findOrCreateSheet, SIGN_IN_AGAIN, sheetUrl, userTarget } from '../lib/google-user.ts';
 import { tradesRoute } from '../lib/trades-http.ts';
 
 const SECRET = 'test-secret-at-least-32-characters-long!!';
@@ -119,4 +119,9 @@ test('route: a forged or missing cookie falls back to the key check', async () =
   assert.equal((await tradesRoute(forged, 'list', async () => assert.fail('must not run'))).status, 503);
   const owner = new Request('http://localhost:3000/api/notify/test', { method: 'POST', headers: { cookie: await sessionCookie('mine') } });
   assert.equal((await tradesRoute(owner, 'notify test', async () => assert.fail('must not run'), { ownerOnly: true })).status, 503);
+});
+
+test('the browser gets only a link to the own Sheet, and only for a well-formed id', () => {
+  assert.equal(sheetUrl('1AbC-def_ghi1234567'), 'https://docs.google.com/spreadsheets/d/1AbC-def_ghi1234567/edit');
+  for (const bad of [undefined, '', 'short', '1AbC/../evil0000', 'x"><script>', 42]) assert.equal(sheetUrl(bad), undefined, String(bad));
 });

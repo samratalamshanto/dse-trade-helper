@@ -6,7 +6,7 @@ import { fmt, fmtDate } from '@/components/format';
 import { dhakaToday } from '@/lib/dhaka';
 import { Icon, Skeleton } from '@/components/ui';
 import TelegramTestButton from '@/components/TelegramTestButton';
-import { CheckBadge, type TradesList as List } from '@/components/trades-client';
+import { CheckBadge, KEY_STORE, SIGNED_IN_STORE, type TradesList as List } from '@/components/trades-client';
 import { deleteTrade, dropRefusedKey, importFile, listTrades, saveLimits, saveTrade, useBrowserData, useMode, type ImportResult } from '@/components/portfolio-store';
 import { commissionFor, MAX_COMMISSION_PCT, tradesCsv, type Account, type Trade, type TradeInput } from '@/lib/trades';
 import { useApi } from '@/components/AppProvider';
@@ -38,6 +38,10 @@ function tradeAmount(t: Trade): number {
 export default function PortfolioPage() {
   const { mode, ready } = useMode();
   const sheet = mode === 'sheet';
+  // Telegram still sends to the one owner chat (lib/trades-http.ts ownerOnly): only the owner key may test it.
+  const [ownerKey] = useStoredValue(KEY_STORE, '');
+  const [signedIn] = useStoredValue(SIGNED_IN_STORE, '');
+  const ownerMode = !!ownerKey && signedIn !== '1';
   const browserTrades = useBrowserData().trades.good;
   const [data, setData] = useState<List | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -274,8 +278,14 @@ export default function PortfolioPage() {
       {paper ? null : <div className={`panel ${css.section}`}><WhatIfCalc companies={companies} dividends={dividends} /></div>}
       <div className={`panel ${css.section}`}>
         <h2 className="h3">Phone alerts</h2>
-        <p className="small muted">Get a Telegram message when a plan reaches its price or a holding needs a look. Ask whoever set up this site to connect Telegram, then send a test.</p>
-        {sheet ? <TelegramTestButton /> : <p className="small">Phone alerts need Google Sheet sync (below).</p>}
+        {ownerMode ? (
+          <>
+            <p className="small muted">Get a Telegram message when a plan reaches its price or a holding needs a look.</p>
+            <TelegramTestButton />
+          </>
+        ) : (
+          <p className="small">Telegram alerts are run by the site owner for now. For price alerts on companies you watch, use the <Link href="/alerts">Alerts page</Link>.</p>
+        )}
       </div>
       </div>
       <SyncPanel mode={mode} onChanged={() => void load(account)} />

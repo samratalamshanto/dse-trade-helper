@@ -160,6 +160,8 @@ body.nav-collapsed aside a { justify-content: center; padding: 8px; }
 dl.gloss dt { font-weight: 600; margin-top: 14px; } dl.gloss dd { margin: 4px 0 0; color: var(--muted); }
 .empty { text-align: center; padding: 30px; color: var(--muted); }
 footer { margin-top: 40px; font-size: 12px; color: var(--muted); }
+/* Privacy and Terms links: a tap target big enough for a finger. */
+footer a { display: inline-block; padding: 12px 6px; }
 aside .menu-btn { display: none; }
 .skip-link { position: absolute; left: 8px; top: -60px; z-index: 20; background: var(--accent); color: #fff; padding: 10px 14px; border-radius: 8px; }
 .skip-link:focus { top: 8px; }

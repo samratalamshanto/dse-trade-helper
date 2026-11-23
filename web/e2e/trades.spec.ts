@@ -35,11 +35,13 @@ test.describe('/trades (API mocked)', () => {
     await expect(page.getByRole('heading', { name: 'Portfolio', level: 1 })).toBeVisible();
     await expect(page.getByLabel('Password')).toBeHidden();
     await page.getByText('Sync with my Google Sheet').click();
+    await syncPanel(page).getByText('For the site owner').click();
     await syncPanel(page).getByLabel('Password').fill(KEY);
     await syncPanel(page).getByRole('button', { name: 'Connect' }).click();
     await expect(syncPanel(page).getByRole('alert')).toHaveText('That password is not right.');
     await expect(syncPanel(page).getByRole('button', { name: 'Connect' })).toBeVisible();
-    expect(await page.evaluate(() => localStorage.getItem('tradesKey'))).toBeNull();
+    // No key is kept: the dev key server answers an empty key, which is saved as ''.
+    expect(await page.evaluate(() => localStorage.getItem('tradesKey') ?? '')).toBe('');
   });
   test.use({ allowedConsole: [/status of 40[01]/] });
 
@@ -48,7 +50,8 @@ test.describe('/trades (API mocked)', () => {
     await page.route('**/api/trades**', (r) => json(r, r.request().headers()['x-trades-key'] === KEY ? 200 : 401, LIST));
     await page.goto('/portfolio');
     await expect(page.getByRole('heading', { name: 'All trades' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Disconnect' })).toBeAttached();
+    await page.getByText('Sync with my Google Sheet').click();
+    await expect(syncPanel(page).getByRole('button', { name: 'Disconnect' })).toBeVisible();
   });
 
   test('list: holdings and trades table, sell amount = qty*price - fee', async ({ page }) => {
@@ -219,13 +222,14 @@ test.describe('/trades (API mocked)', () => {
     await expect(page.getByRole('button', { name: 'Practice', exact: true })).toBeEnabled();
   });
 
-  test('telegram: browser mode says it needs the Sheet; after connecting, the test button posts with the key', async ({ page }) => {
+  test('telegram: browser mode points to the Alerts page; after connecting, the test button posts with the key', async ({ page }) => {
     await page.route('**/api/trades**', (r) => json(r, 200, LIST));
     await page.route('**/api/notify/test', (r) => json(r, 200, { sent: true }));
     await page.goto('/portfolio');
-    await expect(page.getByText('Phone alerts need Google Sheet sync (below).')).toBeVisible();
+    await expect(page.getByText('Telegram alerts are run by the site owner for now.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Send test to Telegram' })).toHaveCount(0);
     await page.getByText('Sync with my Google Sheet').click();
+    await syncPanel(page).getByText('For the site owner').click();
     await syncPanel(page).getByLabel('Password').fill(KEY);
     await syncPanel(page).getByRole('button', { name: 'Connect' }).click();
     await expect(page.getByRole('heading', { name: 'Phone alerts' })).toBeVisible();
@@ -234,7 +238,7 @@ test.describe('/trades (API mocked)', () => {
     expect((await req).headers()['x-trades-key']).toBe(KEY);
     await expect(page.getByRole('status').filter({ hasText: 'Sent — check Telegram.' })).toBeVisible();
     await syncPanel(page).getByRole('button', { name: 'Disconnect' }).click();
-    await expect(page.getByText('Phone alerts need Google Sheet sync (below).')).toBeVisible();
+    await expect(page.getByText('Telegram alerts are run by the site owner for now.')).toBeVisible();
   });
 });
 

@@ -112,9 +112,10 @@ test.describe('browser mode → Google Sheet (Sheet API mocked)', () => {
     await page.goto('/portfolio');
     await page.getByText('Sync with my Google Sheet').click();
     const sync = page.locator('details').filter({ has: page.getByText('Sync with my Google Sheet') });
+    await sync.getByText('For the site owner').click();
     await sync.getByLabel('Password').fill(KEY);
     await sync.getByRole('button', { name: 'Connect' }).click();
-    await expect(sync.getByText('2 trades and 1 plan and your limits are still saved only in this browser.')).toBeVisible();
+    await expect(sync.getByText('2 trades, 1 plan and your limits are still saved only in this browser.')).toBeVisible();
 
     await sync.getByRole('button', { name: 'Move into my Google Sheet' }).click();
     await expect(sync.getByRole('alert')).toHaveText('Could not reach your Google Sheet. Nothing was lost: press Move again to carry on.');

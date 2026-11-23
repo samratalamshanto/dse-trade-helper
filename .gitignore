@@ -23,3 +23,6 @@ client_secret_*.json
 
 # Account recovery codes: kept outside the repo.
 vercel-recovery-codes-*.txt
+
+# Agent worktrees made by Claude Code: local only.
+.claude/worktrees/

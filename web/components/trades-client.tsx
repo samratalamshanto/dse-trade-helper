@@ -12,6 +12,8 @@ export const readKey = (): string => readStored(KEY_STORE) ?? '';
 
 // '1' while this browser has a Google session; then the session cookie, not the key, picks the user's own Sheet.
 export const SIGNED_IN_STORE = 'googleSignedIn';
+// Link to the signed-in user's own Sheet, from the session.
+export const SHEET_URL_STORE = 'googleSheetUrl';
 // Sheet mode: the key to send ('' when signed in with Google, the cookie does the work). null: browser mode.
 export const sheetKey = (): string | null => (readStored(SIGNED_IN_STORE) === '1' ? '' : readKey() || null);
 
@@ -19,8 +21,8 @@ export const sheetKey = (): string | null => (readStored(SIGNED_IN_STORE) === '1
 let signInCheck: Promise<void> | undefined;
 export function checkSignIn(): Promise<void> {
   signInCheck ??= fetch('/api/auth/session', { cache: 'no-store' })
-    .then((r) => (r.ok ? (r.json() as Promise<{ user?: unknown } | null>) : null))
-    .then((s) => writeStored(SIGNED_IN_STORE, s?.user ? '1' : ''))
+    .then((r) => (r.ok ? (r.json() as Promise<{ user?: unknown; sheetUrl?: string } | null>) : null))
+    .then((s) => { writeStored(SHEET_URL_STORE, s?.user ? s.sheetUrl ?? '' : ''); writeStored(SIGNED_IN_STORE, s?.user ? '1' : ''); })
     .catch((e: unknown) => console.warn('google sign-in state not checked; staying with the last known state', e));
   return signInCheck;
 }

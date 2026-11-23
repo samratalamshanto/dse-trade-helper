@@ -35,6 +35,11 @@ export async function findOrCreateSheet(accessToken: string): Promise<string> {
   return made.id;
 }
 
+// The only Sheet detail the browser gets: a link to the user's own Sheet. Sheet ids are letters, digits, - and _.
+export function sheetUrl(sheetId: unknown): string | undefined {
+  return typeof sheetId === 'string' && /^[\w-]{10,200}$/.test(sheetId) ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit` : undefined;
+}
+
 export interface SignedIn { sub: string; sheetId: string; refreshToken?: string; accessToken?: string; expiresAt?: number }
 
 // Access tokens live an hour; one per user is kept in memory. The refresh token stays in the encrypted session cookie.
