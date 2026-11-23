@@ -18,8 +18,11 @@ const SCOPES: readonly RangeScope[] = ['all', 'watchlist', 'holdings'];
 // Rules about "my buy" need a buy price, so they only ever look at holdings.
 const NEEDS_HOLDING: ReadonlySet<RangeRuleKind> = new Set(['upFromBuy', 'downFromBuy']);
 
-const round1 = (x: number) => Math.round(x * 10) / 10;
-const ok = (x: number | null): x is number => x != null && Number.isFinite(x) && x > 0;
+// For display only; matching uses the exact value. `+ 0` turns -0 into 0.
+const round1 = (x: number) => Math.round(x * 10) / 10 + 0;
+const ok = (x: number | null | undefined): x is number => x != null && Number.isFinite(x) && x > 0;
+const RESERVED_IDS = new Set(['__proto__', 'constructor', 'prototype']);
+const EPS = 1e-9;
 
 // null when the price or the range is missing or broken (low above high, price outside a stale range is still shown).
 export function rangeStats(r: RangeRow): RangeStats | null {
@@ -33,32 +36,37 @@ export function rangeStats(r: RangeRow): RangeStats | null {
   };
 }
 
-export const gainFromBuyPct = (price: number | null, avgCost: number): number | null =>
-  ok(price) && avgCost > 0 ? round1((price / avgCost - 1) * 100) : null;
+const rawGain = (price: number | null, avgCost: number): number | null => (ok(price) && ok(avgCost) ? (price / avgCost - 1) * 100 : null);
+
+export const gainFromBuyPct = (price: number | null, avgCost: number): number | null => {
+  const g = rawGain(price, avgCost);
+  return g == null ? null : round1(g);
+};
 
 // The figure a rule compares with its threshold, or null when the rule cannot apply to this company.
 function ruleValue(rule: RangeRule, row: RangeRow, owned: Owned | undefined): number | null {
   if (rule.kind === 'nearLow' || rule.kind === 'nearHigh') {
-    const s = rangeStats(row);
-    if (!s) return null;
-    return rule.kind === 'nearLow' ? s.aboveLowPct : s.belowHighPct;
+    if (!rangeStats(row)) return null;
+    const price = row.price as number, low = row.weekLow52 as number, high = row.weekHigh52 as number;
+    return rule.kind === 'nearLow' ? (price / low - 1) * 100 : (1 - price / high) * 100;
   }
-  if (!owned || owned.shares <= 0) return null;
-  const gain = gainFromBuyPct(row.price, owned.avgCost);
+  if (!owned || !ok(owned.shares)) return null;
+  const gain = rawGain(row.price, owned.avgCost);
   if (gain == null) return null;
   return rule.kind === 'upFromBuy' ? gain : -gain;
 }
 
 function matches(rule: RangeRule, value: number): boolean {
-  // near: within pct of the low or high (a price below a stale low counts as near). from buy: moved at least pct.
-  return rule.kind === 'nearLow' || rule.kind === 'nearHigh' ? value <= rule.pct : value >= rule.pct;
+  // near: between the low (or high) and pct from it; a price outside a stale range is not "near". from buy: moved at least pct.
+  // EPS absorbs float noise (30 / 25 - 1 is 0.19999999999999996), so a value equal to the threshold matches.
+  return rule.kind === 'nearLow' || rule.kind === 'nearHigh' ? value >= -EPS && value <= rule.pct + EPS : value >= rule.pct - EPS;
 }
 
 export interface FeedInput { rows: readonly RangeRow[]; watchlist: readonly string[]; holdings: readonly Owned[] }
 
 // Every company that matches at least one rule, in rule order, each rule's matches sorted closest-first.
 export function rangeFeed(rules: readonly RangeRule[], input: FeedInput): RangeMatch[] {
-  const owned = new Map(input.holdings.filter((h) => h.shares > 0).map((h) => [h.code, h]));
+  const owned = new Map(input.holdings.filter((h) => ok(h.shares)).map((h) => [h.code, h]));
   const watched = new Set(input.watchlist);
   const out: RangeMatch[] = [];
   for (const rule of rules) {
@@ -68,10 +76,11 @@ export function rangeFeed(rules: readonly RangeRule[], input: FeedInput): RangeM
       if (scope === 'holdings' && !owned.has(row.code)) continue;
       if (scope === 'watchlist' && !watched.has(row.code)) continue;
       const value = ruleValue(rule, row, owned.get(row.code));
-      if (value != null && matches(rule, value)) found.push({ rule, code: row.code, valuePct: value });
+      if (value != null && matches(rule, value)) found.push({ rule, code: row.code, valuePct: round1(value) });
     }
     const near = rule.kind === 'nearLow' || rule.kind === 'nearHigh';
-    found.sort((a, b) => (near ? a.valuePct - b.valuePct : b.valuePct - a.valuePct) || a.code.localeCompare(b.code));
+    // A plain code compare, so the page and the Telegram job list ties in the same order.
+    found.sort((a, b) => (near ? a.valuePct - b.valuePct : b.valuePct - a.valuePct) || (a.code < b.code ? -1 : a.code > b.code ? 1 : 0));
     out.push(...found);
   }
   return out;
@@ -85,9 +94,10 @@ export function parseRangeRules(raw: unknown): RangeRule[] {
   for (const r of raw) {
     if (!r || typeof r !== 'object') continue;
     const { id, kind, pct, scope } = r as Record<string, unknown>;
-    if (typeof id !== 'string' || !/^[\w-]{1,40}$/.test(id) || seen.has(id)) continue;
+    if (typeof id !== 'string' || !/^[\w-]{1,40}$/.test(id) || RESERVED_IDS.has(id) || seen.has(id)) continue;
     if (!KINDS.includes(kind as RangeRuleKind) || !SCOPES.includes(scope as RangeScope)) continue;
-    const n = typeof pct === 'number' ? pct : Number(pct);
+    // Only a plain number or a plain decimal string: no booleans, hex, exponents or blanks.
+    const n = typeof pct === 'number' ? pct : typeof pct === 'string' && /^\d+(\.\d+)?$/.test(pct.trim()) ? Number(pct.trim()) : Number.NaN;
     if (!Number.isFinite(n) || n < RANGE_PCT_MIN || n > RANGE_PCT_MAX) continue;
     seen.add(id);
     out.push({ id, kind: kind as RangeRuleKind, pct: round1(n), scope: NEEDS_HOLDING.has(kind as RangeRuleKind) ? 'holdings' : scope as RangeScope });

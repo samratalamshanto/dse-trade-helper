@@ -67,3 +67,40 @@ test('match wording is factual and covers a price outside the range', () => {
   assert.equal(describeMatch({ rule: { ...rule, kind: 'downFromBuy' }, code: 'GP', valuePct: 24.4 }), 'down 24.4% from your average buy price');
   assert.doesNotMatch(describeMatch({ rule, code: 'GP', valuePct: 2 }), /buy now|sell now|you should/i);
 });
+
+test('near rules: a price outside a stale range is not "near", and the threshold itself matches', () => {
+  const rule = (kind: 'nearLow' | 'nearHigh', pct: number) => [{ id: 'r', kind, pct, scope: 'all' as const }];
+  const stale = { rows: [row('DOWN', 60, 100, 200), row('UP', 250, 100, 200)], watchlist: [], holdings: [] };
+  assert.deepEqual(rangeFeed(rule('nearLow', 50), stale), [], 'far below an old low is not near it');
+  assert.deepEqual(rangeFeed(rule('nearHigh', 50), stale), [], 'far above an old high is not near it');
+  const edge = { rows: [row('EQ', 105, 100, 200), row('FLAT', 100, 100, 100)], watchlist: [], holdings: [] };
+  assert.deepEqual(rangeFeed(rule('nearLow', 5), edge).map((m) => m.code), ['FLAT', 'EQ'], 'exactly 5% above matches a 5% rule; a flat range sits at the low');
+  assert.deepEqual(rangeFeed(rule('nearHigh', 0.5), edge).map((m) => m.code), ['FLAT'], 'a flat range is also at its high');
+});
+
+test('matching uses the exact value, not the rounded one', () => {
+  const r = [{ id: 'r', kind: 'nearLow' as const, pct: 5, scope: 'all' as const }];
+  assert.deepEqual(rangeFeed(r, { rows: [row('X', 105.04, 100, 200)], watchlist: [], holdings: [] }), [], '5.04% is not within 5%');
+  assert.equal(rangeFeed(r, { rows: [row('X', 104.96, 100, 200)], watchlist: [], holdings: [] })[0].valuePct, 5, 'shown rounded');
+});
+
+test('broken holdings never count as owned', () => {
+  const r = [{ id: 'u', kind: 'upFromBuy' as const, pct: 1, scope: 'holdings' as const }];
+  for (const h of [{ shares: Number.NaN, avgCost: 25 }, { shares: 0, avgCost: 25 }, { shares: 10, avgCost: Number.POSITIVE_INFINITY }, { shares: 10, avgCost: 0 }]) {
+    assert.deepEqual(rangeFeed(r, { rows: [row('ROBI', 30, 25, 40)], watchlist: [], holdings: [{ code: 'ROBI', ...h }] }), [], JSON.stringify(h));
+  }
+  const down = [{ id: 'd', kind: 'downFromBuy' as const, pct: 5, scope: 'holdings' as const }];
+  assert.deepEqual(rangeFeed(down, { rows: [row('ROBI', 30, 25, 40)], watchlist: [], holdings: [{ code: 'ROBI', shares: 10, avgCost: 25 }] }), [], 'a price rise is not "down from buy"');
+});
+
+test('rules from storage: odd ids and number formats are refused; the first of duplicate ids wins', () => {
+  const base = { kind: 'nearLow', scope: 'all' };
+  const parsed = parseRangeRules([
+    { ...base, id: '__proto__', pct: 5 }, { ...base, id: 'has space', pct: 5 }, { ...base, id: 'x'.repeat(41), pct: 5 }, { ...base, id: 7, pct: 5 },
+    { ...base, id: 'hex', pct: '0x10' }, { ...base, id: 'exp', pct: '1e1' }, { ...base, id: 'bool', pct: true }, { ...base, id: 'blank', pct: ' ' }, { ...base, id: 'nul', pct: null },
+    { ...base, id: 'first', pct: 3 }, { ...base, id: 'first', pct: 9 }, { ...base, id: 'spaced', pct: ' 7.5 ' },
+  ]);
+  assert.deepEqual(parsed.map((r) => [r.id, r.pct]), [['first', 3], ['spaced', 7.5]]);
+  assert.deepEqual(parseRangeRules({ id: 'a' }), []);
+  assert.deepEqual(parseRangeRules(undefined), []);
+});
