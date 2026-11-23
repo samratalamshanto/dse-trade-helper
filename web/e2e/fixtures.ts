@@ -1,4 +1,4 @@
-import { test as base, expect } from '@playwright/test';
+import { test as base, expect, type Page } from '@playwright/test';
 
 // Every test fails on any console error or uncaught page error. Nothing is allow-listed.
 export const test = base.extend<{ guard: void; allowedConsole: RegExp[]; guideSeen: boolean }>({
@@ -21,3 +21,9 @@ export const test = base.extend<{ guard: void; allowedConsole: RegExp[]; guideSe
 export { expect };
 
 export const isPhone = (name: string) => name === 'phone';
+
+// Limits, phone alerts, backup and Google Sheet sync sit in the folded Settings at the bottom of /portfolio.
+export async function openSettings(page: Page): Promise<void> {
+  const settings = page.locator('details').filter({ has: page.locator('summary', { hasText: /^Settings/ }) });
+  if (!(await settings.evaluate((d) => (d as HTMLDetailsElement).open))) await settings.locator('summary').first().click();
+}
