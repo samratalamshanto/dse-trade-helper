@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { call, KEY_STORE } from '@/components/trades-client';
+import { call, KEY_STORE, SIGNED_IN_STORE } from '@/components/trades-client';
 import { readStored, useStoredValue, writeStored } from '@/components/useStored';
 import { encodeAlertStore, parseAlertStore, type AlertRule } from '@/lib/alerts';
 import { BROKER_COMMISSION_PCT } from '@/lib/buy-planner';
@@ -24,11 +24,15 @@ const localNow = (): Local => ({
 // First sync of a browser: keep everything from both sides (rules by id, Sheet first).
 const mergeRules = (sheet: AlertRule[], local: AlertRule[]) => parseAlertRules([...sheet, ...local.filter((r) => !sheet.some((s) => s.id === r.id))]);
 
-// With a trades key, the watchlist, broker rate and price-alert rules follow the Sheet.
+// Signed in with Google or with a trades key, the watchlist, broker rate and price-alert rules follow the Sheet.
 // On load: an unsaved local change wins; a browser's first sync merges both sides; otherwise the Sheet wins.
 // Fired alerts and alert history stay per browser.
 export function PrefsSync() {
-  const [key] = useStoredValue(KEY_STORE, '');
+  const [rawKey] = useStoredValue(KEY_STORE, '');
+  const [signedIn] = useStoredValue(SIGNED_IN_STORE, '');
+  // Which Sheet the prefs follow: the Google user's own one, or the owner's by key. '' = browser only.
+  const who = signedIn === '1' ? 'google' : rawKey;
+  const header = signedIn === '1' ? '' : rawKey;
   const [rawWatch, setWatch] = useStoredValue('watchlist', '[]');
   const [pct, setPct] = useStoredValue('brokerCommissionPct', DEFAULT_PCT);
   const [rawAlerts, setAlerts] = useStoredValue('alerts', '{}');
@@ -47,9 +51,9 @@ export function PrefsSync() {
   }, []);
 
   useEffect(() => {
-    if (!key) return;
+    if (!who) return;
     let active = true;
-    call<Prefs>(key, '/api/prefs').then((p) => {
+    call<Prefs>(header, '/api/prefs').then((p) => {
       if (!active) return;
       const local = localNow();
       const dirty = readStored(DIRTY_STORE) === '1';
@@ -68,14 +72,14 @@ export function PrefsSync() {
       saved.current = p.watchlist && p.brokerCommissionPct != null && p.alertRules
         ? bodyOf({ watchlist: p.watchlist, brokerCommissionPct: p.brokerCommissionPct, alertRules: p.alertRules }) : '';
       lastRate.current = p.brokerCommissionPct ?? DEFAULT_PCT;
-      setLoadedFor(key);
+      setLoadedFor(who);
       setLoads((n) => n + 1);
     }).catch((e: unknown) => console.warn('prefs: could not read the watchlist, broker rate and alert rules from the Sheet', e));
     return () => { active = false; };
-  }, [key, visits, setWatch, setPct, setAlerts]);
+  }, [who, header, visits, setWatch, setPct, setAlerts]);
 
   useEffect(() => {
-    if (!key || loadedFor !== key) return;
+    if (!who || loadedFor !== who) return;
     const now = localNow();
     // An unfinished rate (e.g. "0.") must not hold back watchlist or rule changes.
     const validRate = now.brokerCommissionPct === '' || commissionFor('1', '1', now.brokerCommissionPct) !== '';
@@ -85,12 +89,12 @@ export function PrefsSync() {
     if (!parsePrefs(JSON.parse(body))) return;
     writeStored(DIRTY_STORE, '1');
     const t = setTimeout(() => {
-      call(key, '/api/prefs', { method: 'PUT', headers: { 'content-type': 'application/json' }, body })
+      call(header, '/api/prefs', { method: 'PUT', headers: { 'content-type': 'application/json' }, body })
         .then(() => { saved.current = body; lastRate.current = JSON.parse(body).brokerCommissionPct; if (bodyOf(localNow()) === body) writeStored(DIRTY_STORE, ''); })
         .catch((e: unknown) => console.warn('prefs: could not save to the Sheet; it is saved on the next visit to this tab', e));
     }, SAVE_DELAY_MS);
     return () => clearTimeout(t);
-  }, [key, loadedFor, loads, rawWatch, pct, rawAlerts]);
+  }, [who, header, loadedFor, loads, rawWatch, pct, rawAlerts]);
 
   return null;
 }

@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { signIn, signOut } from 'next-auth/react';
+import { SIGNED_IN_STORE } from '@/components/trades-client';
+import { useStoredValue, writeStored } from '@/components/useStored';
 import { connectSheet, disconnectSheet, moveBrowserDataToSheet, useBrowserData, type Mode } from '@/components/portfolio-store';
 import css from '@/app/portfolio/trades.module.css';
 
@@ -13,7 +16,7 @@ function plain(err: unknown, failed: string): string {
   return err instanceof Error && status != null && status < 500 ? err.message : failed;
 }
 
-// Optional, for the site owner: switches the one data source from this browser to the Google Sheet and back.
+// Optional: switches the one data source from this browser to a Google Sheet (the user's own by Google sign-in, or the owner's by password) and back.
 export function SyncPanel({ mode, onChanged }: { mode: Mode; onChanged: () => void }) {
   const { trades, plans, hasLimits } = useBrowserData();
   const [open, setOpen] = useState(false);
@@ -21,6 +24,12 @@ export function SyncPanel({ mode, onChanged }: { mode: Mode; onChanged: () => vo
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const sheet = mode === 'sheet';
+  const [signedIn] = useStoredValue(SIGNED_IN_STORE, '');
+  const google = signedIn === '1';
+  // The flag goes first, so the page never asks the Sheet with a session that is ending.
+  const leave = () => { writeStored(SIGNED_IN_STORE, ''); void signOut(); };
+  // Also shown in owner-key mode: a Google sign-in then takes over with the user's own Sheet.
+  const googleButton = <button className="btn primary" type="button" disabled={busy} onClick={() => void signIn('google')}>Continue with Google</button>;
   const pending = sheet && (trades.good.length + plans.good.length > 0 || hasLimits);
 
   const run = async (work: () => Promise<void>, failed: string) => {
@@ -32,24 +41,35 @@ export function SyncPanel({ mode, onChanged }: { mode: Mode; onChanged: () => vo
   return (
     <details className={`panel ${css.section}`} open={open || pending} onToggle={(e) => setOpen(e.currentTarget.open)}>
       <summary className="h3">Sync with my Google Sheet</summary>
-      <p className="small muted">Keep your trades, plans, watchlist and broker rate in your own Google Sheet so they show on every device and Telegram alerts can use them. Only for the site owner: needs the site&apos;s sync password.</p>
+      <p className="small muted">Keep your trades, plans, watchlist and broker rate in your own Google Sheet so they show on every device.</p>
       {sheet ? (
         <>
-          <p className="small" role="status">Connected: your trades, plans, watchlist and broker rate are saved in your Google Sheet.</p>
+          <p className="small" role="status">{google ? 'Signed in with Google: your trades, plans, watchlist and broker rate are saved in the "DSE Trade Helper" Sheet in your Google Drive.' : 'Connected: your trades, plans, watchlist and broker rate are saved in your Google Sheet.'}</p>
           {pending ? (
             <div className="note warn" role="status">
               <b>{plural(trades.good.length, 'trade', 'trades')} and {plural(plans.good.length, 'plan', 'plans')}{hasLimits ? ' and your limits' : ''} are still saved only in this browser.</b> Move them into your Google Sheet so every device shows them. Each one leaves this browser once it is saved.{hasLimits ? ' Your limits here replace the limits saved in the Sheet.' : ''}
               <div className={css.actions}><button className="btn primary" type="button" disabled={busy} onClick={() => void run(moveBrowserDataToSheet, 'Could not reach your Google Sheet. Nothing was lost: press Move again to carry on.')}>Move into my Google Sheet</button></div>
             </div>
           ) : null}
-          <div className={css.actions}><button className="btn" type="button" disabled={busy} onClick={() => { disconnectSheet(); onChanged(); }}>Disconnect</button></div>
-          <p className="small muted">Disconnect goes back to this browser. Nothing in the Sheet is deleted.</p>
+          {google ? (
+            <div className={css.actions}><button className="btn" type="button" disabled={busy} onClick={leave}>Sign out</button></div>
+          ) : (
+            <div className={css.actions}>
+              <button className="btn" type="button" disabled={busy} onClick={() => { disconnectSheet(); onChanged(); }}>Disconnect</button>
+              {googleButton}
+            </div>
+          )}
+          <p className="small muted">{google ? 'Sign out' : 'Disconnect'} goes back to this browser. Nothing in the Sheet is deleted.</p>
         </>
       ) : (
-        <form className={css.form} onSubmit={connect}>
-          <label>Password<input type="password" autoComplete="off" value={draft} onChange={(e) => setDraft(e.target.value)} required minLength={16} /></label>
-          <div className={css.actions}><button className="btn primary" type="submit" disabled={busy}>Connect</button></div>
-        </form>
+        <>
+          <p className="small muted">We only see the one Sheet we create for you. Your other Google Drive files stay private.</p>
+          <div className={css.actions}>{googleButton}</div>
+          <form className={css.form} onSubmit={connect}>
+            <label>Site owner: sync password<input type="password" autoComplete="off" value={draft} onChange={(e) => setDraft(e.target.value)} required minLength={16} /></label>
+            <div className={css.actions}><button className="btn" type="submit" disabled={busy}>Connect</button></div>
+          </form>
+        </>
       )}
       {error ? <p className={css.error} role="alert">{error}</p> : null}
     </details>

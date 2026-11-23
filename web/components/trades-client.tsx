@@ -9,6 +9,21 @@ export type Valued = Holding & { price: number | null; value: number | null; unr
 export interface TradesList { trades: Trade[]; holdings: Valued[]; warnings: string[]; badRows: number[]; settings?: LimitSettings }
 
 export const readKey = (): string => readStored(KEY_STORE) ?? '';
+
+// '1' while this browser has a Google session; then the session cookie, not the key, picks the user's own Sheet.
+export const SIGNED_IN_STORE = 'googleSignedIn';
+// Sheet mode: the key to send ('' when signed in with Google, the cookie does the work). null: browser mode.
+export const sheetKey = (): string | null => (readStored(SIGNED_IN_STORE) === '1' ? '' : readKey() || null);
+
+// One session check per page load; a session that ended turns the flag off.
+let signInCheck: Promise<void> | undefined;
+export function checkSignIn(): Promise<void> {
+  signInCheck ??= fetch('/api/auth/session', { cache: 'no-store' })
+    .then((r) => (r.ok ? (r.json() as Promise<{ user?: unknown } | null>) : null))
+    .then((s) => writeStored(SIGNED_IN_STORE, s?.user ? '1' : ''))
+    .catch((e: unknown) => console.warn('google sign-in state not checked; staying with the last known state', e));
+  return signInCheck;
+}
 // Through the shared store so every page sees the switch between browser and Sheet at once.
 export const storeKey = (k: string): void => writeStored(KEY_STORE, k);
 

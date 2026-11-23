@@ -17,3 +17,9 @@ app/.claude/
 
 # Release APKs — large binaries, not committed.
 apk/
+
+# Google OAuth client file: values live in web/.env.local; keep the file outside the repo.
+client_secret_*.json
+
+# Account recovery codes: kept outside the repo.
+vercel-recovery-codes-*.txt

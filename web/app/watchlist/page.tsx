@@ -1,5 +1,6 @@
 'use client';
 
+import { useMode } from '@/components/portfolio-store';
 import Link from 'next/link';
 import { Tr } from '@/components/Tr';
 import { useRouter } from 'next/navigation';
@@ -7,8 +8,6 @@ import { useApi } from '@/components/AppProvider';
 import { ChangeText } from '@/components/CompanyCard';
 import { LastBuy } from '@/components/LastBuy';
 import { useWatchlist, WatchButton } from '@/components/Watchlist';
-import { useStoredValue } from '@/components/useStored';
-import { KEY_STORE } from '@/components/trades-client';
 import { fmt, fmtDate, pctNum, sectorName } from '@/components/format';
 import { FraudPill, Icon, SignalPill, type FraudLevel, type Signal } from '@/components/ui';
 import type { CalendarRow, CompanyRow } from '@/lib/service';
@@ -19,7 +18,7 @@ interface Calendar { upcoming: CalendarRow[]; session: MarketSession | null }
 
 export default function WatchlistPage() {
   const { codes } = useWatchlist();
-  const [tradesKey] = useStoredValue(KEY_STORE, '');
+  const tradesKey = useMode().mode === 'sheet';
   const router = useRouter();
   const { data, error } = useApi<Companies>('/api/companies');
   const { data: cal } = useApi<Calendar>('/api/dividends');

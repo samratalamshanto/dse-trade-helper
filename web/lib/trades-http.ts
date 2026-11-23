@@ -1,5 +1,5 @@
 import { timingSafeEqual } from 'node:crypto';
-import { SheetsError } from './sheets.ts';
+import { SheetsError, withSheet } from './sheets.ts';
 import { TradeInputError } from './trades-service.ts';
 import { respond } from './http.ts';
 import { XLSX_MAX_BYTES, XlsxError } from './xlsx.ts';
@@ -21,20 +21,29 @@ function authorised(request: Request): Response | null {
 // For public endpoints that add private details only when the caller proves the trades key.
 export const hasTradesKey = (request: Request): boolean => authorised(request) === null;
 
-export async function tradesRoute(request: Request, label: string, work: () => Promise<unknown>): Promise<Response> {
-  const denied = authorised(request);
-  if (denied) return denied;
+// Signed in with Google: the user's own Sheet. Otherwise the shared key opens the owner's Sheet.
+// ownerOnly: Telegram routes still send to the one owner chat, so they keep the key and ignore sign-in.
+export async function tradesRoute(request: Request, label: string, work: () => Promise<unknown>, { ownerOnly = false } = {}): Promise<Response> {
   try {
+    // Loaded on use, so code that never reads a session (tests, the alert job) does not load Auth.js.
+    const target = ownerOnly ? null : await (await import('./session-sheet.ts')).signedInSheet(request);
+    // The session is a cookie, so only this site's own pages may use it (sibling subdomains too are refused).
+    const site = request.headers.get('sec-fetch-site');
+    if (target && site && site !== 'same-origin' && site !== 'none') return json(403, { error: 'Open this site to use your trades.' });
+    if (target) return json(200, await withSheet(target, work));
+    const denied = authorised(request);
+    if (denied) return denied;
     return json(200, await work());
   } catch (e) {
-    if (e instanceof TradeInputError || e instanceof XlsxError) return json(400, { error: e.message });
-    if (e instanceof SheetsError) {
-      console.error(`trades ${label} failed`, e);
-      return json(e.status, { error: e.message });
-    }
-    console.error(`trades ${label} failed`, e);
-    return json(500, { error: 'Something went wrong while saving trades. Try again.' });
+    return failed(label, e);
   }
+}
+
+function failed(label: string, e: unknown): Response {
+  if (e instanceof TradeInputError || e instanceof XlsxError) return json(400, { error: e.message });
+  console.error(`trades ${label} failed`, e);
+  if (e instanceof SheetsError) return json(e.status, { error: e.message });
+  return json(500, { error: 'Something went wrong while saving trades. Try again.' });
 }
 
 export { TRADE_ID_RE } from './trades.ts';

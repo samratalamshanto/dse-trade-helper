@@ -1,6 +1,6 @@
 'use client';
 
-import { KEY_STORE } from '@/components/trades-client';
+import { useMode } from '@/components/portfolio-store';
 import { useState, useSyncExternalStore } from 'react';
 import { useApi } from '@/components/AppProvider';
 import { useStoredValue } from '@/components/useStored';
@@ -58,7 +58,7 @@ export default function AlertsPage() {
   const { data: cal } = useApi<Calendar>('/api/dividends');
   const { codes: watchlistCodes } = useWatchlist();
   const [raw, setRaw] = useStoredValue('alerts', '{}');
-  const [tradesKey] = useStoredValue(KEY_STORE, '');
+  const tradesKey = useMode().mode === 'sheet';
   const store = parseAlertStore(raw);
 
   const [formType, setFormType] = useState<RuleType | ''>('');

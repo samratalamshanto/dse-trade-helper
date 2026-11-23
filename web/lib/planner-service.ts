@@ -3,7 +3,7 @@ import { dhakaToday } from './dhaka.ts';
 import { livePrices } from './dse.ts';
 import { boughtSince, planCreatedAt, planStatus, planToRow, plansFromRows, PLAN_COLUMNS, type SavedPlan, validatePlan } from './plans.ts';
 import { companyDetail, listCompanies } from './service.ts';
-import { appendRows, deleteRow, readRows, SheetsError, writeRow, type TabSpec } from './sheets.ts';
+import { appendRows, deleteRow, readRows, serialPerSheet, SheetsError, writeRow, type TabSpec } from './sheets.ts';
 import { allCompanies } from './store.ts';
 import { holdingsFrom, fromRows, MAX_PRICE, type Trade } from './trades.ts';
 import { givenId, TradeInputError } from './trades-service.ts';
@@ -78,8 +78,7 @@ export async function picksFor(params: URLSearchParams) {
   return { budget, picks, today: dhakaToday() };
 }
 
-let queue: Promise<unknown> = Promise.resolve();
-const serial = <T>(work: () => Promise<T>): Promise<T> => { const next = queue.then(work, work); queue = next.catch(() => undefined); return next; };
+const serial = serialPerSheet();
 
 const checked = (input: unknown) => { const v = validatePlan(input); if (!v.ok) throw new TradeInputError(v.error); return v.value; };
 

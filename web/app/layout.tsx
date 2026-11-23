@@ -48,6 +48,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <footer>
                 Data: Dhaka Stock Exchange public website (dse.com.bd). Signals come from fixed rules on that data.
                 They are learning aids, not investment advice. A red flag shows a pattern, not proof of fraud.
+                {' '}<a href="/privacy">Privacy</a> · <a href="/terms">Terms</a>
               </footer>
             </main>
           </div>

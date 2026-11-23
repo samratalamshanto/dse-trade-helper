@@ -4,20 +4,15 @@ import { livePrices } from './dse.ts';
 import { checkPosition, parseSettings, settingsFromRows, settingsToRows, type LimitSettings } from './positions.ts';
 import { companyDetail } from './service.ts';
 import { allCompanies } from './store.ts';
-import { appendRows, deleteRow, readRows, readSettingsRows, SheetsError, writeRow, writeSettingsRows, type TabSpec } from './sheets.ts';
+import { appendRows, deleteRow, readRows, readSettingsRows, serialPerSheet, SheetsError, writeRow, writeSettingsRows, type TabSpec } from './sheets.ts';
 import { parsePrefs, PREFS_COLUMNS, prefsFromRows, prefsToRows, type Prefs } from './prefs.ts';
 import { dateFromFileName, fromRows, MAX_COMMISSION_PCT, TRADE_ID_RE, TradeInputError, holdingsFrom, parseOrderSummary, splitNew, toRow, type Account, type Trade, type TradeInput, validateTrade } from './trades.ts';
 import { readFirstSheet } from './xlsx.ts';
 
 export { TradeInputError };
 
-let queue: Promise<unknown> = Promise.resolve();
-// Sheet writes run one at a time so a duplicate check and the write that follows cannot interleave.
-const serial = <T>(work: () => Promise<T>): Promise<T> => {
-  const next = queue.then(work, work);
-  queue = next.catch(() => undefined);
-  return next;
-};
+// Sheet writes run one at a time per Sheet so a duplicate check and the write that follows cannot interleave.
+const serial = serialPerSheet();
 
 const stamp = (input: TradeInput, source: string): Trade => ({ ...input, id: randomUUID(), source, createdAt: new Date().toISOString() });
 

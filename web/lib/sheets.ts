@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { createSign } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { TRADE_COLUMNS } from './trades.ts';
@@ -42,6 +43,32 @@ function config(): { sheetId: string; account: ServiceAccount } {
 
 let token: { value: string; until: number } | null = null;
 
+// Which Sheet a request works on: a signed-in user's own Sheet, or (no target) the site owner's Sheet by service account.
+export interface SheetTarget { sheetId: string; accessToken: () => Promise<string>; dropToken: () => void }
+const target = new AsyncLocalStorage<SheetTarget>();
+export const withSheet = <T>(t: SheetTarget, work: () => Promise<T>): Promise<T> => target.run(t, work);
+export const currentSheetKey = (): string => target.getStore()?.sheetId ?? 'site';
+
+// A write queue per Sheet: one user's slow Sheet never holds up another user's writes. An idle queue is dropped.
+export function serialPerSheet() {
+  const queues = new Map<string, Promise<unknown>>();
+  return <T>(work: () => Promise<T>): Promise<T> => {
+    const key = currentSheetKey();
+    const next = (queues.get(key) ?? Promise.resolve()).then(work, work);
+    const tail = next.catch(() => undefined);
+    queues.set(key, tail);
+    void tail.then(() => { if (queues.get(key) === tail) queues.delete(key); });
+    return next;
+  };
+}
+
+function resolveTarget(): SheetTarget & { own: boolean } {
+  const t = target.getStore();
+  if (t) return { ...t, own: true };
+  const { sheetId, account } = config();
+  return { sheetId, accessToken: () => accessToken(account), dropToken: () => { token = null; }, own: false };
+}
+
 async function accessToken(account: ServiceAccount): Promise<string> {
   if (token && Date.now() < token.until) return token.value;
   const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url');
@@ -61,9 +88,10 @@ async function accessToken(account: ServiceAccount): Promise<string> {
 }
 
 async function call<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
-  const { sheetId, account } = config();
+  const t = resolveTarget();
+  const sheetId = t.sheetId;
   const method = init.method ?? 'GET';
-  const authorization = `Bearer ${await accessToken(account)}`;
+  const authorization = `Bearer ${await t.accessToken()}`;
   const res = await fetchRetry(API + encodeURIComponent(sheetId) + path, () => ({
     method,
     headers: { authorization, 'content-type': 'application/json' },
@@ -72,7 +100,8 @@ async function call<T>(path: string, init: { method?: string; body?: unknown } =
   }), method === 'GET').catch((e: unknown) => { throw new SheetsError('Google Sheets could not be reached.', 502, { cause: e }); });
   const body = (await res.json().catch(() => ({}))) as T & { error?: { message?: string; status?: string } };
   if (!res.ok) {
-    if (res.status === 401) token = null;
+    if (res.status === 401) t.dropToken();
+    if (t.own && (res.status === 403 || res.status === 404)) throw new SheetsError('Your Google Sheet could not be opened. Sign out, then sign in with Google again.');
     if (res.status === 403) throw new SheetsError('The trades sheet is not shared with the app (give the service account Editor access).');
     if (res.status === 404) throw new SheetsError('The trades sheet was not found. Check GOOGLE_SHEET_ID.');
     throw new SheetsError(`Google Sheets error ${res.status}: ${body.error?.status ?? 'unknown'}.`);
@@ -86,10 +115,11 @@ const tabSetups = new Map<string, Promise<number>>();
 
 // Creates a tab and its header row on first use; parallel first calls share one setup.
 function ensureTab(title = TAB, columns: readonly string[] = TRADE_COLUMNS): Promise<number> {
-  let setup = tabSetups.get(title);
+  const key = `${currentSheetKey()}/${title}`;
+  let setup = tabSetups.get(key);
   if (!setup) {
-    setup = setUpTab(title, columns).catch((e: unknown) => { tabSetups.delete(title); throw e; });
-    tabSetups.set(title, setup);
+    setup = setUpTab(title, columns).catch((e: unknown) => { tabSetups.delete(key); throw e; });
+    tabSetups.set(key, setup);
   }
   return setup;
 }
