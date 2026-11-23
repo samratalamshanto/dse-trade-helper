@@ -6,10 +6,11 @@ import { useApi } from '@/components/AppProvider';
 import { useStoredValue } from '@/components/useStored';
 import { ChangeText } from '@/components/CompanyCard';
 import { ChartBox, useChartColors, type Colors } from '@/components/charts';
-import { fmt, fmtDate, marketState } from '@/components/format';
+import { fmt, fmtDateLang, marketState } from '@/components/format';
 import { ALLOCATION, futureValue, GROWTH_RATES, GROWTH_YEARS, INITIAL_CHOICES, MONTHLY_SPLIT, PLAN_COMPANIES, RESEARCH, type PlanCompany } from '@/components/plan/data';
 import type { CompanyDetail, Dashboard } from '@/lib/service';
 import { Tr } from '@/components/Tr';
+import { useLang } from '@/components/i18n';
 
 const SECTIONS = [['start', 'First steps'], ['risks', 'Risks'], ['market', 'Market'], ['companies', 'Example companies'], ['ranking', 'Ranking'], ['portfolio', 'Example portfolio'], ['growth', 'Growth'], ['research', 'Research list']] as const;
 const SECTION_OFFSET = 90;
@@ -76,12 +77,13 @@ function PlanCard({ p, colors }: { p: PlanCompany; colors: Colors | null }) {
       <p><b>Why:</b> {p.why}</p>
       <div className="note">{p.positive}</div>
       <div className="note warn">{p.warning}</div>
-      <p><b>Verdict:</b> {p.final} <a href={p.link} target="_blank" rel="noopener noreferrer">Source ↗</a></p>
+      <p style={{ overflowWrap: 'anywhere' }}><b>Verdict:</b> {p.final} <a href={p.link} target="_blank" rel="noopener noreferrer">Source ↗</a></p>
     </div>
   );
 }
 
 export default function PlanPage() {
+  const { t, lang } = useLang();
   const colors = useChartColors();
   const active = useActiveSection();
   const { data: dash } = useApi<Dashboard>('/api/dashboard');
@@ -99,10 +101,10 @@ export default function PlanPage() {
       <p className="muted">First steps for a new investor: open a BO account, pick a broker, start small, and learn the risks.
         Further down is an <b>example</b> long-term plan with four well-known companies, to show how a plan can look.</p>
       <nav className="section-tabs" aria-label="Sections on this page">
-        {SECTIONS.map(([id, label]) => <a key={id} href={'#' + id} aria-current={active === id ? 'true' : undefined}>{label}</a>)}
+        {SECTIONS.map(([id, label]) => <a key={id} href={'#' + id} aria-current={active === id ? 'true' : undefined}>{t(label)}</a>)}
       </nav>
 
-      <h2 id="start">First steps</h2>
+      <h2 id="start"><Tr text="First steps" /></h2>
       <div className="panel"><ol className="steps">
         <li><b>Open a BO account</b> through a licensed DSE broker or authorised participant.</li>
         <li><b>Choose a brokerage firm.</b> Compare fees, support, online trading and withdrawals.</li>
@@ -111,7 +113,7 @@ export default function PlanPage() {
         <li><b>Keep an investment journal:</b> price, quantity, reason, holding period and risks.</li></ol>
         <div className="check"><input type="checkbox" id="bo-account" checked={hasBo} onChange={(e) => setHasBo(e.target.checked)} /><label htmlFor="bo-account">I have a BO account</label></div></div>
 
-      <h2 id="risks">Important risks before investing</h2>
+      <h2 id="risks"><Tr text="Important risks before investing" /></h2>
       <div className="grid g2">
         {[['1. Banking sector', 'Check classified loans, rescheduled loans, provisions and capital adequacy. Rising profit alone is not enough.'],
           ['2. Corporate governance', 'Check sponsor and director holdings, related-party transactions and auditor qualifications.'],
@@ -121,12 +123,12 @@ export default function PlanPage() {
       </div>
       <div className="note bad">Keep your emergency fund separate. A 3–5 year horizon is short for shares. Do not invest money that you must take out on a fixed date.</div>
 
-      <h2>Example plan</h2>
+      <h2><Tr text="Example plan" /></h2>
       <div className="note warn" role="note"><b>Example plan, not advice.</b> The companies, split and amounts below are one person&apos;s worked example from public reports.
         They are not a recommendation to buy. Do your own research, and check the live signal on each company page.</div>
       <section id="market">
         <div className="grid g4">
-          <div className="panel stat"><div className="k">DSEX {dash ? (dash.live && marketState(dash.session).key === 'open' ? '(live)' : `(close ${fmtDate(dash.session?.sessionDate || dash.showingDate)})`) : ''}</div><div className="v mono">{fmt(dsex?.value)}</div>
+          <div className="panel stat"><div className="k">DSEX {dash ? (dash.live && marketState(dash.session).key === 'open' ? '(live)' : `(close ${fmtDateLang(dash.session?.sessionDate || dash.showingDate, lang)})`) : ''}</div><div className="v mono">{fmt(dsex?.value)}</div>
             <div className="small mono">{dsex?.change == null ? 'change shows after the open' : `${dsex.change >= 0 ? '+' : ''}${fmt(dsex.change)} (${fmt(dsex.percent)}%)`}</div></div>
           <div className="panel stat"><div className="k">Market breadth</div><div className="v mono">{dash ? `${dash.breadth.advanced} / ${dash.breadth.declined} / ${dash.breadth.unchanged}` : '—'}</div>
             <div className="small">{dash?.live ? '' : 'last session: '}advanced / declined / unchanged</div></div>
@@ -137,17 +139,17 @@ export default function PlanPage() {
           <b> Approach: invest in stages over 3–6 months, based on valuation and financial results.</b></div>
       </section>
 
-      <h2 id="companies">Example companies: five-year analysis</h2>
+      <h2 id="companies"><Tr text="Example companies: five-year analysis" /></h2>
       <div className="grid">{PLAN_COMPANIES.map((p) => <PlanCard key={p.code} p={p} colors={colors} />)}</div>
 
-      <h2 id="ranking">Overall comparison and ranking</h2>
+      <h2 id="ranking"><Tr text="Overall comparison and ranking" /></h2>
       <div className="panel table-wrap"><table>
         <thead><tr><th>Company</th><th>Earnings trend</th><th>Assessment</th></tr></thead>
         <tbody>{PLAN_COMPANIES.map((p) => <tr key={p.code}><td><b className="mono">{p.code}</b><div className="small">{p.name}</div></td><td>{p.trend}</td>
           <td><span className={`pill ${p.good ? 's-research' : 's-caution'}`}>{p.verdict}</span></td></tr>)}</tbody>
       </table><p className="small muted">These are first fundamental checks, not full buy ratings. Check the latest quarterly cash flows, loan quality, regulatory disclosures and management risks before a final decision.</p></div>
 
-      <h2 id="portfolio">Example portfolio split</h2>
+      <h2 id="portfolio"><Tr text="Example portfolio split" /></h2>
       <div className="grid g2">
         <div className="panel">
           <div className="grid g2">
@@ -172,7 +174,7 @@ export default function PlanPage() {
           <div className="note warn">Do not force a purchase every month. If the price is above your valuation range, keep the cash and wait.</div></div>
       </div>
 
-      <h2 id="growth">What could your investment become?</h2>
+      <h2 id="growth"><Tr text="What could your investment become?" /></h2>
       <div className="panel">
         {colors ? (
           <ChartBox height={300} label="Value of the plan after each year at 0, 4, 8 and 12 percent a year">
@@ -187,7 +189,7 @@ export default function PlanPage() {
         <p className="small muted">Start with {taka(initial)}, add {taka(monthly)} at the end of each month, returns compounded monthly. These figures leave out tax, brokerage fees and inflation. Returns are examples, not forecasts. DSE returns can be negative.</p>
       </div>
 
-      <h2 id="research">Next research phase</h2>
+      <h2 id="research"><Tr text="Next research phase" /></h2>
       <div className="panel"><p className="small muted">For each company: five years of audited financials, quarterly results, dividends, price history, valuation, ownership and disclosures. Compare companies inside the same industry.</p>
         <div className="grid g2">{RESEARCH.map((code) => <ResearchItem key={code} code={code} />)}</div></div>
     </>

@@ -196,6 +196,7 @@ export interface Analysis {
   reasons: Reason[];
   history: string[];
   suggestion: string;
+  suggestionParts: { buyLine: string; holder: string };
   metrics: Metrics;
 }
 

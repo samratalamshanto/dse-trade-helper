@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Tr } from '@/components/Tr';
+import { useLang } from '@/components/i18n';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { useApi } from '@/components/AppProvider';
@@ -14,6 +15,7 @@ function FraudAlerts() {
   const { data, error } = useApi<{ rows: CompanyRow[]; session: MarketSession | null }>('/api/companies');
   const lane = useSearchParams().get('lane') === 'z' ? 'z' : 'warn';
   const router = useRouter();
+  const { t } = useLang();
   if (error && !data) return <div className="note bad">Could not load the alerts: {error}</div>;
   const rows = data?.rows ?? [];
   const warn = rows.filter((r) => r.fraud !== 'clean' && r.category !== 'Z').sort((a, b) => b.flags.length - a.flags.length || (b.change1y ?? 0) - (a.change1y ?? 0));
@@ -23,11 +25,14 @@ function FraudAlerts() {
   return (
     <>
       <h1><Tr text="Fraud alerts" /></h1>
-      <div className="note warn">A flag shows a pattern that often comes with manipulation, such as a price pump or owners selling. It is <b>not proof</b> of fraud.
-        Before you buy a flagged share, read its DSE disclosures and the latest results.</div>
+      <div className="note warn">
+        <Tr text="A flag shows a pattern that often comes with manipulation, such as a price pump or owners selling. It is " />
+        <b><Tr text="not proof" /></b>
+        <Tr text=" of fraud. Before you buy a flagged share, read its DSE disclosures and the latest results." />
+      </div>
       <nav className="tabs" aria-label="Alert lists">
-        <Link className="tab-link" aria-current={lane === 'warn' ? 'page' : undefined} href="/fraud">Warnings outside category Z ({warn.length})</Link>
-        <Link className="tab-link" aria-current={lane === 'z' ? 'page' : undefined} href="/fraud?lane=z">Category Z ({z.length})</Link>
+        <Link className="tab-link" aria-current={lane === 'warn' ? 'page' : undefined} href="/fraud">{t('Warnings')} ({warn.length})</Link>
+        <Link className="tab-link" aria-current={lane === 'z' ? 'page' : undefined} href="/fraud?lane=z"><Tr text="Category Z" /> ({z.length})</Link>
       </nav>
       <p className="muted small">{lane === 'z'
         ? 'Category Z companies missed AGMs, paid no dividend or stopped operating. Sorted by 1-year price change: a big rise in a Z share is the classic manipulation pattern.'
@@ -41,7 +46,7 @@ function FraudAlerts() {
             <td className="small" data-label="Flags">{r.flags.join(' · ') || '—'}</td>
             <td className="n mono" data-label="Price">৳{fmt(r.price)}</td><td className="n mono muted" data-label="1 year">{signed(r.change1y)}</td>
           </tr>
-        )) : <tr><td colSpan={5} className="empty">None.</td></tr>}</tbody>
+        )) : <tr><td colSpan={5} className="empty"><Tr text="No companies in this list right now." /></td></tr>}</tbody>
       </table></div>
     </>
   );

@@ -14,6 +14,7 @@ import type { MarketSession } from '@/lib/dse';
 import styles from './alerts.module.css';
 import { CODE_RE } from '@/lib/dhaka';
 import { Tr } from '@/components/Tr';
+import { useLang } from '@/components/i18n';
 
 interface Companies { rows: CompanyRow[]; session: MarketSession | null }
 interface Calendar { upcoming: CalendarRow[]; session: MarketSession | null }
@@ -54,6 +55,7 @@ function ruleDesc(rule: AlertRule): string {
 }
 
 export default function AlertsPage() {
+  const { t } = useLang();
   const { data } = useApi<Companies>('/api/companies');
   const { data: cal } = useApi<Calendar>('/api/dividends');
   const { codes: watchlistCodes } = useWatchlist();
@@ -212,23 +214,23 @@ export default function AlertsPage() {
 
       {/* Browser notifications */}
       <section>
-        <h2>Browser notifications</h2>
+        <h2><Tr text="Browser notifications" /></h2>
         <div className="panel">
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
             {notifPerm === 'unsupported' && (
-              <span className={`${styles.permBadge} ${styles.permOff}`}>Not supported in this browser</span>
+              <span className={`${styles.permBadge} ${styles.permOff}`}><Tr text="Not supported in this browser" /></span>
             )}
             {notifPerm === 'granted' && (
-              <span className={`${styles.permBadge} ${styles.permOn}`}>✓ Browser notifications are on</span>
+              <span className={`${styles.permBadge} ${styles.permOn}`}><Tr text="✓ Browser notifications are on" /></span>
             )}
             {notifPerm === 'denied' && (
-              <span className={`${styles.permBadge} ${styles.permOff}`}>Blocked — allow notifications in browser settings</span>
+              <span className={`${styles.permBadge} ${styles.permOff}`}><Tr text="Blocked: allow notifications for this site in your browser's site settings." /></span>
             )}
             {notifPerm === 'default' && (
               <>
-                <span className={`${styles.permBadge} ${styles.permDefault}`}>Not yet enabled</span>
+                <span className={`${styles.permBadge} ${styles.permDefault}`}><Tr text="Not yet enabled" /></span>
                 <button className="btn" type="button" onClick={() => void handleRequestNotif()}>
-                  Turn on browser notifications
+                  <Tr text="Turn on browser notifications" />
                 </button>
               </>
             )}
@@ -242,7 +244,7 @@ export default function AlertsPage() {
 
       {/* Rules list */}
       <section>
-        <h2>Your alert rules</h2>
+        <h2><Tr text="Your alert rules" /></h2>
         {watchlistCodes.length > 0 && (
           <div style={{ marginBottom: 12 }}>
             <button className="btn" type="button" onClick={handleAddDefaults} disabled={!companies.length}>
@@ -293,13 +295,13 @@ export default function AlertsPage() {
 
       {/* Add rule form */}
       <section>
-        <h2>Add a rule</h2>
+        <h2><Tr text="Add a rule" /></h2>
         <div className="panel">
           <form onSubmit={handleSubmit} noValidate>
             <div className={styles.formRow}>
               {/* Type */}
               <div className={styles.fieldWrap}>
-                <label htmlFor="alert-type">Rule type</label>
+                <label htmlFor="alert-type">{t('Rule type')}</label>
                 <select
                   id="alert-type"
                   value={formType}
@@ -318,7 +320,7 @@ export default function AlertsPage() {
 
               {/* Code */}
               <div className={`${styles.fieldWrap} ${styles.codeWrap}`}>
-                <label htmlFor="alert-code">Company code</label>
+                <label htmlFor="alert-code">{t('Company code')}</label>
                 <input
                   id="alert-code"
                   type="text"
@@ -465,7 +467,7 @@ export default function AlertsPage() {
 
       {/* Recent alerts history */}
       <section>
-        <h2>Recent alerts</h2>
+        <h2><Tr text="Recent alerts" /></h2>
         <div className="panel">
           {!store.history.length ? (
             <p className="muted" style={{ padding: '8px 0' }}>No alerts have fired yet.</p>

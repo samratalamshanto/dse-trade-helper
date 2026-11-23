@@ -280,4 +280,84 @@ export const BN: Record<string, string> = {
   'View the guide': 'গাইড দেখুন',
   'View the guide (opens in a new tab)': 'গাইড দেখুন (নতুন ট্যাবে খুলবে)',
   'Download PDF': 'PDF ডাউনলোড করুন',
+  // Topbar search placeholder
+  'Company code or name': 'কোম্পানির কোড বা নাম',
+
+  // Overview P/E and EPS tooltips
+  'Price to earnings: how many taka you pay for ৳1 of yearly profit. Lower can mean cheaper.': 'দাম ও আয়ের অনুপাত: প্রতি ৳১ বার্ষিক মুনাফার জন্য কত টাকা দিচ্ছেন। কম হলে সাধারণত সস্তা।',
+  "Earnings per share: the company's yearly profit for each share.": 'শেয়ারপ্রতি আয়: প্রতিটি শেয়ারে কোম্পানির বার্ষিক মুনাফা।',
+
+  // Suggestion buyLine parts (from analysis.ts buyLine())
+  'High risk. Not a candidate to buy now.': 'উচ্চ ঝুঁকি। এখন কেনার মতো নয়।',
+  'Not rated — no EPS published, so the profit checks cannot run. Judge it on its dividends and reports.': 'রেটিং নেই — EPS প্রকাশিত হয়নি, তাই মুনাফার পরীক্ষাগুলো চলে না। লভ্যাংশ ও প্রতিবেদনের ভিত্তিতে বিচার করুন।',
+
+  // Suggestion HOLDER parts (from analysis.ts HOLDER)
+  'If you own it: review why you hold it before the next results.': 'আপনার কাছে থাকলে: পরবর্তী ফলাফলের আগে কেন ধরে আছেন তা পর্যালোচনা করুন।',
+  'If you own it: hold for now, read the disclosures, and re-check after the next results.': 'আপনার কাছে থাকলে: এখন ধরে রাখুন, ঘোষণাগুলো পড়ুন এবং পরবর্তী ফলাফলের পরে আবার যাচাই করুন।',
+  'If you own it: hold and re-check after the next results.': 'আপনার কাছে থাকলে: ধরে রাখুন এবং পরবর্তী ফলাফলের পরে আবার যাচাই করুন।',
+
+  // Fraud page
+  'A flag shows a pattern that often comes with manipulation, such as a price pump or owners selling. It is ': 'একটি পতাকা এমন একটি ধরন দেখায় যা প্রায়ই কারসাজির সাথে আসে, যেমন দাম ফাঁপানো বা মালিকদের বিক্রি। এটি ',
+  'not proof': 'প্রমাণ নয়',
+  ' of fraud. Before you buy a flagged share, read its DSE disclosures and the latest results.': ' প্রতারণার। পতাকাযুক্ত শেয়ার কেনার আগে DSE-এর ঘোষণা ও সর্বশেষ ফলাফল পড়ুন।',
+  'Warnings': 'সতর্কতা',
+  'No companies in this list right now.': 'এই তালিকায় এখন কোনো কোম্পানি নেই।',
+
+  // Scorecard page
+  'After': 'এর পরে',
+  'Right': 'সঠিক',
+  'Avg vs DSEX': 'DSEX-এর তুলনায় গড়',
+  'Calls': 'কল',
+  'trading day': 'লেনদেনের দিন',
+  'trading days': 'লেনদেনের দিন',
+  'Best calls': 'সেরা কল',
+  'Worst calls': 'সবচেয়ে খারাপ কল',
+  '✓ right': '✓ সঠিক',
+  '✗ wrong': '✗ ভুল',
+  'None yet.': 'এখনো কিছু নেই।',
+  'No grades yet': 'এখনো কোনো গ্রেড নেই',
+  'right when it beat DSEX': 'DSEX ছাড়িয়ে গেলে সঠিক',
+  'right when it lagged DSEX': 'DSEX-এর পেছনে থাকলে সঠিক',
+  'Research': 'গবেষণা',
+  'Snapshots since': 'স্ন্যাপশট থেকে',
+  'Waiting to be graded:': 'গ্রেডের অপেক্ষায়:',
+  'call checks.': 'কল পরীক্ষা।',
+  'Weak spot:': 'দুর্বল দিক:',
+  'calls after': 'কল, এর পরে',
+  'were right': 'সঠিক ছিল',
+  'of the time': 'বার',
+  'Treat that signal with extra care.': 'এই সংকেতটি অতিরিক্ত সতর্কতার সাথে দেখুন।',
+  'Some rows have fewer than ': 'কিছু সারিতে ',
+  ' graded calls: those percentages can still change a lot.': 'টির কম গ্রেডকৃত কল: এই শতকরা হারগুলো এখনো অনেক পরিবর্তন হতে পারে।',
+
+  // Alerts page
+  'Browser notifications': 'ব্রাউজার বিজ্ঞপ্তি',
+  'Your alert rules': 'আপনার অ্যালার্ট নিয়ম',
+  'Add a rule': 'নিয়ম যোগ করুন',
+  'Recent alerts': 'সাম্প্রতিক অ্যালার্ট',
+  'Rule type': 'নিয়মের ধরন',
+  'Company code': 'কোম্পানি কোড',
+  'Not supported in this browser': 'এই ব্রাউজারে সমর্থিত নয়',
+  '✓ Browser notifications are on': '✓ ব্রাউজার বিজ্ঞপ্তি চালু আছে',
+  "Blocked: allow notifications for this site in your browser's site settings.": 'ব্লক করা: আপনার ব্রাউজারের সাইট সেটিংসে এই সাইটের জন্য বিজ্ঞপ্তি অনুমোদন করুন।',
+  'Not yet enabled': 'এখনো চালু হয়নি',
+  'Turn on browser notifications': 'ব্রাউজার বিজ্ঞপ্তি চালু করুন',
+
+  // Plan page SECTIONS nav labels
+  'First steps': 'প্রথম পদক্ষেপ',
+  'Risks': 'ঝুঁকি',
+  'Example companies': 'উদাহরণ কোম্পানি',
+  'Ranking': 'র‍্যাঙ্কিং',
+  'Example portfolio': 'উদাহরণ পোর্টফোলিও',
+  'Growth': 'প্রবৃদ্ধি',
+  'Research list': 'গবেষণার তালিকা',
+
+  // Plan page h2 headings
+  'Important risks before investing': 'বিনিয়োগের আগে গুরুত্বপূর্ণ ঝুঁকি',
+  'Example plan': 'উদাহরণ পরিকল্পনা',
+  'Example companies: five-year analysis': 'উদাহরণ কোম্পানি: পাঁচ বছরের বিশ্লেষণ',
+  'Overall comparison and ranking': 'সামগ্রিক তুলনা ও র‍্যাঙ্কিং',
+  'Example portfolio split': 'উদাহরণ পোর্টফোলিও বিভাজন',
+  'What could your investment become?': 'আপনার বিনিয়োগ কতটা হতে পারে?',
+  'Next research phase': 'পরবর্তী গবেষণার পর্যায়',
 };

@@ -14,7 +14,7 @@ import { Details } from '@/components/company/Details';
 import Link from 'next/link';
 import { useLang } from '@/components/i18n';
 import { WatchButton } from '@/components/Watchlist';
-import { fmt, fmtDate, sectorName } from '@/components/format';
+import { fmt, fmtDateLang, sectorName } from '@/components/format';
 import { CATEGORY_TEXT } from '@/lib/glossary';
 import { FRAUD, Icon, Info, SIGNALS, SignalPill, type FraudLevel, type IconName, type Signal } from '@/components/ui';
 import type { CompanyDetail } from '@/lib/service';
@@ -32,7 +32,7 @@ const NOT_RATED = 'Not rated — no EPS published';
 const NOTE_TONE: Record<Signal, string> = { research: 'good', avoid: 'bad', caution: 'warn', neutral: '' };
 
 export function CompanyView({ code }: { code: string }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { data: d, error } = useApi<CompanyDetail>(code ? '/api/company/' + encodeURIComponent(code) : null);
   const [tab, setTab] = useState<Tab>('overview');
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -71,7 +71,7 @@ export function CompanyView({ code }: { code: string }) {
             {CATEGORY_TEXT[c.category] ? <div className={`small ${c.category === 'Z' ? 't-bad' : 'muted'}`}>{t(CATEGORY_TEXT[c.category])}</div> : null}
             <div className="hero-actions"><WatchButton code={c.code} withText /><Link className="btn" href={'/compare?codes=' + encodeURIComponent(c.code)}>{t('Compare with others')}</Link></div></div>
           <div className="hero-price"><div className="mono" style={{ fontSize: 28, fontWeight: 600 }}>৳{fmt(c.price)}</div><div className="mono small"><ChangeText pct={c.changePct} suffix={d.today?.live ? ' today' : ' last session'} /></div>
-            <div className="small muted">{t('DSE data')}: {d.session?.dataTime || fmtDate(d.session?.sessionDate)} · {t('source')} dse.com.bd</div>
+            <div className="small muted">{t('DSE data')}: {d.session?.dataTime || fmtDateLang(d.session?.sessionDate, lang)} · {t('source')} dse.com.bd</div>
             {d.freshSkipped ? <div className="small t-warn" role="status">{t('DSE is busy, so this is the saved copy. Try Refresh in a minute.')}</div> : null}
             <RangeBar52 c={c} compact /><HeaderStats d={d} /></div>
         </div>
@@ -81,9 +81,18 @@ export function CompanyView({ code }: { code: string }) {
 {a.notRated ? null : (
           <span className="mono small muted">{t('Score')} {a.score}/100 <Info text="Each signal has its own range. Avoid 0–30, Caution 31–60, No strong signal 61–75, Worth researching 76–100." /></span>)}
         </div>
-        <div className={`note ${NOTE_TONE[signal]}`}><b>{t('Suggestion')}:</b> {t(a.suggestion).split(/(disclosures)/).map((part, i) => (part === 'disclosures'
-          ? <button key={i} type="button" className="link-btn" onClick={() => { show('news', false); tablist.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>{part}</button>
-          : part))}</div>
+        {(() => {
+          const openNews = () => { show('news', false); tablist.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+          const holderTranslated = t(a.suggestionParts.holder);
+          const holderParts = holderTranslated.split(/(disclosures)/);
+          const hasDisclosures = holderParts.length > 1;
+          const holderNode = hasDisclosures
+            ? holderParts.map((p, i) => p === 'disclosures' ? <button key={i} type="button" className="link-btn" onClick={openNews}>{p}</button> : p)
+            : <>{holderTranslated}{a.suggestionParts.holder.includes('disclosures') ? <> (<button type="button" className="link-btn" onClick={openNews}>disclosures</button>)</> : null}</>;
+          return (
+            <div className={`note ${NOTE_TONE[signal]}`}><b>{t('Suggestion')}:</b> {t(a.suggestionParts.buyLine)}{' '}{holderNode}</div>
+          );
+        })()}
       </div>
 
       <h2 className="sr-title">{t('Four questions before you buy')}</h2>
@@ -119,7 +128,7 @@ export function CompanyView({ code }: { code: string }) {
         {tab === 'owners' ? <Owners c={c} /> : null}
         {tab === 'details' ? <Details details={c.details} /> : null}
       </div>
-      <p className="why">{t('Data as of')} {d.session?.dataTime || fmtDate(d.session?.sessionDate)} · {t('Source: DSE public website')}.{' '}<a href={'https://www.dse.com.bd/company/' + encodeURIComponent(c.code)} target="_blank" rel="noopener noreferrer">{t('Open on DSE ↗')}</a></p>
+      <p className="why">{t('Data as of')} {d.session?.dataTime || fmtDateLang(d.session?.sessionDate, lang)} · {t('Source: DSE public website')}.{' '}<a className="link-btn" href={'https://www.dse.com.bd/company/' + encodeURIComponent(c.code)} target="_blank" rel="noopener noreferrer">{t('Open on DSE ↗')}</a></p>
     </>
   );
 }

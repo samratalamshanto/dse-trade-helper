@@ -343,10 +343,13 @@ export function analyze(c: Company, sectorPe: number | null, now = new Date()): 
 
   const metricsOut: Metrics = { ...m, pe: round(m.pe, 2), pb: round(m.pb, 2), avgDailyValue: round(m.avgDailyValue, 0), volumeSpike: round(m.volumeSpike), epsYears: undefined };
 
+  const buyLinePart = buyLine(signal as Analysis['signal'], m, c);
+  const holderPart = HOLDER[signal as Analysis['signal']];
   return {
     signal: signal as Analysis['signal'], score, quality, notRated: m.epsNow == null, fraud, checks, reasons,
     history: history(c, m),
     suggestion: suggestion(signal as Analysis['signal'], m, c),
+    suggestionParts: { buyLine: buyLinePart, holder: holderPart },
     metrics: metricsOut,
   };
 }
