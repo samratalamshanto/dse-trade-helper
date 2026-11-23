@@ -15,6 +15,7 @@ const NAV: { group: string; items: { href: string; label: string; icon: IconName
     { href: '/', label: 'Dashboard', icon: 'home' },
     { href: '/all', label: 'Companies', icon: 'list', also: ['/sectors', '/dividends'] },
     { href: '/compare', label: 'Compare', icon: 'columns' },
+    { href: '/range', label: '52-week range', icon: 'trend' },
     { href: '/warning-signs', label: 'Warning signs', icon: 'high' },
     { href: '/scorecard', label: 'Signal scorecard', icon: 'research' },
   ] },
