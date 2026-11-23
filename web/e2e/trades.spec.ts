@@ -1,5 +1,5 @@
 import type { Page, Route } from '@playwright/test';
-import { test, expect } from './fixtures';
+import { test, expect, openSettings } from './fixtures';
 
 // The real /api/trades writes to the owner's Google Sheet: every request is mocked, anything unmocked is aborted.
 const KEY = 'k'.repeat(20);
@@ -34,6 +34,7 @@ test.describe('/trades (API mocked)', () => {
     await expect(page).toHaveURL(/\/portfolio$/);
     await expect(page.getByRole('heading', { name: 'Portfolio', level: 1 })).toBeVisible();
     await expect(page.getByLabel('Password')).toBeHidden();
+    await openSettings(page);
     await page.getByText('Sync with my Google Sheet').click();
     await syncPanel(page).getByText('For the site owner').click();
     await syncPanel(page).getByLabel('Password').fill(KEY);
@@ -50,6 +51,7 @@ test.describe('/trades (API mocked)', () => {
     await page.route('**/api/trades**', (r) => json(r, r.request().headers()['x-trades-key'] === KEY ? 200 : 401, LIST));
     await page.goto('/portfolio');
     await expect(page.getByRole('heading', { name: 'All trades' })).toBeVisible();
+    await openSettings(page);
     await page.getByText('Sync with my Google Sheet').click();
     await expect(syncPanel(page).getByRole('button', { name: 'Disconnect' })).toBeVisible();
   });
@@ -94,18 +96,18 @@ test.describe('/trades (API mocked)', () => {
     expect(posted).toEqual({ date: '2026-03-02', code: 'GP', side: 'SELL', quantity: '10', price: '281.5', commission: '5', note: 'e2e', account: 'real' });
   });
 
-  test('holding check: coloured badge with its reasons (tap to expand on phones)', async ({ page }, info) => {
+  test('holding check: one coloured status per row; tap it to see the reasons and limits', async ({ page }) => {
     await page.route('**/api/trades**', (r) => json(r, 200, LIST));
     await unlock(page);
-    await expect(page.getByText('Checks use fixed rules on your numbers and public DSE data — a learning aid, not investment advice.')).toBeVisible();
-    const row = page.locator('.panel').filter({ has: page.getByRole('heading', { name: 'Holdings', exact: true }) }).locator('tbody tr').filter({ hasText: 'GP' });
-    const reason = row.getByText('Up 21.0% — past your 20% target');
-    if (info.project.name === 'phone') {
-      await expect(reason).toBeHidden();
-      await row.getByRole('button', { name: /Consider taking some profit/ }).click();
-    }
+    await expect(page.getByText('The status comes from fixed rules on your numbers and public DSE data. It is a learning aid, not advice. Tap a status to see why.')).toBeVisible();
+    const tbody = page.locator('.panel').filter({ has: page.getByRole('heading', { name: 'Holdings', exact: true }) }).locator('tbody');
+    const row = tbody.locator('tr').filter({ hasText: 'GP' });
+    const reason = tbody.getByText('Up 21.0% — past your 20% target');
+    await expect(reason).toBeHidden();
+    await row.getByRole('button', { name: /Consider taking some profit/ }).click();
     await expect(row.locator('.pill.s-caution:visible')).toHaveText('Consider taking some profit');
     await expect(reason).toBeVisible();
+    await expect(tbody.getByText('Your limits: stop-loss 10%, target 20%')).toBeVisible();
   });
 
   test('my limits: save sends the PUT, shows the 400 message inline, then saves and reloads', async ({ page }) => {
@@ -117,6 +119,7 @@ test.describe('/trades (API mocked)', () => {
     });
     await page.route('**/api/trades', (r) => { gets++; return json(r, 200, LIST); });
     await unlock(page);
+    await openSettings(page);
     const panel = page.locator('form').filter({ has: page.getByRole('heading', { name: 'My limits' }) });
     await panel.getByLabel('Default stop-loss %').fill('12');
     await panel.getByLabel('Holding with its own limits').selectOption('GP');
@@ -226,6 +229,7 @@ test.describe('/trades (API mocked)', () => {
     await page.route('**/api/trades**', (r) => json(r, 200, LIST));
     await page.route('**/api/notify/test', (r) => json(r, 200, { sent: true }));
     await page.goto('/portfolio');
+    await openSettings(page);
     await expect(page.getByText('Sign in with Google (in the panel below) to get Telegram alerts from your own Sheet.', { exact: false })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Send test to Telegram' })).toHaveCount(0);
     await page.getByText('Sync with my Google Sheet').click();
@@ -314,6 +318,7 @@ test.describe('telegram for every user (session and Telegram API mocked)', () =>
       ? json(r, 200, { url: 'https://t.me/DseTestBot?start=k7Qm2xV9aB3dE5fGhJ1q0w', expiresAt: new Date(Date.now() + 600_000).toISOString() })
       : json(r, 200, { disconnected: true })));
     await page.goto('/portfolio');
+    await openSettings(page);
     await page.getByRole('button', { name: 'Connect Telegram' }).click();
     await expect(page.getByRole('link', { name: 'Open Telegram (opens in a new tab)' })).toHaveAttribute('href', 'https://t.me/DseTestBot?start=k7Qm2xV9aB3dE5fGhJ1q0w');
     await expect(page.locator('.tg-connect svg title')).toHaveText('Scan to connect Telegram');

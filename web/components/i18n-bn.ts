@@ -492,4 +492,15 @@ export const BN: Record<string, string> = {
   'Data looks wrong: the price is far outside its 52-week range.': 'তথ্য ভুল মনে হচ্ছে: দাম ৫২-সপ্তাহের সীমার অনেক বাইরে।',
   'Loading 52-week range…': '৫২ সপ্তাহের সীমা লোড হচ্ছে…',
   'A price near its low can fall further. Automatic figures and your own rules, not advice.': 'সর্বনিম্নের কাছের দাম আরো কমতে পারে। স্বয়ংক্রিয় তথ্য ও আপনার নিয়ম, পরামর্শ নয়।',
+  // Portfolio page (trades)
+  'Your shares, worked out from your buys and sells. Saved in your own Google Sheet, so every device shows the same numbers.': 'আপনার কেনা-বেচা থেকে হিসাব করা আপনার শেয়ার। আপনার নিজের Google Sheet-এ রাখা, তাই প্রতিটি ডিভাইসে একই সংখ্যা দেখায়।',
+  'Your shares, worked out from your buys and sells. Saved in this browser only. To see them on other devices, turn on Google Sheet sync in Settings at the bottom.': 'আপনার কেনা-বেচা থেকে হিসাব করা আপনার শেয়ার। শুধু এই ব্রাউজারে রাখা। অন্য ডিভাইসে দেখতে নিচের সেটিংসে Google Sheet সিঙ্ক চালু করুন।',
+  'Add a trade': 'লেনদেন যোগ করুন', 'Add a practice trade': 'অনুশীলনের লেনদেন যোগ করুন',
+  'Holdings': 'হোল্ডিং', 'Avg cost': 'গড় খরচ', 'Value': 'মূল্য', 'Profit / loss': 'লাভ / ক্ষতি', 'Status': 'অবস্থা',
+  'The status comes from fixed rules on your numbers and public DSE data. It is a learning aid, not advice. Tap a status to see why.': 'অবস্থা আসে আপনার সংখ্যা ও DSE-এর পাবলিক তথ্যের উপর নির্দিষ্ট নিয়ম থেকে। এটি শেখার সহায়ক, পরামর্শ নয়। কারণ দেখতে অবস্থায় চাপ দিন।',
+  'Details': 'বিস্তারিত', 'Hide': 'লুকান', 'Your limits': 'আপনার সীমা', 'stop-loss': 'স্টপ-লস', 'target': 'লক্ষ্য',
+  'Allocation and dividend income': 'বরাদ্দ ও লভ্যাংশ আয়', 'Dividend income': 'লভ্যাংশ আয়',
+  'How your money is spread, by value now.': 'বর্তমান মূল্য অনুযায়ী আপনার টাকা কোথায় কতটা আছে।',
+  'Settings': 'সেটিংস', 'Phone alerts': 'ফোন অ্যালার্ট', 'My data': 'আমার তথ্য', 'Your stop-loss and target, phone alerts, backup and Google Sheet sync.': 'আপনার স্টপ-লস ও লক্ষ্য, ফোন অ্যালার্ট, ব্যাকআপ ও Google Sheet সিঙ্ক।',
+  'Invested': 'বিনিয়োগ', 'Profit / loss now': 'এখন লাভ / ক্ষতি', 'Profit / loss from sales': 'বিক্রি থেকে লাভ / ক্ষতি', 'Broker fees paid': 'দেওয়া ব্রোকার ফি',
 };

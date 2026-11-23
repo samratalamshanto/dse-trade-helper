@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import type { Page, Route } from '@playwright/test';
-import { test, expect } from './fixtures';
+import { test, expect, openSettings } from './fixtures';
 
 // Browser mode (no key): data lives in localStorage; the keyless /api/portfolio/* routes only compute. Every Sheet call is mocked.
 const KEY = 'k'.repeat(20);
@@ -112,6 +112,7 @@ test.describe('browser mode → Google Sheet (Sheet API mocked)', () => {
     await page.route('**/api/plans', (r) => { posted.push(r.request().postDataJSON() as Record<string, unknown>); return json(r, 201, {}); });
     await page.route('**/api/trades/settings', (r) => { posted.push({ settings: r.request().postDataJSON() }); return json(r, 200, {}); });
     await page.goto('/portfolio');
+    await openSettings(page);
     await page.getByText('Sync with my Google Sheet').click();
     const sync = page.locator('details').filter({ has: page.getByText('Sync with my Google Sheet') });
     await sync.getByText('For the site owner').click();
@@ -139,12 +140,13 @@ test.describe('browser mode: export and import my data', () => {
   const summary = (page: Page) => page.locator('div.panel').filter({ hasText: 'Value now' }).first();
   const seed = (page: Page, trades: unknown[]) => page.addInitScript((t) => { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('myTrades', JSON.stringify(t)); } }, trades);
   const exportFile = async (page: Page) => {
+    await openSettings(page);
     const dl = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Export my data' }).click();
     const file = await (await dl).path();
     return { file, body: JSON.parse(fs.readFileSync(file, 'utf8')) as Record<string, unknown> };
   };
-  const importFile = (page: Page, body: unknown) => page.getByLabel('Import my data').setInputFiles({ name: 'backup.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(body)) });
+  const importFile = async (page: Page, body: unknown) => { await openSettings(page); await page.getByLabel('Import my data').setInputFiles({ name: 'backup.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(body)) }); };
 
   test('export → clear → import (replace) restores the same Portfolio numbers', async ({ page }) => {
     await seed(page, [trade('a1', 'GP', 7), trade('a2', 'ACI', 2)]);
@@ -157,6 +159,7 @@ test.describe('browser mode: export and import my data', () => {
     await page.evaluate(() => localStorage.clear());
     await page.reload();
     await expect(page.getByText('No trades yet.', { exact: false })).toBeVisible();
+    await openSettings(page);
     await page.getByLabel('Import my data').setInputFiles(file);
     await expect(page.getByText('This file has 2 trades, 0 plans, 0 watchlist codes, 0 alerts.')).toBeVisible();
     page.once('dialog', (d) => void d.accept());
