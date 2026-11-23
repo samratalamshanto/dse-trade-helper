@@ -558,4 +558,10 @@ export const BN: Record<string, string> = {
   // Watchlist decision facts and next steps
   'Decision facts': 'সিদ্ধান্তের তথ্য', 'Alert': 'সতর্কতা', 'Plan': 'পরিকল্পনা',
   'results ~': 'ফলাফল ~',
+  '{n}% above 52-wk low': '{n}% ৫২-সপ্তাহের নিম্নের উপরে',
+  'P/E {pe} vs usual {usual}': 'P/E {pe} বনাম স্বাভাবিক {usual}',
+  'EPS ↑{n}%/yr': 'EPS ↑{n}%/বছর',
+  'EPS ↓{n}%/yr': 'EPS ↓{n}%/বছর',
+  'declared ৳{n} · record date passed': 'ঘোষিত ৳{n} · রেকর্ড তারিখ পেরিয়েছে',
+  'declared {n}% bonus · record date passed': 'ঘোষিত {n}% বোনাস · রেকর্ড তারিখ পেরিয়েছে',
 };

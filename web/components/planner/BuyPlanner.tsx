@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useState, useEffect, type FormEvent, type ReactNode } from 'react';
 import { fmt } from '@/components/format';
 import { useLang } from '@/components/i18n';
 import { Info } from '@/components/ui';
@@ -80,6 +80,9 @@ function Result({ p, bar }: { p: BuyPlan; bar: ReactNode }) {
 export function BuyPlanner({ code, bar }: { code: string; bar: ReactNode }) {
   const { t } = useLang();
   const [mode, setMode] = useState<'qty' | 'budget'>('qty');
+  useEffect(() => {
+    if (window.location.hash === '#planner-title') document.getElementById('planner-title')?.scrollIntoView();
+  }, []);
   const [amount, setAmount] = useState('');
   const [plan, setPlan] = useState<BuyPlan | null>(null);
   const [error, setError] = useState<string | null>(null);

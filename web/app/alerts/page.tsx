@@ -65,15 +65,18 @@ export default function AlertsPage() {
 
   const [formType, setFormType] = useState<RuleType | ''>('');
   const [formCode, setFormCode] = useState('');
-  useEffect(() => {
-    const p = new URLSearchParams(window.location.search).get('code');
-    if (p) setFormCode(p.toUpperCase());
-  }, []);
   const [formTarget, setFormTarget] = useState('');
   const [formDays, setFormDays] = useState('3');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [showSuggests, setShowSuggests] = useState(false);
   const [hiIdx, setHiIdx] = useState(-1);
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get('code');
+    if (!p) return;
+    const clean = p.trim().toUpperCase().slice(0, 12);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (/^[A-Z0-9&._-]+$/.test(clean)) setFormCode(clean);
+  }, []);
   const [notifOverride, setNotifOverride] = useState<NotificationPermission | null>(null);
   const baseNotifPerm = useSyncExternalStore(
     () => () => {},
