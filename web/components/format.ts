@@ -22,6 +22,13 @@ export const fmtDateLang = (iso: string | null | undefined, lang: string): strin
 export const monthName = (ym: string | null | undefined): string =>
   ym ? new Date(ym + '-01T00:00:00Z').toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }) : '—';
 
+export const monthYearShort = (ym: string | null | undefined): string => {
+  if (!ym) return '';
+  const d = new Date(ym + '-01T00:00:00Z');
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+};
+
 export { dhakaToday } from '../lib/dhaka.ts';
 
 // One unit everywhere: crore taka (৳1 cr = ৳100 lakh).
