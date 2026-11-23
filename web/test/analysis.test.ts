@@ -51,7 +51,7 @@ test('a 40% monthly rise without earnings growth is flagged as a pump', () => {
   const flat = [2021, 2022, 2023, 2024, 2025].map((year) => ({ year, eps: 5, pe: 14, nav: null, profit: null, dividend: null }));
   const pump = [...series(100, 70, 70), ...series(23, 70, 98)];
   const a = analyze(company({ years: flat, series: pump, price: 98 }), 15, NOW);
-  assert.ok(a.fraud.flags.some((f) => f.title === 'Price pump'));
+  assert.ok(a.fraud.flags.some((f) => f.title === 'Fast price rise'));
   assert.notStrictEqual(a.signal, 'research');
 });
 
@@ -218,7 +218,7 @@ test('review ISLAMIBANK: a loss in the latest quarter fails the profit check', (
 test('review APEXSPINN: a slow 1-year pump with flat earnings is flagged', () => {
   const flat = [2021, 2022, 2023, 2024, 2025].map((year) => ({ year, eps: 3.6, pe: 14, nav: null, profit: null, dividend: null }));
   const a = analyze(company({ years: flat, series: series(260, 140, 409), price: 409 }), 15, NOW);
-  assert.ok(a.fraud.flags.some((f) => f.title === 'Price pump' && f.detail.includes('1 year')));
+  assert.ok(a.fraud.flags.some((f) => f.title === 'Fast price rise' && f.detail.includes('1 year')));
 });
 
 test('review PRIMEBANK: sponsor drop plus a quiet volume spike is suspicious, not high risk', () => {
@@ -267,7 +267,7 @@ test('review: one price move cannot make "high risk" on its own', () => {
   const pumped = [...series(100, 20, 20), ...series(64, 20, 31)];
   const a = analyze(company({ years: flat, series: pumped, price: 31, paidUpCapital: 2e8 }), 15, NOW);
   const titles = a.fraud.flags.map((f) => f.title);
-  assert.ok(titles.includes('Price pump') && titles.includes('Small company, fast rise'));
+  assert.ok(titles.includes('Fast price rise') && titles.includes('Small company, fast rise'));
   assert.strictEqual(a.fraud.level, 'suspicious');
 });
 

@@ -11,6 +11,7 @@ export default function TermsPage() {
       <div className="panel">
         <h2 className="h3">Not investment advice</h2>
         <p>Trade Helper is a free learning aid. Signals, checks and plans come from fixed rules on public Dhaka Stock Exchange data. They are not advice to buy or sell. You make your own trading decisions, and you carry their risk.</p>
+        <p>Not affiliated with, or endorsed by, Dhaka Stock Exchange or BSEC. Not a licensed investment adviser. Data © Dhaka Stock Exchange; shown from its public website.</p>
       </div>
       <div className="panel" style={{ marginTop: 14 }}>
         <h2 className="h3">Data can be wrong or late</h2>

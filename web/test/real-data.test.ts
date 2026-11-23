@@ -48,7 +48,7 @@ test('A6 DELTALIFE: no EPS published is "not rated", never a loss or avoid', () 
 test('A7/A8 BNIPLC: +224% price on +14.8% EPS is a pump and not worth researching', () => {
   const a = run(real('BNIPLC', { price: 146.3 }), 20);
   assert.notStrictEqual(a.signal, 'research');
-  assert.ok(a.fraud.flags.some((f) => f.title === 'Price pump' && f.detail.includes('P/E rose')));
+  assert.ok(a.fraud.flags.some((f) => f.title === 'Fast price rise' && f.detail.includes('P/E rose')));
   const check = a.checks.find((x) => x.label === 'Price not stretched')!;
   assert.strictEqual(check.ok, false);
   // Usual P/E is the median of the last 5 (14.03), not the mean pulled up by 2021's 42: limit 1.5 × 14 = 21.
@@ -57,7 +57,7 @@ test('A7/A8 BNIPLC: +224% price on +14.8% EPS is a pump and not worth researchin
 
 test('A8: a price rise matched by the same EPS rise is not a pump', () => {
   const c = real('HWAWELLTEX', { years: [{ year: 2024, eps: 2, pe: 20 }, { year: 2025, eps: 4, pe: 11 }], price: 91 });
-  assert.ok(!run(c).fraud.flags.some((f) => f.title === 'Price pump'));
+  assert.ok(!run(c).fraud.flags.some((f) => f.title === 'Fast price rise'));
 });
 
 test('A12 SHEPHERD: EPS −1.51 → 0.04 is not a sudden profit jump', () => {
@@ -82,16 +82,16 @@ test('A10: without P/E history the cheap answer falls back to the 52-week range'
   assert.strictEqual(q.label, 'Near its 52-week low');
 });
 
-test('A10/B4: the fraud answer uses Clean / Suspicious / High risk', () => {
-  assert.strictEqual(questions(real('GP'))[2].label, 'Clean');
-  assert.strictEqual(questions(real('SHEPHERD'))[2].label, 'Suspicious');
-  assert.strictEqual(questions(real('GP', { category: 'Z' }))[2].label, 'High risk');
+test('A10/B4: the fraud answer uses No flags / 1 flag pattern / Several flags', () => {
+  assert.strictEqual(questions(real('GP'))[2].label, 'No flags');
+  assert.strictEqual(questions(real('SHEPHERD'))[2].label, '1 flag pattern');
+  assert.strictEqual(questions(real('GP', { category: 'Z' }))[2].label, 'Several flags');
 });
 
 test('A11: every signal carries a line for a holder', () => {
   const cases = [real('BRACBANK', { price: 66.6 }), real('GP'), real('DELTALIFE'), real('TITASGAS', { price: 23.4 })];
   assert.deepStrictEqual(cases.map((c) => run(c, 20).signal).sort(), ['avoid', 'caution', 'neutral', 'research']);
-  for (const c of cases) assert.ok(run(c, 20).suggestion.includes('If you own it:'), c.code);
+  for (const c of cases) assert.ok(run(c, 20).suggestion.includes('If you own it,'), c.code);
 });
 
 test('A15: "That is strong" needs EPS growth of 15% a year or more', () => {

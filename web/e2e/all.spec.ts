@@ -30,14 +30,14 @@ test.describe('/all', () => {
     const n = await rows(page).count();
     expect(n).toBeLessThan(all);
     if (n > 0 && !(await page.getByText('No company matches these filters.').count())) {
-      for (const t of await rows(page).locator('td[data-label="Signal"]').allInnerTexts()) expect(t).toMatch(/Worth researching/i);
+      for (const t of await rows(page).locator('td[data-label="Signal"]').allInnerTexts()) expect(t).toMatch(/Passes the checks/i);
     }
   });
 
   test('sort by P/E ascending', async ({ page }, info) => {
     // At phone width table.cards hides <thead>; the card layout has its own sort select.
     if (info.project.name === 'phone') await page.getByRole('combobox', { name: 'Sort by' }).selectOption('pe');
-    else await page.getByRole('button', { name: 'P/E' }).click();
+    else await page.getByRole('button', { name: 'P/E ↕', exact: true }).click();
     await expect(page).toHaveURL(/sort=pe&dir=1/);
     await expect(page.locator('th[data-sort="pe"]')).toHaveAttribute('aria-sort', 'ascending');
     const vals = (await rows(page).locator('td[data-label="P/E"]').allInnerTexts())
@@ -55,7 +55,7 @@ test.describe('/all', () => {
   });
 
   test('quick pick chip shows its active state and filters by URL', async ({ page }) => {
-    const chip = page.getByRole('group', { name: 'Quick picks:' }).getByRole('button', { name: 'Risky — avoid' });
+    const chip = page.getByRole('group', { name: 'Quick picks:' }).getByRole('button', { name: 'High-risk list' });
     await expect(chip).toHaveAttribute('aria-pressed', 'false');
     await chip.click();
     await expect(page).toHaveURL(/preset=avoid/);
@@ -63,9 +63,9 @@ test.describe('/all', () => {
     await expect(chip).toHaveClass(/active/);
   });
 
-  test('"Good companies" lists only Worth researching rows at any price, more than "Good and cheap"', async ({ page }) => {
+  test('"Good companies" lists only Passes the checks rows at any price, more than "Low P/E vs sector"', async ({ page }) => {
     const group = page.getByRole('group', { name: 'Quick picks:' });
-    const cheapChip = group.getByRole('button', { name: 'Good and cheap' });
+    const cheapChip = group.getByRole('button', { name: 'Low P/E vs sector' });
     await cheapChip.click();
     await expect(cheapChip).toHaveAttribute('aria-pressed', 'true');
     const cheap = await rows(page).count();
@@ -77,7 +77,7 @@ test.describe('/all', () => {
     expect(good).toBeGreaterThanOrEqual(cheap);
     expect(good).toBeGreaterThan(0);
     const signals = await rows(page).locator('td[data-label=Signal]').allInnerTexts();
-    for (const s of signals) expect(s).toContain('Worth researching');
+    for (const s of signals) expect(s).toContain('Passes the checks');
   });
 
   test('CSV download has a header row', async ({ page }) => {

@@ -10,11 +10,11 @@ const MIN_PCT = 1;
 export type PositionAction = 'review' | 'take-profit' | 'hold-dividend' | 'add' | 'hold';
 
 export const ACTION_TEXT: Record<PositionAction, { label: string; tone: 'bad' | 'warn' | 'info' | 'good' | 'neutral' }> = {
-  review: { label: 'Review — consider selling', tone: 'bad' },
-  'take-profit': { label: 'Consider taking some profit', tone: 'warn' },
-  'hold-dividend': { label: 'Hold — dividend coming', tone: 'info' },
-  add: { label: 'Could buy more', tone: 'good' },
-  hold: { label: 'Hold', tone: 'neutral' },
+  review: { label: 'Review: stop-loss or a warning', tone: 'bad' },
+  'take-profit': { label: 'Above your target', tone: 'warn' },
+  'hold-dividend': { label: 'Dividend record date near', tone: 'info' },
+  add: { label: 'Fits your rules', tone: 'good' },
+  hold: { label: 'No rule triggered', tone: 'neutral' },
 };
 
 export interface Limits { stopPct: number; targetPct: number }
@@ -51,8 +51,8 @@ export function checkPosition(p: PositionInput, limits: Limits, today: string): 
   const vsCost = plPct == null ? 'no live price' : `${pct(plPct)} vs your cost ৳${p.avgCost.toFixed(2)}`;
 
   const review: string[] = [];
-  if (p.fraud === 'high') review.push('High fraud risk on this company');
-  if (p.signal === 'avoid') review.push('The signal is Avoid');
+  if (p.fraud === 'high') review.push('The company has several warning-sign patterns');
+  if (p.signal === 'avoid') review.push('The signal is High risk');
   if (plPct != null && plPct <= -limits.stopPct) review.push(`Down ${Math.abs(plPct).toFixed(1)}% from your cost — past your ${limits.stopPct}% stop-loss`);
   if (review.length) return done('review', [...review, vsCost]);
 
@@ -69,12 +69,12 @@ export function checkPosition(p: PositionInput, limits: Limits, today: string): 
 
   const smallEnough = p.weightPct == null || p.weightPct < MAX_WEIGHT_TO_ADD_PCT;
   if (p.signal === 'research' && p.verdictKey === 'value' && plPct != null && plPct < 0 && smallEnough) {
-    return done('add', ['Worth researching, and cheap against its own history', `${Math.abs(plPct).toFixed(1)}% below your average cost`, `Only ${p.weightPct == null ? '—' : p.weightPct.toFixed(0) + '%'} of your holdings`]);
+    return done('add', ['Passes the checks, and cheap against its own history', `${Math.abs(plPct).toFixed(1)}% below your average cost`, `Only ${p.weightPct == null ? '—' : p.weightPct.toFixed(0) + '%'} of your holdings`]);
   }
 
   const why = [vsCost];
   if (p.signal === 'caution') why.unshift('Caution signal — re-check after the next results');
-  if (p.fraud === 'suspicious') why.unshift('One fraud warning pattern — keep an eye on it');
+  if (p.fraud === 'suspicious') why.unshift('One warning sign pattern — keep an eye on it');
   if (plPct != null && plPct >= limits.targetPct) why.push(`Up ${plPct.toFixed(1)}% — past your ${limits.targetPct}% target, but the price is not high against its own history`);
   else if (plPct != null) why.push(`Stop-loss ${limits.stopPct}% and target ${limits.targetPct}% not reached`);
   return done('hold', why);

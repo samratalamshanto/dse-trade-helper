@@ -200,7 +200,7 @@ export function planBuy(p: PlannerInput): BuyPlan {
 
   if (p.illiquid) return plan('avoid', 0, null, ['No trades in the last 52 weeks — there may be no seller at any price']);
   if (p.fraud === 'high' || p.signal === 'avoid') {
-    return plan('avoid', 0, null, [p.fraud === 'high' ? 'High fraud risk on this company' : 'The signal is Avoid — loss-making, category Z or a high-risk pattern']);
+    return plan('avoid', 0, null, [p.fraud === 'high' ? 'This company shows several warning-sign patterns' : 'The signal is High risk — loss-making, category Z or a high-risk pattern']);
   }
   if (dividend && dividend.tradingDaysLeft <= DIVIDEND_SOON_TRADING_DAYS && p.fraud === 'clean') {
     const cash = cashPerShare != null ? `৳${fmt(cashPerShare)} a share (৳${fmt(cashPerShare * p.quantity)} for ${p.quantity})` : 'the dividend';

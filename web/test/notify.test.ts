@@ -46,7 +46,7 @@ test('a reached buy plan says what to buy; a plan ending on the next trading day
   ];
   const a = alertsFor(base({ plans }), {});
   assert.deepEqual(a.map((x) => x.key), ['plan:p1:reached:2026-11-19', 'plan:p2:expiring:2026-11-22']);
-  assert.equal(a[0].text, '<b>GP</b> reached ৳222.20 — your plan says buy the other 5');
+  assert.equal(a[0].text, '<b>GP</b> reached your plan price; 5 shares left in your plan');
 });
 
 test('a holding alerts only when its check changes to Review or Take profit', () => {
@@ -58,7 +58,7 @@ test('a holding alerts only when its check changes to Review or Take profit', ()
   ];
   const a = alertsFor(base({ holdings }), { BBB: 'take-profit' });
   assert.deepEqual(a.map((x) => x.key), ['pos:AAA:review:2026-11-19']);
-  assert.match(a[0].text, /Review — consider selling\n• Down 12% &lt;stop&gt;/);
+  assert.match(a[0].text, /Review: stop-loss or a warning\n• Down 12% &lt;stop&gt;/);
 });
 
 test('a held company whose dividend last-buy day is today or the next trading day alerts', () => {
@@ -76,7 +76,7 @@ test('the morning summary: holdings value, day P/L, plans and top picks, escaped
     plans: [{ id: '1', code: 'A', until: null, targetPrice: 1, live: { status: 'reached', remaining: 1 } }, { id: '2', code: 'B', until: null, targetPrice: 1, live: { status: 'waiting', remaining: 1 } }],
     picks: [{ code: 'A&B', name: 'x', price: 10 }],
   }));
-  assert.equal(s, '<b>DSE morning summary — 2026-11-19</b>\nHoldings: ৳12,346 (today -৳1,234)\nBuy plans: 1 reached, 1 waiting\nPicks to research: A&amp;B ৳10.00\n<i>Learning aid, not investment advice.</i>');
+  assert.equal(s, '<b>Morning summary (DSE data) — 2026-11-19</b>\nHoldings: ৳12,346 (today -৳1,234)\nBuy plans: 1 reached, 1 waiting\nResearch list: A&amp;B ৳10.00\n<i>Learning aid, not investment advice.</i>');
 });
 
 test('dedupe: a sent key is never sent again; the summary comes once a day after 09:45', () => {

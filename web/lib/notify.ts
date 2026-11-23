@@ -61,11 +61,14 @@ export interface NotifyState {
   signInAsked?: string;
 }
 
+// Every alert ends with this line, as the site does.
+export const ALERT_FOOTER = 'Learning aid, not investment advice.';
+
 export const emptyState = (): NotifyState => ({ sent: {}, actions: {}, lastRun: null, lastSent: null, pending: 0 });
 
 const taka = (x: number) => `৳${x.toFixed(2)}`;
 const whole = (x: number) => `${x < 0 ? '-' : ''}৳${Math.round(Math.abs(x)).toLocaleString('en-US')}`;
-const ALERT_ACTIONS: Record<string, string> = { review: 'Review — consider selling', 'take-profit': 'Take profit' };
+const ALERT_ACTIONS: Record<string, string> = { review: 'Review: stop-loss or a warning', 'take-profit': 'Above your target' };
 
 export function alertsFor(input: NotifyInput, prevActions: Record<string, string>): Alert[] {
   const { clock } = input;
@@ -73,7 +76,7 @@ export function alertsFor(input: NotifyInput, prevActions: Record<string, string
   for (const p of input.plans) {
     const code = escapeHtml(p.code);
     if (p.live.status === 'reached' && p.targetPrice != null) {
-      out.push({ key: `plan:${p.id}:reached:${clock.date}`, text: `<b>${code}</b> reached ${taka(p.targetPrice)} — your plan says buy the other ${p.live.remaining}` });
+      out.push({ key: `plan:${p.id}:reached:${clock.date}`, text: `<b>${code}</b> reached your plan price; ${p.live.remaining} shares left in your plan` });
     }
     if ((p.live.status === 'reached' || p.live.status === 'waiting') && p.until === clock.tomorrow) {
       out.push({ key: `plan:${p.id}:expiring:${p.until}`, text: `Your <b>${code}</b> buy plan ends on the next trading day (${p.until}) — ${p.live.remaining} shares still to buy. Edit the date or cancel it.` });
@@ -85,11 +88,11 @@ export function alertsFor(input: NotifyInput, prevActions: Record<string, string
     const action = h.check?.action ?? '';
     if (ALERT_ACTIONS[action] && prevActions[h.code] !== action) {
       const why = (h.check?.reasons ?? []).map((r) => `• ${escapeHtml(r)}`).join('\n');
-      out.push({ key: `pos:${h.code}:${action}:${clock.date}`, code: h.code, text: `<b>${code}</b>: ${ALERT_ACTIONS[action]}\n${why}`.trim() });
+      out.push({ key: `pos:${h.code}:${action}:${clock.date}`, code: h.code, text: `<b>${code}</b>: ${ALERT_ACTIONS[action]}\n${why}\nBased only on the limits you set.`.trim() });
     }
     const lastBuy = input.lastBuyDates[h.code];
     if (lastBuy === clock.date || lastBuy === clock.tomorrow) {
-      out.push({ key: `div:${h.code}:${lastBuy}`, text: `<b>${code}</b>: ${lastBuy === clock.date ? 'today' : 'the next trading day'} (${lastBuy}) is the last day to buy for the dividend. To get it you must still hold the shares on the record date — check that date with your broker.` });
+      out.push({ key: `div:${h.code}:${lastBuy}`, text: `<b>${code}</b>: ${lastBuy === clock.date ? 'today' : 'the next trading day'} (${lastBuy}) is the last day to buy for the dividend. If the board's dividend is approved, you must still hold the shares on the record date to get it — check that date with your broker.` });
     }
   }
   return out;
@@ -101,11 +104,11 @@ export function summaryText(input: NotifyInput): string {
   const reached = input.plans.filter((p) => p.live.status === 'reached').length;
   const waiting = input.plans.filter((p) => p.live.status === 'waiting').length;
   const lines = [
-    `<b>DSE morning summary — ${input.clock.date}</b>`,
+    `<b>Morning summary (DSE data) — ${input.clock.date}</b>`,
     held.length ? `Holdings: ${whole(value)}${input.dayPl == null ? '' : ` (today ${input.dayPl >= 0 ? '+' : ''}${whole(input.dayPl)})`}` : 'Holdings: none',
     `Buy plans: ${reached} reached, ${waiting} waiting`,
   ];
-  if (input.picks.length) lines.push(`Picks to research: ${input.picks.map((p) => `${escapeHtml(p.code)} ${taka(p.price)}`).join(', ')}`);
+  if (input.picks.length) lines.push(`Research list: ${input.picks.map((p) => `${escapeHtml(p.code)} ${taka(p.price)}`).join(', ')}`);
   lines.push('<i>Learning aid, not investment advice.</i>');
   return lines.join('\n');
 }
@@ -175,7 +178,7 @@ export async function checkOnce(state: NotifyState, send: (text: string) => Prom
   const sentKeys: string[] = [];
   const unsent = [...held];
   for (const a of due) {
-    if ((await send(a.text)).ok) sentKeys.push(a.key);
+    if ((await send(`${a.text}\n<i>${ALERT_FOOTER}</i>`)).ok) sentKeys.push(a.key);
     else unsent.push(a);
   }
   return { state: { ...nextState(state, input, sentKeys, unsent, now.toISOString()), lastError: null }, sent: sentKeys.length, pending: unsent.length };

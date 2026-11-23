@@ -39,7 +39,7 @@ export default function WatchlistPage() {
         </div>
       ) : (
         <div className="panel table-wrap"><table className="cards">
-          <thead><tr><th>Company</th><th className="n">Price</th><th className="n">Today</th><th>Signal</th><th>Fraud check</th><th className="n">Yield</th><th>Next dividend</th></tr></thead>
+          <thead><tr><th>Company</th><th className="n">Price</th><th className="n">Today</th><th>Signal</th><th>Warning-sign check</th><th className="n">Yield</th><th>Next dividend</th></tr></thead>
           <tbody>{codes.map((code) => {
             const r = byCode[code];
             const dv = nextDividend[code];
@@ -50,7 +50,7 @@ export default function WatchlistPage() {
                 <td className="n mono" data-label="Price">{r ? '৳' + fmt(r.price) : '—'}</td>
                 <td className="n mono" data-label="Today">{r ? <ChangeText pct={r.changePct} /> : '—'}</td>
                 <td data-label="Signal">{r ? <SignalPill signal={r.signal as Signal} /> : '—'}</td>
-                <td data-label="Fraud check">{r ? <FraudPill level={r.fraud as FraudLevel} /> : '—'}</td>
+                <td data-label="Warning-sign check">{r ? <FraudPill level={r.fraud as FraudLevel} /> : '—'}</td>
                 <td className="n mono" data-label="Yield">{r?.dividendYield != null ? fmt(r.dividendYield, 1) + '%' : '—'}</td>
                 <td data-label="Next dividend">{dv ? <>{pctNum(dv.cashPct)}% · buy by <LastBuy r={dv} /><div className="small muted">record date {fmtDate(dv.recordDate)}</div></> : <span className="muted">none announced</span>}</td>
               </tr>

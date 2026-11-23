@@ -26,8 +26,8 @@ const USUAL_PE_MIN_EPS_SHARE = 0.05;
 const MIN_SECTOR_COMPANIES = 3;
 const MIN_YEAR_END_PRICES = 3;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const STRONG_FLAGS = new Set(['Price pump', 'Loss-making but rising']);
-const PRICE_FLAGS = new Set(['Price pump', 'Loss-making but rising', 'Small company, fast rise', 'Volume spike']);
+const STRONG_FLAGS = new Set(['Fast price rise', 'Loss-making but rising']);
+const PRICE_FLAGS = new Set(['Fast price rise', 'Loss-making but rising', 'Small company, fast rise', 'Volume spike']);
 const INTERIM_MAX_AGE_MONTHS = 15;
 const INTERIM_ORDER: Array<[string, string]> = [['nine', '9-month'], ['q3', 'Q3'], ['half', '6-month'], ['q2', 'Q2'], ['q1', 'Q1']];
 
@@ -202,36 +202,36 @@ function fraudFlags(c: Company, m: Metrics, now: Date): { level: 'clean' | 'susp
   const flags: FraudFlag[] = [];
   const add = (title: string, detail: string, why: string) => flags.push({ title, detail, why });
   if (c.category === 'Z') add('Category Z', 'DSE placed this company in category Z.',
-    'Z means the company missed AGMs, paid no dividend, or stopped operating. Many manipulated shares are in Z.');
+    'Z means the company missed AGMs, paid no dividend, or stopped operating. Z shares carry higher risk.');
   const earningsFlat = !((m.epsNow ?? 0) > 0 && (m.epsPrev ?? 0) > 0 && (m.epsNow ?? 0) >= (m.epsPrev ?? 0) * PUMP_EPS_GROWTH);
   const epsGrowth = (m.epsNow ?? 0) > 0 && (m.epsPrev ?? 0) > 0 ? m.epsNow! / m.epsPrev! - 1 : 0;
   // A rise is a pump when the P/E itself expands past the limit, i.e. the price outruns the earnings.
   const peRise = (change: number): number => ((1 + change / 100) / (1 + epsGrowth) - 1) * 100;
   const windows: Array<[number | null, number, string]> = [[m.change1m, PUMP_1M, '1 month'], [m.change3m, PUMP_3M, '3 months'], [m.change1y, PUMP_1Y, '1 year']];
   const pump = windows.find(([change, limit]) => change != null && change > limit && peRise(change) > limit);
-  if (pump) add('Price pump', epsGrowth
+  if (pump) add('Fast price rise', epsGrowth
     ? `Price rose ${pump[0]}% in ${pump[2]} while yearly earnings changed ${round(epsGrowth * 100)}%, so the P/E rose ${round(peRise(pump[0]!))}%.`
     : `Price rose ${pump[0]}% in ${pump[2]} with no earnings growth behind it.`,
-  'A big rise with no better results often means a group is pushing the price to sell to new buyers.');
+  'A large price rise with no matching earnings increase expands the P/E beyond its usual level.');
   const priceMoved = Math.abs(m.changeToday ?? 0) >= SPIKE_PRICE_MOVE || Math.abs(m.change1m ?? 0) >= SPIKE_MONTH_MOVE;
   if ((m.volumeSpike ?? 0) >= 5 && priceMoved) add('Volume spike', `Latest volume is ${round(m.volumeSpike)}× the 3-month average while the price moved sharply.`,
-    'Heavy trading together with a sharp price move, without news, is a common sign of a coordinated game.');
+    'High trading volume together with a sharp price move can indicate concentrated activity in a short period.');
   if ((m.sponsorDrop ?? 0) >= 2) add('Sponsors selling', `Sponsor/director holding fell by ${round(m.sponsorDrop)} points since ${m.sponsorSince}.`,
-    'Owners sell when they expect the price to fall, or after they have pushed it up.');
+    'The owners and directors have reduced their reported holding.');
   if (c.paidUpCapital && c.paidUpCapital < SMALL_PAID_UP_BDT && (m.change3m ?? 0) > 25 && earningsFlat) add('Small company, fast rise',
     `Paid-up capital is only ৳${round(c.paidUpCapital / 1e7)} crore and the price rose ${m.change3m}% in 3 months.`,
-    'Small companies need little money to move the price. They are the usual targets of manipulation.');
+    'A small paid-up capital means fewer shares are needed to move the price.');
   if (m.epsPrev != null && (m.epsNow ?? 0) >= JUMP_MIN_EPS && (m.epsPrev <= 0 || (m.epsNow ?? 0) > 3 * m.epsPrev)) add('Sudden profit jump',
     `EPS went from ${m.epsPrev} to ${m.epsNow} in one year.`,
     'Real businesses rarely triple profit in a year. Check the annual report for one-time gains.');
   if (m.reportedYear && m.reportedYear < expectedLatestYear(now)) add('Old financials', `The latest yearly result on DSE is for ${m.reportedYear}.`,
-    'A company that does not publish results on time may be hiding problems.');
+    'A company whose results are not current cannot be fully assessed from public data.');
   const epsLatest = m.interim?.value ?? m.epsNow;
   if (epsLatest != null && epsLatest <= 0 && (m.change3m ?? 0) > 20) add('Loss-making but rising', `The company makes a loss, yet the price rose ${m.change3m}% in 3 months.`,
     'A share that rises while the company loses money is driven by speculation, not by the business.');
   const dir = directorActivity(c.events, now);
   if (dir.sells.length) add('Directors plan to sell', `${dir.sells.length} sell notice(s) by directors or sponsors in the last ${dir.windowDays} days (latest ${dir.sells[0].date}).`,
-    'Insiders know the company best. When they sell, ask why before you buy.');
+    'Read the sell notice.');
   const strong = flags.some((f) => STRONG_FLAGS.has(f.title));
   const confirmed = flags.some((f) => !PRICE_FLAGS.has(f.title));
   const level: 'clean' | 'suspicious' | 'high' = flags.length === 0 ? 'clean' : (c.category === 'Z' || (strong && confirmed) ? 'high' : 'suspicious');
@@ -247,7 +247,7 @@ function qualityChecks(c: Company, m: Metrics, zone: PricePosition['zone']): Che
     { ok: m.epsAllPositive && !m.interimLoss, label: 'Profit every year (5 years)', detail: `EPS ৳ ${(m.epsYears ?? []).map((y) => y.eps).join(' → ')}${m.interim ? ` · latest ${m.interim.label} EPS ৳${m.interim.value}` : ''}`, why: 'A company that never makes a loss, including in its latest quarters, is less risky.' },
     { ok: m.epsGrowing, label: 'Earnings growing', detail: m.epsCagr != null ? growthText(m) : 'not enough data', why: 'Your share is worth more when the profit per share grows.' },
     { ok: (m.dividendYears ?? 0) >= 3, label: 'Dividend in 3+ of last 5 years', detail: `${m.dividendYears} of the last 5 years`, why: 'A steady dividend shows real cash, not just paper profit.' },
-    { ok: (m.sponsorNow ?? 0) >= SPONSOR_MIN_PCT, label: `Sponsors hold ${SPONSOR_MIN_PCT}%+`, detail: m.sponsorNow != null ? `${m.sponsorNow}%` : 'unknown', why: `BSEC requires sponsors to hold at least ${SPONSOR_MIN_PCT}% together. Owners with skin in the game.` },
+    { ok: (m.sponsorNow ?? 0) >= SPONSOR_MIN_PCT, label: `Sponsors hold ${SPONSOR_MIN_PCT}%+`, detail: m.sponsorNow != null ? `${m.sponsorNow}%` : 'unknown', why: `BSEC requires sponsors to hold at least ${SPONSOR_MIN_PCT}% together. Owners keep a stake.` },
     { ok: !stretched && !ranUp && zone !== 'high', label: 'Price not stretched',
       detail: `P/E ${m.pe == null ? '—' : round(m.pe)} (limit ${round(peLimit)}), P/B ${m.pb == null ? '—' : round(m.pb)} (limit ${STRETCHED_PB})${zone === 'high' ? ', P/E high in its 5-year range' : ''}${ranUp ? `, price up ${m.change1y}% in a year` : ''}`,
       why: 'Even a great company is a poor buy at a price far above its own usual P/E, its book value, or after it has doubled in a year.' },
@@ -274,25 +274,25 @@ function history(c: Company, m: Metrics): string[] {
   if (m.illiquid) notes.push(`No trades in 52 weeks${m.lastTradeDate ? ` (last trade ${dateLabel(m.lastTradeDate)})` : ''}, so the price range says nothing about value.`);
   else if (c.weekHigh52 && c.weekLow52 != null && m.priceNow) {
     const pos = (m.priceNow - c.weekLow52) / (c.weekHigh52 - c.weekLow52 || 1);
-    notes.push(pos < LOW_ZONE ? 'The price is near its 52-week low.' : pos > HIGH_ZONE ? 'The price is near its 52-week high. Avoid chasing it.' : 'The price is in the middle of its 52-week range.');
+    notes.push(pos < LOW_ZONE ? 'The price is near its 52-week low.' : pos > HIGH_ZONE ? 'The price is near its 52-week high.' : 'The price is in the middle of its 52-week range.');
   }
   return notes;
 }
 
 const HOLDER: Record<Analysis['signal'], string> = {
-  avoid: 'If you own it: review why you hold it before the next results.',
-  caution: 'If you own it: hold for now, read the disclosures, and re-check after the next results.',
-  neutral: 'If you own it: hold and re-check after the next results.',
-  research: 'If you own it: hold and re-check after the next results.',
+  avoid: 'If you own it, re-read its disclosures after the next results.',
+  caution: 'If you own it, re-read its disclosures after the next results.',
+  neutral: 'If you own it, re-read its disclosures after the next results.',
+  research: 'If you own it, re-read its disclosures after the next results.',
 };
 
 function buyLine(signal: Analysis['signal'], m: Metrics, c: Company): string {
-  if (signal === 'avoid') return 'High risk. Not a candidate to buy now.';
-  if (signal === 'caution') return 'Wait. Read the latest disclosures and quarterly results first.';
+  if (signal === 'avoid') return 'High risk by these rules.';
+  if (signal === 'caution') return 'A warning rule fired. Read the latest disclosures and quarterly results.';
   if (signal === 'neutral') return m.epsNow == null ? `${NOT_RATED}, so the profit checks cannot run. Judge it on its dividends and reports.` : 'No strong signal. Research more before you decide.';
   const nearHigh = !m.illiquid && c.weekHigh52 && c.weekLow52 != null && m.priceNow && (m.priceNow - c.weekLow52) / (c.weekHigh52 - c.weekLow52 || 1) > HIGH_ZONE;
-  if (nearHigh) return 'Good business, but the price is near its 52-week high. Research it and wait for a calmer price.';
-  return m.pe && m.avgPastPe && m.pe < m.avgPastPe ? 'Good business, and cheaper than its usual P/E. Worth researching now.'
+  if (nearHigh) return 'Passes the quality checks; the price is near its 52-week high.';
+  return m.pe && m.avgPastPe && m.pe < m.avgPastPe ? 'Passes the quality checks; P/E is below its usual level.'
     : 'Good business at a normal or higher P/E than usual. Research it before deciding.';
 }
 
@@ -316,7 +316,7 @@ export function analyze(c: Company, sectorPe: number | null, now = new Date()): 
   const m = metrics(c, now);
   const fraud = fraudFlags(c, m, now);
   const checks = qualityChecks(c, m, pricePosition(c, m).zone);
-  checks.push({ ok: fraud.level === 'clean', label: 'No fraud warning', detail: `${fraud.flags.length} flag(s)`, why: 'Any red flag removes a company from the shortlist.' });
+  checks.push({ ok: fraud.level === 'clean', label: 'No warning signs', detail: `${fraud.flags.length} flag(s)`, why: 'Any warning sign removes a company from the shortlist.' });
   const reasons: Reason[] = [];
   const add = (tone: string, text: string) => reasons.push({ tone, text });
   if (m.epsNow == null) add('warn', `${NOT_RATED}. Some companies, such as life insurers, do not report EPS, so the profit checks cannot run.`);
@@ -329,8 +329,8 @@ export function analyze(c: Company, sectorPe: number | null, now = new Date()): 
   if ((m.pb ?? 0) > 5) add('warn', `Price is ${round(m.pb)}× book value. That is expensive.`);
   if (m.avgDailyValue != null && m.avgDailyValue < LIQUID_DAILY_VALUE_BDT) add('warn', 'Few shares trade each day. It may be hard to sell.');
   const buys = directorActivity(c.events, now).buys;
-  if (buys.length) add('good', `Directors announced ${buys.length} share purchase(s) in the last 6 months. Insiders are buying.`);
-  checks.filter((x) => x.ok && x.label !== 'No fraud warning').forEach((x) => add('good', x.detail === x.label ? `${x.label}.` : `${x.label}: ${x.detail}.`));
+  if (buys.length) add('good', `Directors announced ${buys.length} purchase(s) in the last 6 months.`);
+  checks.filter((x) => x.ok && x.label !== 'No warning signs').forEach((x) => add('good', x.detail === x.label ? `${x.label}.` : `${x.label}: ${x.detail}.`));
 
   const quality = checks.every((x) => x.ok);
   const bad = fraud.level === 'high' || (m.epsNow != null && m.epsNow < 0);
@@ -396,7 +396,7 @@ export function fiveYearSummary(c: Company): Summary {
 const LOW_ZONE = 0.25;
 const HIGH_ZONE = 0.75;
 const VALUATION: Record<string, { label: string; tone: string; text: string }> = {
-  value: { label: 'Possible value', tone: 'good', text: 'Cheap against its own 5-year history while earnings still grow. Worth researching further.' },
+  value: { label: 'Possible value', tone: 'good', text: 'Cheap against its own 5-year history while earnings still grow.' },
   trap: { label: 'Cheap for a reason', tone: 'bad', text: 'Cheap against its history, but earnings are falling. A low price can keep falling. Be careful.' },
   expensive: { label: 'Priced high', tone: 'warn', text: 'Expensive against its own history, though earnings grow. Good business, but wait for a better price.' },
   risky: { label: 'Expensive and weakening', tone: 'bad', text: 'Expensive against its history while earnings fall. High risk at this price.' },
@@ -443,7 +443,7 @@ const ANSWER = { yes: 'yes', partly: 'partly', no: 'no', unknown: 'unknown' } as
 const CHEAP_ANSWER: Record<string, Question['answer']> = { value: 'yes', fair: 'partly', trap: 'partly', expensive: 'no', risky: 'no' };
 const CHEAP_LABEL: Record<string, string> = { trap: 'Cheap, but profits falling' };
 const FRAUD_ANSWER: Record<Analysis['fraud']['level'], Question['answer']> = { clean: 'yes', suspicious: 'partly', high: 'no' };
-export const FRAUD_LABEL: Record<Analysis['fraud']['level'], string> = { clean: 'Clean', suspicious: 'Suspicious', high: 'High risk' };
+export const FRAUD_LABEL: Record<Analysis['fraud']['level'], string> = { clean: 'No flags', suspicious: '1 flag pattern', high: 'Several flags' };
 
 // Without P/E history (no profit), the place of the price in its 52-week range is the only guide.
 function rangeAnswer(c: Company, price: number | null, m: Metrics): Pick<Question, 'answer' | 'label' | 'text'> | null {
@@ -470,7 +470,7 @@ export function declaredText(d: Declaration, face: number): string {
 }
 
 export function fourQuestions(c: Company, a: Analysis, position: PricePosition | null, dividend: DividendStatus | null): Question[] {
-  const passed = a.checks.filter((x) => x.ok && x.label !== 'No fraud warning').length;
+  const passed = a.checks.filter((x) => x.ok && x.label !== 'No warning signs').length;
   const total = a.checks.length - 1;
   const solid = a.metrics.epsAllPositive && !a.metrics.interimLoss;
   const growing = a.metrics.epsCagr != null && a.metrics.epsCagr > 0;
@@ -486,7 +486,7 @@ export function fourQuestions(c: Company, a: Analysis, position: PricePosition |
     ...(v && !a.metrics.illiquid ? { answer: dearBook && CHEAP_ANSWER[v.key] === 'yes' ? ANSWER.partly : CHEAP_ANSWER[v.key], label: cheapLabel!,
       text: `${cheapLabel}. P/E ${a.metrics.pe ?? '—'} against its usual ${position?.usualPe ?? '—'}${dearBook ? `, but P/B ${a.metrics.pb} is above ${STRETCHED_PB}, so it is expensive against its book value` : ''}.` }
       : rangeAnswer(c, a.metrics.priceNow, a.metrics) ?? { answer: ANSWER.unknown, text: 'Not enough price history.' }) };
-  const safe: Question = { q: 'Any fraud warning signs?', answer: FRAUD_ANSWER[a.fraud.level], label: FRAUD_LABEL[a.fraud.level],
+  const safe: Question = { q: 'Any warning signs?', answer: FRAUD_ANSWER[a.fraud.level], label: FRAUD_LABEL[a.fraud.level],
     text: a.fraud.flags.length ? a.fraud.flags.map((f) => f.title).join(', ') + '.' : 'No warning pattern found.', tab: 'safety' };
   const d = dividend;
   const lastBuy = (x: { lastBuyDate?: string | null; lastBuyEstimated?: boolean }): string =>
@@ -494,13 +494,13 @@ export function fourQuestions(c: Company, a: Analysis, position: PricePosition |
   const pay: Omit<Question, 'q' | 'tab'> = d?.upcoming && d.canStillBuy
     ? { answer: ANSWER.yes, label: d.upcoming.lastBuyEstimated ? 'Yes, soon (date estimated)' : 'Yes, soon', text: `Board recommended ${rate(d.upcoming)}. Last day to buy: ${lastBuy(d.upcoming)}. Record date ${dateLabel(d.upcoming.recordDate)}. Needs AGM approval.` }
     : d?.upcoming
-    ? { answer: ANSWER.no, label: 'Too late', text: `${rate(d.upcoming)}, but the last day to buy (${lastBuy(d.upcoming)}) has passed. Next expected around ${monthLabel(d.nextExpected)}.` }
+    ? { answer: ANSWER.no, label: 'Too late', text: `${rate(d.upcoming)}, but the last day to buy (${lastBuy(d.upcoming)}) has passed. Past timing suggests around ${monthLabel(d.nextExpected)}; not a forecast.` }
     : d?.recordToday
-    ? { answer: ANSWER.no, label: 'Too late', text: `Today (${dateLabel(d.recordToday.recordDate)}) is the record date. Next expected around ${monthLabel(d.nextExpected)}.` }
+    ? { answer: ANSWER.no, label: 'Too late', text: `Today (${dateLabel(d.recordToday.recordDate)}) is the record date. Past timing suggests around ${monthLabel(d.nextExpected)}; not a forecast.` }
     : d?.unpaid
     ? { answer: ANSWER.no, label: 'Declared, record date passed', text: `${declaredText(d.unpaid, c.faceValue || DEFAULT_FACE_VALUE)} The record date (${dateLabel(d.unpaid.recordDate)}) has passed, so buying now does not qualify.` }
     : d?.latest
-    ? { answer: ANSWER.no, label: 'Not soon', text: `Last: ${rate(d.latest)}${d.latest.interim ? ' (interim)' : ''}, record date ${dateLabel(d.latest.recordDate)}. Next expected around ${monthLabel(d.nextExpected)}.` }
+    ? { answer: ANSWER.no, label: 'Not soon', text: `Last: ${rate(d.latest)}${d.latest.interim ? ' (interim)' : ''}, record date ${dateLabel(d.latest.recordDate)}. Past timing suggests around ${monthLabel(d.nextExpected)}; not a forecast.` }
     : { answer: ANSWER.no, label: 'No', text: 'No recent dividend announcement on DSE.' };
   return [good, cheap, safe, { q: 'Is a dividend coming?', tab: 'dividends', ...pay }];
 }

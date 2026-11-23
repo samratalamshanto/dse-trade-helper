@@ -60,7 +60,7 @@ test.describe('/c/GP full DSE data', () => {
     await tab(page, 'Dividends').click();
     await expect(page.getByRole('heading', { name: 'Dividend record by year' })).toBeVisible();
     await expect(page.locator('th', { hasText: 'Rights' }).first()).toBeVisible();
-    await tab(page, 'Cheap or expensive').click();
+    await tab(page, 'Price vs own history').click();
     await expect(page.getByRole('heading', { name: 'P/E over the last 30 trading days' })).toBeVisible();
   });
 });

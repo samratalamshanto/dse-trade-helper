@@ -1,13 +1,13 @@
 // Plain-text learning content shared by the web Learn page and the mobile app.
 export const SIGNAL_TEXT = {
-  research: { label: 'Worth researching', text: 'Passes every quality check and has no fraud flag.' },
+  research: { label: 'Passes the checks', text: 'Passes all 8 rule checks and has no warning sign.' },
   neutral: { label: 'No strong signal', text: 'Not bad, but misses one or more quality checks.' },
-  caution: { label: 'Caution', text: 'Has a warning: falling profit, high price, thin trading or one fraud flag.' },
-  avoid: { label: 'Avoid', text: 'Loss-making, category Z, or a high-risk fraud pattern. If you hold it, review it.' },
+  caution: { label: 'Caution', text: 'Has a warning: falling profit, high price, thin trading or one warning sign.' },
+  avoid: { label: 'High risk', text: 'Loss-making, category Z, or several warning-sign patterns. If you hold it, re-read its disclosures.' },
 } as const;
 
 export const FLAGS: [string, string][] = [
-  ['Price pump', 'Price up more than 30% in 1 month, 50% in 3 months or 100% in 1 year, while yearly earnings grew less than 10%.'],
+  ['Fast price rise', 'Price up more than 30% in 1 month, 50% in 3 months or 100% in 1 year, while yearly earnings grew less than 10%.'],
   ['Volume spike', 'Volume 5× or more above the 3-month average, together with a price move of 5%+ in a day or 15%+ in a month.'],
   ['Sponsors selling', 'Owner holding fell 2 points or more.'],
   ['Small company, fast rise', 'Paid-up capital under ৳30 crore, up 25%+ in 3 months, with no earnings growth.'],
@@ -31,8 +31,8 @@ export const TERMS: [string, string][] = [
   ['Record date', 'The day the company checks who owns the share. Owners on this day get the dividend. Buying on the record date itself is too late.'],
   ['AGM (annual general meeting)', 'The yearly meeting where shareholders approve the dividend. Payment usually follows within about a month.'],
   ['Quarterly (interim) results', 'Unaudited results for 3, 6 or 9 months. A loss there is an early warning, even when the last full year was profitable.'],
-  ['Cheap or expensive now', 'Compares today\'s P/E with the company\'s own P/E over the last 5 years, then checks whether earnings still grow. Near its low with growing earnings is "Possible value". Near its low with falling earnings is "Cheap for a reason". It is not a prediction: a cheap share can stay cheap.'],
-  ['Score', 'Each signal has its own range: Avoid 0–30, Caution 31–60, No strong signal 61–75, Worth researching 76–100. Inside a range, a company ranks higher for passing more checks, faster earnings growth, a P/E below its sector and its own past, and a higher dividend yield.'],
+  ['Price vs own history', 'Compares today\'s P/E with the company\'s own P/E over the last 5 years, then checks whether earnings still grow. Near its low with growing earnings is "Possible value". Near its low with falling earnings is "Cheap for a reason". It is not a prediction: a cheap share can stay cheap.'],
+  ['Score', 'Each signal has its own range: High risk 0–30, Caution 31–60, No strong signal 61–75, Passes the checks 76–100. Inside a range, a company ranks higher for passing more checks, faster earnings growth, a P/E below its sector and its own past, and a higher dividend yield.'],
 ];
 
 export const CATEGORY_TEXT: Record<string, string> = {

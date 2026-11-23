@@ -12,7 +12,7 @@ type Report = Scorecard & { note: string; session?: null };
 
 // Below this many graded calls a percentage moves a lot with each new call.
 const SMALL_SAMPLE = 30;
-const LABEL: Record<string, string> = { research: 'Research', caution: 'Caution', avoid: 'Avoid' };
+const LABEL: Record<string, string> = { research: 'Passes the checks', caution: 'Caution', avoid: 'High risk' };
 const RIGHT_WHEN: Record<string, string> = { research: 'right when it beat DSEX', caution: 'right when it lagged DSEX', avoid: 'right when it lagged DSEX' };
 
 function CallList({ title, list }: { title: string; list: Grade[] }) {
@@ -47,9 +47,9 @@ export default function ScorecardPage() {
       <h1><Tr text="Signal scorecard" /></h1>
       <div className="note">
         <Tr text="Every trading day after the close we save what this app said about each company. Later we grade each call against the DSEX index at " />
-        <b>1, 5 and 20 trading days</b>. <b>Research</b>
+        <b>1, 5 and 20 trading days</b>. <b><Tr text="Passes the checks" /></b>
         <Tr text=" is right when the share beat DSEX; " />
-        <b>caution</b> and <b>avoid</b>
+        <b><Tr text="Caution" /></b> <Tr text="and" /> <b><Tr text="High risk" /></b>
         <Tr text=" are right when it lagged DSEX. Neutral is not graded. The first grades appear after 1 trading day; the full picture needs 20. This is our track record, not a forecast. Learning aid, not investment advice." />
       </div>
       <p className="small muted">{d.days ? <>{t('Snapshots since')} {fmtDateLang(d.since, lang)}: {d.days} {t(d.days === 1 ? 'trading day' : 'trading days')}. </> : null}{t('Waiting to be graded:')} {d.pending} {t('call checks.')}</p>

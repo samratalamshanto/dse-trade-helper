@@ -29,7 +29,7 @@ test.describe('/c/GP', () => {
   test('tabs switch, financials show trend cards', async ({ page }) => {
     const tab = (n: string) => page.getByRole('tab', { name: n });
     await expect(tab('Overview')).toHaveAttribute('aria-selected', 'true');
-    for (const n of ['Cheap or expensive', 'Dividends', 'News', 'Safety checks', 'Owners']) {
+    for (const n of ['Price vs own history', 'Dividends', 'News', 'Safety checks', 'Owners']) {
       await tab(n).click();
       await expect(tab(n)).toHaveAttribute('aria-selected', 'true');
       await expect(tab('Overview')).toHaveAttribute('aria-selected', 'false');

@@ -12,7 +12,8 @@ export function Safety({ a }: { a: CompanyDetail['analysis'] }) {
   const level = a.fraud.level as FraudLevel;
   return (
     <>
-      <div className="panel"><h3>Fraud check <FraudPill level={level} /></h3>
+      <div className="panel"><h3>Warning signs <FraudPill level={level} /></h3>
+        <p className="muted small"><Tr text="A flag is a pattern in public data, not an accusation against the company." /></p>
         {a.fraud.flags.length ? a.fraud.flags.map((f) => (
           <div key={f.title} className={`note ${level === 'high' ? 'bad' : 'warn'}`}><b><Tr text={f.title} />:</b> {f.detail}<div className="why">Why it matters: {f.why}</div></div>
         )) : <p className="muted">No warning pattern found: no price pump, no volume spike, no owner selling, no sudden profit jump, and results are up to date.</p>}

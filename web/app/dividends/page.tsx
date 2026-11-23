@@ -76,7 +76,7 @@ export default function DividendsPage() {
       <div className="filters filters-center">
         <label className="check small"><input type="checkbox" checked={showPast} onChange={(e) => setShowPast(e.target.checked)} />
           <span><Tr text="Show rows where the last day to buy has passed" /> ({pastCount})</span></label>
-        <span className="small muted"><Tr text="Companies with no fraud flag are listed first." /></span>
+        <span className="small muted"><Tr text="Companies with no warning sign are listed first." /></span>
       </div>
       <div className="panel table-wrap"><table className="cards">
         <thead><tr>

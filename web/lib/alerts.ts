@@ -179,7 +179,7 @@ export function evaluateRules(
         const newFlags = co.flags.filter((f) => !rule.seenFlags.includes(f));
         if (newFlags.length > 0) {
           events.push({ ruleId: rule.id, code: rule.code, key, date: today,
-            message: `${rule.code} has new fraud flag${newFlags.length > 1 ? 's' : ''}: ${newFlags.join(', ')}` });
+            message: `${rule.code} has new warning sign${newFlags.length > 1 ? 's' : ''}: ${newFlags.join(', ')}` });
           seenFlagsUpdates.push({ ruleId: rule.id, seenFlags: [...co.flags] });
         }
         break;

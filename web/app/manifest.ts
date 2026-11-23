@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'Trade Helper',
     short_name: 'Trade Helper',
-    description: 'Research Dhaka Stock Exchange companies: signals, fraud checks, dividends and your watchlist.',
+    description: 'Research Dhaka Stock Exchange companies: signals, warning signs, dividends and your watchlist.',
     start_url: '/',
     display: 'standalone',
     background_color: '#0d1117',

@@ -10,6 +10,8 @@ interface Link { url: string; expiresAt: string }
 // Signed-in users: connect their own Telegram chat by a one-time link (button on phones, QR code to scan on a computer).
 export function TelegramConnect() {
   const [connected, setConnected] = useState<boolean | null>(null);
+  // 503: the site has no Telegram settings yet; show a note instead of a button that cannot work.
+  const [unavailable, setUnavailable] = useState(false);
   const [paused, setPaused] = useState(false);
   const [link, setLink] = useState<Link | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +25,10 @@ export function TelegramConnect() {
   }, []);
 
   useEffect(() => {
-    void Promise.resolve().then(check).catch((e: unknown) => { setConnected(false); setError(e instanceof Error ? e.message : 'Could not check Telegram.'); });
+    void Promise.resolve().then(check).catch((e: unknown) => {
+      if ((e as { status?: number }).status === 503) { setUnavailable(true); return; }
+      setConnected(false); setError(e instanceof Error ? e.message : 'Could not check Telegram.');
+    });
   }, [check]);
 
   // While a link is open, check every few seconds until the user taps Start in Telegram or the link expires.
@@ -43,6 +48,7 @@ export function TelegramConnect() {
   const connect = () => run(async () => setLink(await call<Link>('', '/api/telegram/link', { method: 'POST' })));
   const disconnect = () => run(async () => { await call('', '/api/telegram/link', { method: 'DELETE' }); setConnected(false); });
 
+  if (unavailable) return <p className="small muted">Telegram alerts for your account are coming soon. For price alerts in this browser, use the Alerts page.</p>;
   if (connected === null && !error) return <p className="small muted">Checking Telegram…</p>;
   return (
     <div>

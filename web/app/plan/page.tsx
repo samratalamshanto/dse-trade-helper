@@ -171,7 +171,7 @@ export default function PlanPage() {
         <div className="panel"><b>Monthly plan</b>
           <table><tbody>{MONTHLY_SPLIT.map(([k, f]) => <tr key={k}><td>{k}</td><td className="n mono">{taka(monthly * f)}</td></tr>)}
             <tr><td><b>Total</b></td><td className="n mono"><b>{taka(monthly)}</b></td></tr></tbody></table>
-          <div className="note warn">Do not force a purchase every month. If the price is above your valuation range, keep the cash and wait.</div></div>
+          <div className="note warn">Do not force a purchase every month. Some investors keep the cash when the price is above their range.</div></div>
       </div>
 
       <h2 id="growth"><Tr text="What could your investment become?" /></h2>
