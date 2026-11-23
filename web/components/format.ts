@@ -12,6 +12,13 @@ export const pctNum = (v: number | null | undefined): string => (v == null ? '�
 export const fmtDate = (iso: string | null | undefined): string =>
   iso ? new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—';
 
+export const fmtDateLang = (iso: string | null | undefined, lang: string): string => {
+  if (!iso) return '—';
+  const d = new Date(iso + 'T00:00:00Z');
+  if (lang === 'bn') return d.toLocaleDateString('bn-BD', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+};
+
 export const monthName = (ym: string | null | undefined): string =>
   ym ? new Date(ym + '-01T00:00:00Z').toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }) : '—';
 

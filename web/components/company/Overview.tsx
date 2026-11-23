@@ -57,8 +57,8 @@ export function HeaderStats({ d }: { d: CompanyDetail }) {
   return (
     <div className="hero-stats">
       <div><div className="small muted"><Tr text="Market cap" /></div><div className="mono">{crore(c.marketCap)}</div></div>
-      <div><div className="small muted">P/E</div><div className="mono">{fmt(m.pe, 1)}</div></div>
-      <div><div className="small muted">EPS</div><div className="mono">{taka(m.epsNow)}</div></div>
+      <div><div className="small muted"><Tr text="P/E" /> <Info text="Price to earnings: how many taka you pay for ৳1 of yearly profit. Lower can mean cheaper." /></div><div className="mono">{fmt(m.pe, 1)}</div></div>
+      <div><div className="small muted"><Tr text="EPS" /> <Info text="Earnings per share: the company's yearly profit for each share." /></div><div className="mono">{taka(m.epsNow)}</div></div>
     </div>
   );
 }

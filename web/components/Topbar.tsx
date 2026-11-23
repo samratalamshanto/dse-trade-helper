@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApi, useApp } from '@/components/AppProvider';
-import { fmtDate, marketState } from '@/components/format';
+import { fmtDateLang, marketState } from '@/components/format';
 import { useStoredValue } from '@/components/useStored';
 import { LangToggle, useLang } from '@/components/i18n';
 import { Icon, SignalPill, type Signal } from '@/components/ui';
@@ -40,7 +40,7 @@ function Search() {
   return (
     <div className="search" ref={box}>
       <Icon name="search" />
-      <input id="q" placeholder={t('Search company (code or name)')} autoComplete="off" aria-label={t('Search company')}
+      <input id="q" placeholder={t('Company code or name')} autoComplete="off" aria-label={t('Search company')}
         role="combobox" aria-expanded={open && hits.length > 0}
         aria-controls={open && hits.length > 0 ? 'suggest' : undefined}
         aria-activedescendant={open && hits.length > 0 ? `suggest-opt-${hi}` : undefined}
@@ -79,11 +79,11 @@ export function Topbar() {
   const { session, refresh } = useApp();
   const toggleTheme = useTheme();
   const [spinning, setSpinning] = useState(false);
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const st = marketState(session);
   const stateText = st.key === 'open' ? t('Market open · updates every minute') : st.key === 'preopen' ? `${t('Pre-open')} · ${t('market opens')} ${session?.opening} ${t('today')}`
-    : `${t('Market closed')}${session?.next ? ` · ${t('next session')} ${fmtDate(session.next)}` : ''}`;
-  const status = session ? `${t('DSE data')}: ${session.dataTime || fmtDate(session.sessionDate)} · ${stateText}` : '';
+    : `${t('Market closed')}${session?.next ? ` · ${t('next session')} ${fmtDateLang(session.next, lang)}` : ''}`;
+  const status = session ? `${t('DSE data')}: ${session.dataTime || fmtDateLang(session.sessionDate, lang)} · ${stateText}` : '';
 
   return (
     <header className="topbar">
@@ -92,7 +92,7 @@ export function Topbar() {
       <span className="mkt-status" title={status || undefined}>
         {session ? <span aria-hidden="true" className="mkt-visual">
           <span className={`mkt-pill m-${st.key}`}><i />{t(st.short.replace('● ', ''))}</span>
-          <span className="mkt-time">{session.dataTime || fmtDate(session.sessionDate)}</span>
+          <span className="mkt-time">{session.dataTime || fmtDateLang(session.sessionDate, lang)}</span>
         </span> : null}
         <span className="sr-only" aria-live="polite">{status}</span>
       </span>
