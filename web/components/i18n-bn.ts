@@ -431,6 +431,14 @@ export const BN: Record<string, string> = {
   'Fits your rules': 'আপনার নিয়মের সাথে মেলে',
   'No rule triggered': 'কোনো নিয়ম চালু হয়নি',
 
+  // Start investing example plan
+  'The market recovered strongly in FY26, then the market cap fell. In this example, the purchases are spread over 3–6 months.': '২০২৫–২৬ অর্থবছরে বাজার জোরালোভাবে ঘুরে দাঁড়ায়, তারপর বাজার মূলধন কমে। এই উদাহরণে কেনাকাটা ৩–৬ মাসে ভাগ করা হয়েছে।',
+  'In this worked example, it did not pass the 5-year checks because earnings fell in 2025.': 'এই উদাহরণে এটি ৫ বছরের পরীক্ষায় উত্তীর্ণ হয়নি, কারণ ২০২৫ সালে আয় কমেছে।',
+  'In this worked example, it did not pass because one share costs more than a small monthly budget allows.': 'এই উদাহরণে এটি উত্তীর্ণ হয়নি, কারণ একটি শেয়ারের দাম ছোট মাসিক বাজেটের চেয়ে বেশি।',
+  'Square Pharma (example)': 'স্কয়ার ফার্মা (উদাহরণ)',
+  'BRAC Bank (example)': 'ব্র্যাক ব্যাংক (উদাহরণ)',
+  'This example does not buy every month. When the price is above its range, it keeps the cash.': 'এই উদাহরণে প্রতি মাসে কেনা হয় না। দাম নিজের সীমার উপরে থাকলে টাকা নগদ রাখা হয়।',
+
   // 52-week range page
   'Near the 52-week low': 'বার্ষিক সর্বনিম্নের কাছে',
   'Risen from the low': 'সর্বনিম্ন থেকে উঠেছে',
