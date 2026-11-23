@@ -11,7 +11,7 @@ const at = (iso: string) => dhakaClock(Date.parse(iso));
 const THU_0945 = at('2026-11-19T03:45:00Z');
 
 const base = (over: Partial<NotifyInput> = {}): NotifyInput => ({
-  clock: at('2026-11-19T04:00:00Z'), plans: [], holdings: [], lastBuyDates: {}, dayPl: null, picks: [], ...over,
+  clock: at('2026-11-19T04:00:00Z'), plans: [], holdings: [], owned: [], rangeRules: [], rangeRows: [], watchlist: [], lastBuyDates: {}, dayPl: null, picks: [], ...over,
 });
 
 test('Dhaka clock: date, tomorrow, minutes and Sun-Thu trading days', () => {
@@ -185,4 +185,36 @@ test('Thursday: the next trading day is Sunday, so a Sunday last-buy day alerts 
   const thu = dhakaClock(Date.UTC(2026, 10, 19, 4, 0));
   assert.equal(thu.tomorrow, '2026-11-22');
   assert.equal(dhakaClock(Date.UTC(2026, 10, 17, 4, 0)).tomorrow, '2026-11-18');
+});
+
+test('range rule match creates one alert with the right key and text', () => {
+  const rule = { id: 'nr1', kind: 'nearLow' as const, pct: 10, scope: 'all' as const };
+  const row = { code: 'GP', price: 220, weekLow52: 200, weekHigh52: 300 };
+  const a = alertsFor(base({ rangeRules: [rule], rangeRows: [row], owned: [] }), {});
+  assert.deepEqual(a.map((x) => x.key), ['range:nr1:GP:2026-11-19']);
+  assert.match(a[0].text, /^<b>GP<\/b>: 10% above its 52-week low \(your rule\)$/);
+});
+
+test('the same range match does not repeat on the same day (decide + sent state)', () => {
+  const rule = { id: 'nr1', kind: 'nearLow' as const, pct: 10, scope: 'all' as const };
+  const row = { code: 'GP', price: 220, weekLow52: 200, weekHigh52: 300 };
+  const input = base({ rangeRules: [rule], rangeRows: [row], owned: [] });
+  const first = decide(input, emptyState());
+  assert.equal(first.due.some((a) => a.key === 'range:nr1:GP:2026-11-19'), true);
+  const after = nextState(emptyState(), input, first.due.map((a) => a.key), [], '2026-11-19T04:00:00.000Z');
+  assert.deepEqual(decide(input, after).due.filter((a) => a.key.startsWith('range:')), []);
+});
+
+test('no range alerts without rules', () => {
+  const row = { code: 'GP', price: 220, weekLow52: 200, weekHigh52: 300 };
+  const a = alertsFor(base({ rangeRules: [], rangeRows: [row], owned: [] }), {});
+  assert.equal(a.filter((x) => x.key.startsWith('range:')).length, 0);
+});
+
+test('holdings-scope range rule ignores non-held codes', () => {
+  const rule = { id: 'h1', kind: 'nearLow' as const, pct: 10, scope: 'holdings' as const };
+  // ROBI price 30 is ~7% above its 52-week low of 28 (matches pct=10); GP is not in owned so it is excluded
+  const rows = [{ code: 'GP', price: 220, weekLow52: 200, weekHigh52: 300 }, { code: 'ROBI', price: 30, weekLow52: 28, weekHigh52: 50 }];
+  const a = alertsFor(base({ rangeRules: [rule], rangeRows: rows, owned: [{ code: 'ROBI', shares: 10, avgCost: 28 }] }), {});
+  assert.deepEqual(a.filter((x) => x.key.startsWith('range:')).map((x) => x.key), ['range:h1:ROBI:2026-11-19']);
 });

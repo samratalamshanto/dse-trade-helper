@@ -2,9 +2,10 @@
 import { commissionFor } from './trades.ts';
 import { parseWatchlist } from './watchlist.ts';
 import { parseAlertStore, type AlertRule } from './alerts.ts';
+import { parseRangeRules, type RangeRule } from './range.ts';
 
 export const PREFS_COLUMNS = ['key', 'value'] as const;
-export interface Prefs { watchlist?: string[]; brokerCommissionPct?: string; alertRules?: AlertRule[] }
+export interface Prefs { watchlist?: string[]; brokerCommissionPct?: string; alertRules?: AlertRule[]; rangeRules?: RangeRule[] }
 // Keeps the Sheet cell (50,000 characters) and the request body small.
 export const ALERT_RULES_MAX = 100;
 export const PREFS_BODY_MAX_BYTES = 60_000;
@@ -30,6 +31,7 @@ export function prefsFromRows(rows: readonly string[][]): Prefs {
     // A cell that is not a JSON list is ignored, so a bad hand edit never empties every device's watchlist.
     if (key === 'watchlist' && isJsonList(value)) out.watchlist = parseWatchlist(value);
     if (key === 'alertRules' && isJsonList(value)) out.alertRules = parseAlertRules(JSON.parse(value));
+    if (key === 'rangeRules' && isJsonList(value)) out.rangeRules = parseRangeRules(JSON.parse(value));
     if (key === 'brokerCommissionPct') { const r = rateOrNull(value); if (r != null) out.brokerCommissionPct = r; }
   }
   return out;
@@ -40,6 +42,7 @@ export function prefsToRows(p: Prefs): string[][] {
     ...(p.watchlist ? [['watchlist', JSON.stringify(p.watchlist)]] : []),
     ...(p.brokerCommissionPct != null ? [['brokerCommissionPct', p.brokerCommissionPct]] : []),
     ...(p.alertRules ? [['alertRules', JSON.stringify(p.alertRules)]] : []),
+    ...(p.rangeRules ? [['rangeRules', JSON.stringify(p.rangeRules)]] : []),
   ];
 }
 
@@ -49,6 +52,6 @@ export function parsePrefs(input: unknown): Prefs | null {
   const o = input as Record<string, unknown>;
   const rate = o.brokerCommissionPct === undefined ? undefined : rateOrNull(o.brokerCommissionPct);
   // A save always sends every value, so a partial or empty body can never erase another one.
-  if (rate === null || rate === undefined || !Array.isArray(o.watchlist) || !Array.isArray(o.alertRules)) return null;
-  return { watchlist: parseWatchlist(JSON.stringify(o.watchlist)), brokerCommissionPct: rate, alertRules: parseAlertRules(o.alertRules) };
+  if (rate === null || rate === undefined || !Array.isArray(o.watchlist) || !Array.isArray(o.alertRules) || !Array.isArray(o.rangeRules)) return null;
+  return { watchlist: parseWatchlist(JSON.stringify(o.watchlist)), brokerCommissionPct: rate, alertRules: parseAlertRules(o.alertRules), rangeRules: parseRangeRules(o.rangeRules) };
 }

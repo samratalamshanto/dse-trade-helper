@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { parsePrefs, prefsFromRows, prefsToRows } from '../lib/prefs.ts';
 
+const rangeRule = { id: 'rr1', kind: 'nearLow' as const, pct: 5, scope: 'all' as const };
+
 test('prefs round-trip through Sheet rows', () => {
-  const p = { watchlist: ['GP', 'WALTONHIL'], brokerCommissionPct: '0.4', alertRules: [{ type: 'price_above' as const, id: 'r1', enabled: true, code: 'GP', target: 250 }] };
+  const p = { watchlist: ['GP', 'WALTONHIL'], brokerCommissionPct: '0.4', alertRules: [{ type: 'price_above' as const, id: 'r1', enabled: true, code: 'GP', target: 250 }], rangeRules: [rangeRule] };
   assert.deepEqual(prefsFromRows(prefsToRows(p)), p);
 });
 
@@ -12,20 +14,32 @@ test('prefsFromRows skips unknown keys, bad codes and bad rates', () => {
   assert.deepEqual(prefsFromRows([['watchlist', 'not json']]), {});
 });
 
+test('prefsFromRows reads rangeRules and drops malformed ones', () => {
+  assert.deepEqual(prefsFromRows([['rangeRules', JSON.stringify([rangeRule, { id: 'bad', kind: 'bogus', pct: 5, scope: 'all' }])]]), { rangeRules: [rangeRule] });
+  assert.deepEqual(prefsFromRows([['rangeRules', 'not json']]), {});
+  assert.deepEqual(prefsFromRows([['rangeRules', '{}']]), {});
+});
+
 test('parsePrefs refuses wrong shapes and out-of-range rates; empty rate means none', () => {
   assert.equal(parsePrefs(null), null);
   assert.equal(parsePrefs([]), null);
   assert.equal(parsePrefs({ watchlist: 'GP' }), null);
-  assert.equal(parsePrefs({ watchlist: [], brokerCommissionPct: '6', alertRules: [] }), null);
+  assert.equal(parsePrefs({ watchlist: [], brokerCommissionPct: '6', alertRules: [], rangeRules: [] }), null);
   assert.equal(parsePrefs({ watchlist: [], brokerCommissionPct: '0.4' }), null);
   assert.equal(parsePrefs({}), null);
   assert.equal(parsePrefs({ watchlist: ['GP'] }), null);
-  assert.equal(parsePrefs({ watchlist: [], brokerCommissionPct: 0.4, alertRules: [] }), null);
-  assert.deepEqual(parsePrefs({ watchlist: ['gp'], brokerCommissionPct: ' ', alertRules: [{ type: 'bogus' }] }), { watchlist: ['GP'], brokerCommissionPct: '', alertRules: [] });
+  assert.equal(parsePrefs({ watchlist: [], brokerCommissionPct: 0.4, alertRules: [], rangeRules: [] }), null);
+  assert.equal(parsePrefs({ watchlist: [], brokerCommissionPct: '0.4', alertRules: [] }), null, 'rangeRules missing');
+  assert.deepEqual(parsePrefs({ watchlist: ['gp'], brokerCommissionPct: ' ', alertRules: [{ type: 'bogus' }], rangeRules: [] }), { watchlist: ['GP'], brokerCommissionPct: '', alertRules: [], rangeRules: [] });
+});
+
+test('parsePrefs parses rangeRules and drops malformed ones', () => {
+  const result = parsePrefs({ watchlist: [], brokerCommissionPct: '0.4', alertRules: [], rangeRules: [rangeRule, { id: 'bad' }] });
+  assert.deepEqual(result?.rangeRules, [rangeRule]);
 });
 
 test('alert rules are capped and damaged rules dropped', () => {
   const many = Array.from({ length: 150 }, (_, i) => ({ type: 'price_below', id: `r${i}`, enabled: true, code: 'GP', target: 200 }));
-  assert.equal(parsePrefs({ watchlist: [], brokerCommissionPct: '0.4', alertRules: many })?.alertRules?.length, 100);
+  assert.equal(parsePrefs({ watchlist: [], brokerCommissionPct: '0.4', alertRules: many, rangeRules: [] })?.alertRules?.length, 100);
   assert.deepEqual(prefsFromRows([['alertRules', 'oops']]), {});
 });
