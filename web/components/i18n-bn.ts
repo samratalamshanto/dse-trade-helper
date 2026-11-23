@@ -23,6 +23,10 @@ export const BN: Record<string, string> = {
   'Price pump': 'দাম ফাঁপানো', 'Volume spike': 'হঠাৎ বেশি লেনদেন', 'Sponsors selling': 'উদ্যোক্তারা বিক্রি করছেন', 'Small company, fast rise': 'ছোট কোম্পানি, দ্রুত দাম বৃদ্ধি',
   'Directors plan to sell': 'পরিচালকরা বিক্রির পরিকল্পনা করছেন', 'Sudden profit jump': 'হঠাৎ মুনাফা লাফ', 'Old financials': 'পুরনো আর্থিক প্রতিবেদন',
   'Loss-making but rising': 'লোকসানে, তবু দাম বাড়ছে', 'Category Z': 'Z ক্যাটাগরি',
+  'Checks it misses': 'যে পরীক্ষায় ঘাটতি', 'Patterns found': 'পাওয়া ধরন',
+  'None of the 9 warning-sign patterns was found.': '৯টি সতর্ক-সংকেত-ধরনের কোনোটি পাওয়া যায়নি।',
+  'One warning-sign pattern was found. A flag is a pattern, not proof.': 'একটি সতর্ক-সংকেত-ধরন পাওয়া গেছে। পতাকা একটি ধরন, প্রমাণ নয়।',
+  'Several warning-sign patterns, or category Z. A flag is a pattern, not proof.': 'কয়েকটি সতর্ক-সংকেত-ধরন, অথবা Z ক্যাটাগরি। পতাকা একটি ধরন, প্রমাণ নয়।',
 
   // Four questions and answers
   'Is it a good business?': 'ব্যবসা কি ভালো?', 'Is it cheap now?': 'এখন কি সস্তা?', 'Any warning signs?': 'কোনো সতর্ক সংকেত?', 'Is a dividend coming?': 'লভ্যাংশ কি আসছে?',

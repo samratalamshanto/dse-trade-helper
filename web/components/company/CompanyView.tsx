@@ -38,6 +38,11 @@ export function CompanyView({ code }: { code: string }) {
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const tablist = useRef<HTMLDivElement>(null);
   const ready = !!d;
+  // A link such as /c/CODE#safety (from a list pill) opens that tab.
+  useEffect(() => {
+    const h = window.location.hash.slice(1);
+    if (TABS.some(([k]) => k === h)) setTab(h as Tab); // eslint-disable-line react-hooks/set-state-in-effect -- the hash exists only in the browser
+  }, []);
   // Keep the active tab in view inside the horizontal strip, without scrolling the page.
   useEffect(() => {
     const el = tabRefs.current[tab], bar = tablist.current;

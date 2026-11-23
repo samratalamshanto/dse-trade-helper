@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { PillPopover } from '@/components/PillPopover';
 import { Tr } from '@/components/Tr';
 import { SIGNAL_TEXT } from '@/lib/glossary';
 
@@ -58,12 +59,23 @@ export type FraudLevel = keyof typeof FRAUD;
 
 export const SIGNAL_ORDER: Record<Signal, number> = { avoid: 0, caution: 1, neutral: 2, research: 3 };
 
-export function SignalPill({ signal, big = false }: { signal: Signal; big?: boolean }) {
-  return <span className={`pill s-${signal}`} style={big ? { fontSize: 16 } : undefined}><Icon name={signal} /> <Tr text={SIGNALS[signal].label} /></span>;
+export const FRAUD_TEXT: Record<FraudLevel, string> = {
+  clean: 'None of the 9 warning-sign patterns was found.',
+  suspicious: 'One warning-sign pattern was found. A flag is a pattern, not proof.',
+  high: 'Several warning-sign patterns, or category Z. A flag is a pattern, not proof.',
+};
+
+// With a company code, the pill becomes a button that explains itself (list rows); without one it is a plain label.
+export function SignalPill({ signal, big = false, code, missed = [] }: { signal: Signal; big?: boolean; code?: string; missed?: readonly string[] }) {
+  const cls = `pill s-${signal}`, style = big ? { fontSize: 16 } : undefined, pill = <><Icon name={signal} /> <Tr text={SIGNALS[signal].label} /></>;
+  if (!code) return <span className={cls} style={style}>{pill}</span>;
+  return <PillPopover className={cls} style={style} pill={pill} meaning={SIGNALS[signal].text} title="Checks it misses" items={missed} href={'/c/' + encodeURIComponent(code)} />;
 }
 
-export function FraudPill({ level, big = false }: { level: FraudLevel; big?: boolean }) {
-  return <span className={`pill f-${level}`} style={big ? { fontSize: 16 } : undefined}><Icon name={level} /> <Tr text={FRAUD[level]} /></span>;
+export function FraudPill({ level, big = false, code, flags = [] }: { level: FraudLevel; big?: boolean; code?: string; flags?: readonly string[] }) {
+  const cls = `pill f-${level}`, style = big ? { fontSize: 16 } : undefined, pill = <><Icon name={level} /> <Tr text={FRAUD[level]} /></>;
+  if (!code) return <span className={cls} style={style}>{pill}</span>;
+  return <PillPopover className={cls} style={style} pill={pill} meaning={FRAUD_TEXT[level]} title="Patterns found" items={flags.slice(0, 3)} href={'/c/' + encodeURIComponent(code) + '#safety'} />;
 }
 
 // Grey rows in the shape of the content, so a page never looks empty or jumps while its data loads.
