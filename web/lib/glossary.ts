@@ -1,9 +1,9 @@
 // Plain-text learning content shared by the web Learn page and the mobile app.
 export const SIGNAL_TEXT = {
-  research: { label: 'Passes the checks', text: 'Passes all 8 rule checks.' },
+  research: { label: 'Passes the checks', text: 'Passes all 8 rule checks and has no warning sign.' },
   neutral: { label: 'No strong signal', text: 'Not bad, but misses one or more quality checks.' },
   caution: { label: 'Caution', text: 'Has a warning: falling profit, high price, thin trading or one warning sign.' },
-  avoid: { label: 'High risk', text: 'Loss-making, category Z, or several warning-sign patterns. If you hold it, re-read its disclosures.' },
+  avoid: { label: 'High risk', text: 'Loss-making, category Z, or several warning-sign patterns. Its latest disclosures explain the reasons.' },
 } as const;
 
 // Pill label from the real number of flags. The level (colour) is separate: one Category Z flag is still high risk.

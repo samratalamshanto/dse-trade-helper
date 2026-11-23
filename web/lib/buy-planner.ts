@@ -24,11 +24,11 @@ export type PlanAction = 'avoid' | 'buy-before-dividend' | 'buy-now' | 'split' |
 export type Trend = 'rising' | 'falling' | 'sideways' | null;
 
 export const PLAN_TEXT: Record<PlanAction, { label: string; tone: 'bad' | 'warn' | 'info' | 'good' | 'neutral' }> = {
-  avoid: { label: 'Rules flag risks — review before buying', tone: 'bad' },
+  avoid: { label: 'Rules flag risks', tone: 'bad' },
   'buy-before-dividend': { label: 'Dividend deadline is close', tone: 'info' },
-  'buy-now': { label: 'All rules met — no timing reason to wait', tone: 'good' },
-  split: { label: 'Part now, price alert for the rest', tone: 'info' },
-  wait: { label: 'No entry signal yet — set a price alert', tone: 'warn' },
+  'buy-now': { label: 'All 8 checks pass; price not high vs its history', tone: 'good' },
+  split: { label: 'Rules met; mid-range or falling price — some now, rest at alert level', tone: 'info' },
+  wait: { label: 'Priced high against its own history', tone: 'warn' },
 };
 
 export interface Holding { shares: number; avgCost: number; portfolioValue: number }
@@ -177,7 +177,7 @@ export function planBuy(p: PlannerInput): BuyPlan {
 
   const warnings: string[] = [];
   if (p.illiquid) warnings.push('No trades in the last 52 weeks — an order may never fill, and you may not be able to sell');
-  if (p.avgDailyValue != null && p.avgDailyValue < THIN_TRADING_BDT) warnings.push('Thinly traded — it can be hard to buy or sell at a fair price');
+  if (p.avgDailyValue != null && p.avgDailyValue < THIN_TRADING_BDT) warnings.push('Thinly traded — prices can jump between trades');
   if (p.avgDailyValue != null && p.avgDailyValue > 0 && cost / p.avgDailyValue > ORDER_SHARE_OF_DAY_WARN) {
     warnings.push(`Your order is ${((cost / p.avgDailyValue) * 100).toFixed(0)}% of a normal day's trading — it may move the price; use a limit order`);
   }

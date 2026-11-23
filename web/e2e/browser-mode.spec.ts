@@ -43,7 +43,7 @@ test.describe('browser mode: a new visitor needs no password', () => {
   test('a plan saved from /c/GP shows on /plans and counts a BUY made after it', async ({ page }) => {
     const BASE = { code: 'GP', quantity: 10, price: 226.7, cost: 2267, position52: 0.08, sma20: 229.91, sma50: 236.28, vsSma20Pct: -1.39, trend: 'falling', typicalDailyMovePct: 0.61,
       moveOdds: [{ pct: 2, within: 5, fell: 24, rose: 16 }], daysCheaperPct: 2, dividend: null, afterBuy: null, warnings: [], reasons: ['Still in a falling trend'], sample: 255,
-      action: 'split', label: 'Part now, price alert for the rest', tone: 'info', buyNow: 5, later: 5, alertPrice: 222.2 };
+      action: 'split', label: 'Rules met; mid-range or falling price — some now, rest at alert level', tone: 'info', buyNow: 5, later: 5, alertPrice: 222.2 };
     let planUrl = '';
     await page.route('**/api/plan/GP?**', (r) => { planUrl = r.request().url(); return json(r, 200, BASE); });
     await page.route('**/api/plans**', (r) => r.abort());

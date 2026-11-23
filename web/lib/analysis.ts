@@ -251,7 +251,7 @@ function qualityChecks(c: Company, m: Metrics, zone: PricePosition['zone']): Che
     { ok: !stretched && !ranUp && zone !== 'high', label: 'Price not stretched',
       detail: `P/E ${m.pe == null ? '—' : round(m.pe)} (limit ${round(peLimit)}), P/B ${m.pb == null ? '—' : round(m.pb)} (limit ${STRETCHED_PB})${zone === 'high' ? ', P/E high in its 5-year range' : ''}${ranUp ? `, price up ${m.change1y}% in a year` : ''}`,
       why: 'Even a great company can be priced above its own usual P/E, its book value, or after it has doubled in a year.' },
-    { ok: (m.avgDailyValue ?? 0) >= LIQUID_DAILY_VALUE_BDT, label: 'Easy to buy and sell', detail: m.avgDailyValue == null ? 'unknown' : `৳${round(m.avgDailyValue / 1e7, m.avgDailyValue >= 1e7 ? 1 : 2)} cr traded a day`, why: 'Thinly traded shares are hard to sell at a fair price.' },
+    { ok: (m.avgDailyValue ?? 0) >= LIQUID_DAILY_VALUE_BDT, label: 'Easy to buy and sell', detail: m.avgDailyValue == null ? 'unknown' : `৳${round(m.avgDailyValue / 1e7, m.avgDailyValue >= 1e7 ? 1 : 2)} cr traded a day`, why: 'Thin trading: prices can jump between trades.' },
   ];
 }
 
@@ -293,7 +293,7 @@ function buyLine(signal: Analysis['signal'], m: Metrics, c: Company, cautions: s
   const nearHigh = !m.illiquid && c.weekHigh52 && c.weekLow52 != null && m.priceNow && (m.priceNow - c.weekLow52) / (c.weekHigh52 - c.weekLow52 || 1) > HIGH_ZONE;
   if (nearHigh) return 'Passes the quality checks; the price is near its 52-week high.';
   return m.pe && m.avgPastPe && m.pe < m.avgPastPe ? 'Passes the quality checks; P/E is below its usual level.'
-    : 'Good business at a normal or higher P/E than usual. Research it before deciding.';
+    : 'Good business at a normal or higher P/E than usual.';
 }
 
 
@@ -406,9 +406,9 @@ const HIGH_ZONE = 0.75;
 const VALUATION: Record<string, { label: string; tone: string; text: string }> = {
   value: { label: 'Possible value', tone: 'good', text: 'Cheap against its own 5-year history while earnings still grow.' },
   trap: { label: 'Cheap for a reason', tone: 'bad', text: 'Cheap against its history, but earnings are falling. A low price can keep falling. Be careful.' },
-  expensive: { label: 'Priced high', tone: 'warn', text: 'Expensive against its own history, though earnings grow. Good business, but priced high against its history.' },
+  expensive: { label: 'Priced high', tone: 'warn', text: 'Expensive vs its own history, though earnings grow.' },
   risky: { label: 'Expensive and weakening', tone: 'bad', text: 'Expensive against its history while earnings fall. High risk at this price.' },
-  fair: { label: 'Fairly priced', tone: 'neutral', text: 'In the middle of its usual range. Price alone gives no strong reason to buy or wait.' },
+  fair: { label: 'Fairly priced', tone: 'neutral', text: 'Price is in the middle of its usual range.' },
 };
 
 const band = (values: (number | null | undefined)[], now: number | null): PriceBand | null => {
