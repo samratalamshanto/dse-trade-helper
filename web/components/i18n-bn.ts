@@ -492,6 +492,30 @@ export const BN: Record<string, string> = {
   'Data looks wrong: the price is far outside its 52-week range.': 'তথ্য ভুল মনে হচ্ছে: দাম ৫২-সপ্তাহের সীমার অনেক বাইরে।',
   'Loading 52-week range…': '৫২ সপ্তাহের সীমা লোড হচ্ছে…',
   'A price near its low can fall further. Automatic figures and your own rules, not advice.': 'সর্বনিম্নের কাছের দাম আরো কমতে পারে। স্বয়ংক্রিয় তথ্য ও আপনার নিয়ম, পরামর্শ নয়।',
+
+  // Dividends: value facts and the five dividend checks
+  '৳ per ৳10,000': 'প্রতি ৳১০,০০০-এ ৳', 'year': 'বছর', 'this dividend': 'এই লভ্যাংশে', '52-week position': '৫২ সপ্তাহে অবস্থান',
+  'Yield vs usual': 'স্বাভাবিকের তুলনায় ফলন', 'pts': 'পয়েন্ট', 'usual': 'স্বাভাবিক', 'Paid from profit': 'মুনাফা থেকে প্রদান',
+  'loss year': 'লোকসানের বছর', 'more than earned': 'আয়ের চেয়ে বেশি', 'Paid in': 'প্রদানের বছর', 'Dividend checks': 'লভ্যাংশ পরীক্ষা',
+  'Passes {n} of 5': '৫টির মধ্যে {n}টিতে উত্তীর্ণ', 'Record date within 30 days': '৩০ দিনের মধ্যে রেকর্ড ডেট', 'record date today': 'আজ রেকর্ড ডেট',
+  'next dividend in {n} day': '{n} দিন পর পরের লভ্যাংশ', 'next dividend in {n} days': '{n} দিন পর পরের লভ্যাংশ',
+  "On DSE the price usually drops by about the dividend after the record date. ৳ per ৳10,000 is the cash a ৳10,000 holding at today's price would get.":
+    'DSE-তে রেকর্ড ডেটের পরে দাম সাধারণত লভ্যাংশের সমান পরিমাণ কমে। প্রতি ৳১০,০০০-এ ৳ মানে আজকের দামে ৳১০,০০০-এর শেয়ারে যত নগদ টাকা আসবে।',
+  '12-month cash yield is 5% or more.': '১২ মাসের নগদ ফলন ৫% বা তার বেশি।', '12-month cash yield is under 5%.': '১২ মাসের নগদ ফলন ৫%-এর কম।',
+  '12-month cash yield is not known.': '১২ মাসের নগদ ফলন জানা নেই।',
+  'The cash dividend is within the yearly profit (EPS).': 'নগদ লভ্যাংশ বছরের মুনাফার (EPS) মধ্যে।',
+  'The cash dividend is more than the yearly profit (EPS).': 'নগদ লভ্যাংশ বছরের মুনাফার (EPS) চেয়ে বেশি।',
+  'The company made a loss, so the dividend is not paid from profit.': 'কোম্পানি লোকসান করেছে, তাই লভ্যাংশ মুনাফা থেকে দেওয়া নয়।',
+  'No cash dividend in 12 months, or profit (EPS) is not known.': '১২ মাসে নগদ লভ্যাংশ নেই, বা মুনাফা (EPS) জানা নেই।',
+  'Paid a cash dividend in 4 or more of the last 5 years.': 'গত ৫ বছরের ৪ বা তার বেশি বছরে নগদ লভ্যাংশ দিয়েছে।',
+  'Paid a cash dividend in fewer than 4 of the last 5 years.': 'গত ৫ বছরের ৪টির কম বছরে নগদ লভ্যাংশ দিয়েছে।',
+  'Dividend history is not known.': 'লভ্যাংশের ইতিহাস জানা নেই।',
+  'No warning sign found.': 'কোনো সতর্ক সংকেত পাওয়া যায়নি।', 'Has a warning sign.': 'সতর্ক সংকেত আছে।', 'Warning signs are not known.': 'সতর্ক সংকেত জানা নেই।',
+  'Price is in the lower half of its 52-week range.': 'দাম ৫২ সপ্তাহের সীমার নিচের অর্ধেকে।',
+  'Price is in the upper half of its 52-week range.': 'দাম ৫২ সপ্তাহের সীমার উপরের অর্ধেকে।',
+  '52-week range is not known.': '৫২ সপ্তাহের সীমা জানা নেই।',
+  'Five fixed rules about this dividend. Facts, not advice.': 'এই লভ্যাংশ নিয়ে পাঁচটি নির্দিষ্ট নিয়ম। তথ্য, পরামর্শ নয়।', 'The five checks': 'পাঁচটি পরীক্ষা',
+
   // Portfolio page (trades)
   'Your shares, worked out from your buys and sells. Saved in your own Google Sheet, so every device shows the same numbers.': 'আপনার কেনা-বেচা থেকে হিসাব করা আপনার শেয়ার। আপনার নিজের Google Sheet-এ রাখা, তাই প্রতিটি ডিভাইসে একই সংখ্যা দেখায়।',
   'Your shares, worked out from your buys and sells. Saved in this browser only. To see them on other devices, turn on Google Sheet sync in Settings at the bottom.': 'আপনার কেনা-বেচা থেকে হিসাব করা আপনার শেয়ার। শুধু এই ব্রাউজারে রাখা। অন্য ডিভাইসে দেখতে নিচের সেটিংসে Google Sheet সিঙ্ক চালু করুন।',

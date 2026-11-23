@@ -1,6 +1,7 @@
-import { analyze, currentYield, sectorMedians, fiveYearSummary, pricePosition, metrics, fourQuestions, dividendRecord, hasSector } from './analysis.ts';
+import { analyze, currentYield, expectedLatestYear, sectorMedians, fiveYearSummary, pricePosition, metrics, fourQuestions, dividendRecord, hasSector } from './analysis.ts';
 import { dividendStatus, dhakaToday, previousTradingDay, toIso } from './announcements.ts';
 import { DATA_VERSION } from './company.ts';
+import { paidYears } from './dividend-checks.ts';
 import { priceHistory } from './price-history.ts';
 import { snapshot, intraday, livePrices, marketSession, seen, remember, SNAPSHOT_TTL_MS, FAILURE_TTL_MS, type MarketSession, type SnapshotRow, type Intraday, type Snapshot } from './dse.ts';
 import { allCompanies, fetchCompany, readLastSession, saveCompanies, saveLastSession, storeVersion, NotFoundError, type StoredCompany, type LastSession } from './store.ts';
@@ -131,6 +132,8 @@ async function buildDividendCalendar() {
   const now = new Date();
   const live: Live = await livePrices().catch(() => ({}));
   const rows = Object.values(allCompanies()).filter((c) => c.events).map((c) => ({ c: withLive(c, live), s: dividendStatus(c.events, now) }));
+  // The same score and signal the Companies page shows (it compares P/E with the sector median).
+  const listed = new Map((await listCompanies().catch(() => null))?.rows.map((r) => [r.code, r]));
   const brief = ({ c, s }: (typeof rows)[number], d: Declaration | null) => {
     const cashPerShare = d?.cashPct != null ? (d.cashPct / 100) * (c.faceValue || 10) : null;
     const a = analyze(c, null, now);
@@ -139,7 +142,9 @@ async function buildDividendCalendar() {
       cashPct: d?.cashPct ?? null, stockPct: d?.stockPct ?? null, interim: !!d?.interim, partial: !!d?.partial,
       // yearlyCashPerShare: every cash declaration of the last 12 months (interims + final), the same sum the yield uses.
       cashPerShare, yearlyCashPerShare: currentYield(c, null, now).cash, yieldPct: a.metrics.latestYield, yieldBasis: a.metrics.yieldBasis,
-      fraud: a.fraud.level, flags: a.fraud.flags.map((f) => f.title),
+      fraud: a.fraud.level, flags: a.fraud.flags.map((f) => f.title), eps: a.metrics.epsNow, avgYieldPct: fiveYearSummary(c).average.dividendYield,
+      paidYears: paidYears(c.dividends, expectedLatestYear(now)), weekLow52: c.weekLow52 ?? null, weekHigh52: c.weekHigh52 ?? null,
+      score: listed.get(c.code)?.score ?? null, signal: listed.get(c.code)?.signal ?? null,
       announced: d?.announced ?? null, recordDate: d?.recordDate ?? null, agmDate: d?.agmDate ?? null,
       lastBuyDate: d?.lastBuyDate ?? (d?.recordDate ? previousTradingDay(d.recordDate) : null),
       lastBuyEstimated: d?.lastBuyDate ? !!d.lastBuyEstimated : true, nextExpected: s.nextExpected, regular: s.regular,

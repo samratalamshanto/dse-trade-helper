@@ -12,6 +12,7 @@ import { listTrades, useMode } from '@/components/portfolio-store';
 import { useWatchlist } from '@/components/Watchlist';
 import { MyRules } from '@/components/range/MyRules';
 import { QuickPickChips } from '@/components/QuickPickChips';
+import { PositionBar } from '@/components/PositionBar';
 import { pickTest, QUICK_PICK_KEYS, type QuickPickKey } from '@/lib/quick-picks';
 import { rangeStats, rangeLooksWrong, gainFromBuyPct, type RangeRow, type Owned } from '@/lib/range';
 import type { CompanyRow } from '@/lib/service';
@@ -61,26 +62,6 @@ function sortKey(r: TableRow, k: string): number | string | null {
   if (k === 'gainPct') return r.gainPct ?? null;
   if (k === 'shares') return r.shares ?? null;
   return null;
-}
-
-function PositionBar({ position }: { position: number }) {
-  const pct = Math.round(position * 100);
-  const left = Math.round(position * 44);
-  return (
-    <span
-      role="img"
-      aria-label={`${pct}% from the low`}
-      style={{
-        display: 'inline-block', width: '56px', height: '8px',
-        background: 'var(--border)', borderRadius: '4px', position: 'relative', verticalAlign: 'middle',
-      }}
-    >
-      <span style={{
-        position: 'absolute', left: `${left}px`, top: '-2px',
-        width: '12px', height: '12px', borderRadius: '50%', background: 'var(--accent)',
-      }} />
-    </span>
-  );
 }
 
 export function RangePage() {
