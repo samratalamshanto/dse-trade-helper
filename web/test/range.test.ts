@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { describeMatch, describeRule, gainFromBuyPct, parseRangeRules, rangeFeed, rangeStats, type RangeRow } from '../lib/range.ts';
+import { describeMatch, describeRule, gainFromBuyPct, parseRangeRules, rangeFeed, rangeLooksWrong, rangeStats, type RangeRow } from '../lib/range.ts';
 import type { CompanyRow } from '../lib/service.ts';
 
 const row = (code: string, price: number | null, low: number | null, high: number | null): RangeRow => ({ code, price, weekLow52: low, weekHigh52: high });
@@ -146,4 +146,16 @@ test('parseRangeRules: a valid pick is kept; an unknown pick is dropped from the
 test('describeRule mentions the pick label when present', () => {
   assert.equal(describeRule({ id: 'a', kind: 'nearLow', pct: 10, scope: 'all', pick: 'good' }), 'within 10% of the 52-week low, Good companies (all companies)');
   assert.equal(describeRule({ id: 'a', kind: 'nearLow', pct: 5, scope: 'all' }), 'within 5% of the 52-week low (all companies)', 'no pick: unchanged format');
+});
+
+test('a price far outside its 52-week range is marked wrong, has no figures and matches no rule', () => {
+  const sibl = row('SIBL', 3, 122, 590);
+  assert.equal(rangeLooksWrong(sibl), true, 'price ৳3 against a ৳122 low');
+  assert.equal(rangeLooksWrong(row('X', 700, 100, 300)), true, 'more than twice the high');
+  assert.equal(rangeLooksWrong(row('X', 90, 100, 200)), false, 'a little below a stale low is still believable');
+  assert.equal(rangeLooksWrong(row('X', null, 100, 200)), false);
+  assert.equal(rangeStats(sibl), null);
+  const input = { rows: [sibl, row('GP', 226.7, 221.9, 282)], watchlist: [], holdings: [{ code: 'SIBL', shares: 10, avgCost: 10 }] };
+  const rules = [{ id: 'a', kind: 'nearLow' as const, pct: 100, scope: 'all' as const }, { id: 'b', kind: 'downFromBuy' as const, pct: 5, scope: 'holdings' as const }];
+  assert.deepEqual(rangeFeed(rules, input).map((m) => `${m.rule.id}:${m.code}`), ['a:GP', 'b:SIBL'], 'a wrong range hides range rules only; the price against your buy is still real');
 });

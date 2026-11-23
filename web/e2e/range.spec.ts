@@ -162,6 +162,15 @@ test.describe('/range', () => {
     await expect(page.getByText(/Near its low 20%/)).toBeVisible();
   });
 
+  test('a row whose price is far outside its 52-week range is marked and sorted last', async ({ page }) => {
+    const sibl = { ...COMPANIES_RESP.rows[0], code: 'SIBL', name: 'Social Islami Bank', price: 3, weekLow52: 122, weekHigh52: 590 };
+    await page.route('**/api/companies', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...COMPANIES_RESP, rows: [...COMPANIES_RESP.rows, sibl] }) }));
+    await page.reload();
+    await expect(rows(page)).toHaveCount(5);
+    expect(await codes(page)).toEqual([...NEAR_LOW_ORDER, 'SIBL']);
+    await expect(rows(page).last().getByText('Data looks wrong: the price is far outside its 52-week range.')).toBeVisible();
+  });
+
   test('no console errors on page load', async ({ page }) => {
     await page.waitForLoadState('networkidle');
   });

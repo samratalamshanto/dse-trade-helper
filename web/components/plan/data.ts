@@ -32,7 +32,7 @@ export const PLAN_COMPANIES: PlanCompany[] = [
     series: { 'EPS (৳)': [25.28, 22.29, 24.49, 26.89, 21.90], 'Dividend/share (৳)': [25.00, 22.00, 12.50, 33.00, 21.50] },
     positive: 'Useful as a dividend company.',
     warning: '2025 revenue was ৳158.06 bn, almost flat on 2024, while net profit fell 18.5%.',
-    final: 'Do not put it ahead of Square or BRAC Bank for a growth goal until earnings become stable.',
+    final: 'In this worked example, it did not pass the 5-year checks because earnings fell in 2025.',
     trend: 'Declining in 2025', link: 'https://www.grameenphone.com/about/investor-relations',
   },
   {
@@ -42,18 +42,18 @@ export const PLAN_COMPANIES: PlanCompany[] = [
     series: { 'Revenue (৳ crore)': [1303, 1414, 1452, 1631, 2071] },
     positive: 'FY2025–26 profit after tax: ৳649 crore.',
     warning: 'The share price is high (above ৳2,600). One share takes a large part of a small monthly budget.',
-    final: 'An excellent business to research, but not a priority for a small monthly portfolio at this price.',
+    final: 'In this worked example, it did not pass because one share costs more than a small monthly budget allows.',
     trend: 'Strong revenue growth', link: 'https://www.dse.com.bd/company/MARICO',
   },
 ];
 
 export const ALLOCATION = [
-  { code: 'SQURPHARMA', label: 'Company A', note: 'Core long-term holding', pct: 45, color: '--accent' },
-  { code: 'BRACBANK', label: 'Company B', note: 'Banking-sector exposure', pct: 35, color: '--up' },
+  { code: 'SQURPHARMA', label: 'Square Pharma (example)', note: 'Core long-term holding', pct: 45, color: '--accent' },
+  { code: 'BRACBANK', label: 'BRAC Bank (example)', note: 'Banking-sector exposure', pct: 35, color: '--up' },
   { code: null, label: 'Cash', note: 'Future chances and risk buffer', pct: 20, color: '--muted' },
 ] as const;
 
-export const MONTHLY_SPLIT: [string, number][] = [['Company A', 0.4], ['Company B', 0.3], ['Cash', 0.2], ['Extra opportunity', 0.1]];
+export const MONTHLY_SPLIT: [string, number][] = [['Square Pharma (example)', 0.4], ['BRAC Bank (example)', 0.3], ['Cash', 0.2], ['Extra opportunity', 0.1]];
 export const RESEARCH = ['SQURPHARMA', 'BRACBANK', 'EBL', 'CITYBANK', 'GP', 'MARICO', 'BERGERPBL', 'WALTONHIL', 'LHB', 'UPGDCL'];
 export const INITIAL_CHOICES = [10000, 20000, 30000, 40000, 50000];
 export const GROWTH_YEARS = 5;

@@ -195,6 +195,12 @@ test('range rule matches go out as one message per rule, naming the rule and eac
   assert.equal(a[0].text, '<b>Your rule:</b> within 10% of the 52-week low (all companies)\n• <b>GP</b>: 10% above its 52-week low');
 });
 
+test('a range that looks wrong never goes out in a range summary', () => {
+  const rule = { id: 'nr1', kind: 'nearLow' as const, pct: 100, scope: 'all' as const };
+  const a = alertsFor(base({ rangeRules: [rule], rangeRows: [{ code: 'EXIMBANK', price: 3, weekLow52: 245.25, weekHigh52: 466.75 }], owned: [] }), {});
+  assert.equal(a.filter((x) => x.key.startsWith('range:')).length, 0);
+});
+
 test('a wide rule lists only the closest 10 companies and counts the rest', () => {
   const rule = { id: 'wide', kind: 'nearLow' as const, pct: 50, scope: 'all' as const };
   const rows = Array.from({ length: 15 }, (_, i) => ({ code: `C${String(i).padStart(2, '0')}`, price: 100 + i, weekLow52: 100, weekHigh52: 300 }));

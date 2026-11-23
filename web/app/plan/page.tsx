@@ -43,6 +43,7 @@ function usePersistentFlag(key: string): [boolean, (v: boolean) => void] {
 function PlanCard({ p, colors }: { p: PlanCompany; colors: Colors | null }) {
   const { data: d } = useApi<CompanyDetail>('/api/company/' + encodeURIComponent(p.code));
   const [view, setView] = useState<'fin' | 'price'>('fin');
+  const { t } = useLang();
   const m = d?.analysis.metrics;
   const sets = Object.entries(p.series);
   const palette = colors ? [colors['--accent'], colors['--up'], colors['--warn']] : [];
@@ -77,7 +78,7 @@ function PlanCard({ p, colors }: { p: PlanCompany; colors: Colors | null }) {
       <p><b>Why:</b> {p.why}</p>
       <div className="note">{p.positive}</div>
       <div className="note warn">{p.warning}</div>
-      <p style={{ overflowWrap: 'anywhere' }}><b>Verdict:</b> {p.final} <a href={p.link} target="_blank" rel="noopener noreferrer">Source ↗</a></p>
+      <p style={{ overflowWrap: 'anywhere' }}><b>Verdict:</b> {t(p.final)} <a href={p.link} target="_blank" rel="noopener noreferrer">Source ↗</a></p>
     </div>
   );
 }
@@ -135,8 +136,7 @@ export default function PlanPage() {
           <div className="panel stat"><div className="k">FY2025–26 DSEX</div><div className="v mono up">+19%</div><div className="small">The Business Standard</div></div>
           <div className="panel stat"><div className="k">Market cap, Aug 2026</div><div className="v mono">৳6.95 tn</div><div className="small down">−4.58% year on year</div></div>
         </div>
-        <div className="note">The market recovered strongly in FY26. The later fall in market cap shows why you should not invest all your money at once.
-          <b> Approach: invest in stages over 3–6 months, based on valuation and financial results.</b></div>
+        <div className="note">{t('The market recovered strongly in FY26, then the market cap fell. In this example, the purchases are spread over 3–6 months.')}</div>
       </section>
 
       <h2 id="companies"><Tr text="Example companies: five-year analysis" /></h2>
@@ -150,7 +150,7 @@ export default function PlanPage() {
       </table><p className="small muted">These are first fundamental checks, not full buy ratings. Check the latest quarterly cash flows, loan quality, regulatory disclosures and management risks before a final decision.</p></div>
 
       <h2 id="portfolio"><Tr text="Example portfolio split" /></h2>
-      <div className="grid g2">
+      <div className="grid">
         <div className="panel">
           <div className="grid g2">
             <label className="field">Initial investment (৳)
@@ -163,15 +163,15 @@ export default function PlanPage() {
             <thead><tr><th>Holding</th><th className="n">Share</th><th className="n">Amount</th><th className="n">Shares at today&apos;s price</th></tr></thead>
             <tbody>{ALLOCATION.map((a) => {
               const amt = (initial * a.pct) / 100;
-              return <tr key={a.label}><td><b>{a.label}</b><div className="small muted">{a.note}</div></td><td className="n mono">{a.pct}%</td><td className="n mono">{taka(amt)}</td>
+              return <tr key={a.label}><td><b>{t(a.label)}</b><div className="small muted">{a.note}</div></td><td className="n mono">{a.pct}%</td><td className="n mono">{taka(amt)}</td>
                 <td className="n mono">{a.code ? <SharesAtPrice code={a.code} amount={amt} /> : '—'}</td></tr>;
             })}</tbody></table></div>
           <p className="small muted">&quot;Shares at today&apos;s price&quot; is the whole shares you can buy, before brokerage fees.</p>
         </div>
         <div className="panel"><b>Monthly plan</b>
-          <table><tbody>{MONTHLY_SPLIT.map(([k, f]) => <tr key={k}><td>{k}</td><td className="n mono">{taka(monthly * f)}</td></tr>)}
+          <table><tbody>{MONTHLY_SPLIT.map(([k, f]) => <tr key={k}><td>{t(k)}</td><td className="n mono">{taka(monthly * f)}</td></tr>)}
             <tr><td><b>Total</b></td><td className="n mono"><b>{taka(monthly)}</b></td></tr></tbody></table>
-          <div className="note warn">Do not force a purchase every month. Some investors keep the cash when the price is above their range.</div></div>
+          <div className="note warn">{t('This example does not buy every month. When the price is above its range, it keeps the cash.')}</div></div>
       </div>
 
       <h2 id="growth"><Tr text="What could your investment become?" /></h2>

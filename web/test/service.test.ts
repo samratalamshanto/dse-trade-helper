@@ -71,6 +71,9 @@ test('A17/A16/A19: the list row and the company page agree for the same stored c
   const d = await companyDetail('HWAWELLTEX', false);
   assert.deepStrictEqual([d.analysis.signal, d.analysis.score, d.company.pe, d.company.dividendYield], [row.signal, row.score, row.pe, row.dividendYield]);
   assert.strictEqual(row.stale, true);
+  // The list pill explains itself with the first 3 checks the company page shows as failed.
+  assert.deepStrictEqual(row.missed, d.analysis.checks.filter((x) => !x.ok).map((x) => x.label).slice(0, 3));
+  assert.ok(row.signal === 'research' || row.missed.length > 0);
   // The stored page had no sector ("—"); both take it from the live snapshot row.
   assert.deepStrictEqual([row.sector, d.company.sector], ['Textile', 'Textile']);
   // The snapshot still carries Thursday's ltp, but the market is closed: not live, and the session date says which day.

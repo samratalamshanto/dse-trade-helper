@@ -10,6 +10,7 @@ import { isTooLate, LastBuy } from '@/components/LastBuy';
 import { SortHeader, type SortState } from '@/components/SortHeader';
 import { compareNullsLast, fmt, fmtDate, monthName, pctNum, sectorName } from '@/components/format';
 import { FraudPill, Info, Skeleton, type FraudLevel } from '@/components/ui';
+import { PillPopover } from '@/components/PillPopover';
 import { FilterBox, matchesText } from '@/components/FilterBox';
 import type { CalendarRow, dividendCalendar } from '@/lib/service';
 import { checksOf, ScoreHeader, ValueCells, ValueHeaders } from '@/components/DividendValue';
@@ -19,7 +20,7 @@ type Calendar = Awaited<ReturnType<typeof dividendCalendar>>;
 
 function CompanyCell({ r }: { r: CalendarRow }) {
   return (
-    <td><b className="mono">{r.code}</b> {r.fraud !== 'clean' ? <FraudPill level={r.fraud as FraudLevel} /> : null}
+    <td><b className="mono">{r.code}</b> {r.fraud !== 'clean' ? <FraudPill level={r.fraud as FraudLevel} href={'/c/' + encodeURIComponent(r.code) + '#safety'} flags={r.flags} /> : null}
       <div className="small muted">{r.name}{r.sector ? ' · ' + sectorName(r.sector) : ''} · Cat {r.category}</div></td>
   );
 }
@@ -27,7 +28,7 @@ function CompanyCell({ r }: { r: CalendarRow }) {
 function DividendCell({ r }: { r: CalendarRow }) {
   return (
     <td data-label="Dividend">{r.cashPct != null ? <>{pctNum(r.cashPct)}% <Tr text="cash" /></> : '—'}{r.stockPct ? <> + {pctNum(r.stockPct)}% <Tr text="bonus" /></> : null}
-      {r.interim ? <> <span className="pill s-neutral"><Tr text="interim" /></span></> : null}{r.partial ? <> <span className="pill s-caution"><Tr text="not for sponsors" /></span></> : null}</td>
+      {r.interim ? <> <span className="pill s-neutral"><Tr text="interim" /></span></> : null}{r.partial ? <> <PillPopover className="pill s-caution" pill={<Tr text="not for sponsors" />} meaning="Sponsors and directors do not take this dividend. Only the other shareholders get it." /></> : null}</td>
   );
 }
 
@@ -35,7 +36,7 @@ const SOON_DAYS = 30;
 const CARD_SORTS = [['recordDate', 'Record date'], ['checks', 'Dividend checks'], ['yieldPct', '12-month cash yield'], ['lastBuyDate', 'Last day to buy'], ['price', 'Price'], ['cashPerShare', 'Cash / share'], ['code', 'Company']] as const;
 
 const YieldCell = ({ r }: { r: CalendarRow }) => (
-  <td data-label="12-month cash yield" className="n mono">{r.yieldPct != null ? <>{fmt(r.yieldPct, 2)}%{r.yieldBasis ? <> <Info text={r.yieldBasis} /></> : null}{r.yieldPct < 1 ? <> <span className="pill s-neutral"><Tr text="tiny" /></span></> : null}</> : '—'}</td>
+  <td data-label="12-month cash yield" className="n mono">{r.yieldPct != null ? <>{fmt(r.yieldPct, 2)}%{r.yieldBasis ? <> <Info text={r.yieldBasis} /></> : null}{r.yieldPct < 1 ? <> <PillPopover className="pill s-neutral" pill={<Tr text="tiny" />} meaning="The cash paid in the last 12 months is less than 1% of the price." /></> : null}</> : '—'}</td>
 );
 
 function RecordCell({ r, today }: { r: CalendarRow; today: string }) {
@@ -134,7 +135,7 @@ export default function DividendsPage() {
         <thead><tr><th>Company</th><th>Last dividend</th><th className="n"><Tr text="12-month cash yield" /></th><th>Expected</th><ValueHeaders /><th><Tr text="Dividend checks" /></th><ScoreHeader /></tr></thead>
         <tbody>{expected.length ? expected.map((r) => (
           <tr key={r.code} onClick={() => open(r.code)}><CompanyCell r={r} /><DividendCell r={r} /><YieldCell r={r} />
-            <td data-label="Expected">{monthName(r.nextExpected)}{r.regular ? <> <span className="pill s-research">regular</span></> : null}</td>
+            <td data-label="Expected">{monthName(r.nextExpected)}{r.regular ? <> <PillPopover className="pill s-research" pill={<Tr text="regular" />} meaning="The last two dividends were announced within about 6 weeks of the same date, so the expected month is a fair guess." /></> : null}</td>
             <ValueCells r={r} /></tr>
         )) : <tr><td colSpan={11} className="empty">None yet.</td></tr>}</tbody>
       </table></div>

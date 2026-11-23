@@ -23,6 +23,19 @@ export const BN: Record<string, string> = {
   'Price pump': 'দাম ফাঁপানো', 'Volume spike': 'হঠাৎ বেশি লেনদেন', 'Sponsors selling': 'উদ্যোক্তারা বিক্রি করছেন', 'Small company, fast rise': 'ছোট কোম্পানি, দ্রুত দাম বৃদ্ধি',
   'Directors plan to sell': 'পরিচালকরা বিক্রির পরিকল্পনা করছেন', 'Sudden profit jump': 'হঠাৎ মুনাফা লাফ', 'Old financials': 'পুরনো আর্থিক প্রতিবেদন',
   'Loss-making but rising': 'লোকসানে, তবু দাম বাড়ছে', 'Category Z': 'Z ক্যাটাগরি',
+  'Checks it misses': 'যে পরীক্ষায় ঘাটতি', 'Patterns found': 'পাওয়া ধরন',
+  '{n} flag patterns': '{n}টি পতাকার ধরন',
+  'Sponsors and directors do not take this dividend. Only the other shareholders get it.': 'উদ্যোক্তা ও পরিচালকরা এই লভ্যাংশ নেন না। শুধু অন্য শেয়ারহোল্ডাররা পান।',
+  'The cash paid in the last 12 months is less than 1% of the price.': 'গত ১২ মাসে দেওয়া নগদ লভ্যাংশ দামের ১%-এর কম।',
+  'The last two dividends were announced within about 6 weeks of the same date, so the expected month is a fair guess.': 'শেষ দুটি লভ্যাংশ একই সময়ের প্রায় ৬ সপ্তাহের মধ্যে ঘোষণা হয়েছিল, তাই প্রত্যাশিত মাসটি মোটামুটি ঠিক অনুমান।',
+  'Cheap against its own 5-year history while earnings still grow.': 'নিজের ৫ বছরের ইতিহাসের তুলনায় সস্তা, আর আয় এখনও বাড়ছে।',
+  'Cheap against its history, but earnings are falling. A low price can keep falling. Be careful.': 'ইতিহাসের তুলনায় সস্তা, কিন্তু আয় কমছে। কম দাম আরও কমতে পারে। সাবধান থাকুন।',
+  'Expensive against its own history, though earnings grow. Good business, but wait for a better price.': 'নিজের ইতিহাসের তুলনায় দামি, যদিও আয় বাড়ছে। ভালো ব্যবসা, তবে ভালো দামের অপেক্ষা করুন।',
+  'Expensive against its history while earnings fall. High risk at this price.': 'ইতিহাসের তুলনায় দামি, আর আয় কমছে। এই দামে ঝুঁকি বেশি।',
+  'In the middle of its usual range. Price alone gives no strong reason to buy or wait.': 'স্বাভাবিক সীমার মাঝামাঝি। শুধু দাম দেখে কেনা বা অপেক্ষার জোরালো কারণ নেই।',
+  'None of the 9 warning-sign patterns was found.': '৯টি সতর্ক-সংকেত-ধরনের কোনোটি পাওয়া যায়নি।',
+  'A warning-sign pattern was found. A flag is a pattern, not proof.': 'সতর্ক-সংকেত-ধরন পাওয়া গেছে। পতাকা একটি ধরন, প্রমাণ নয়।',
+  'Warning signs of more than one kind, or category Z. A flag is a pattern, not proof.': 'একাধিক ধরনের সতর্ক সংকেত, অথবা Z ক্যাটাগরি। পতাকা একটি ধরন, প্রমাণ নয়।',
 
   // Four questions and answers
   'Is it a good business?': 'ব্যবসা কি ভালো?', 'Is it cheap now?': 'এখন কি সস্তা?', 'Any warning signs?': 'কোনো সতর্ক সংকেত?', 'Is a dividend coming?': 'লভ্যাংশ কি আসছে?',
@@ -41,7 +54,15 @@ export const BN: Record<string, string> = {
   'Good business at a normal or higher P/E than usual. Research it before deciding.': 'ভালো ব্যবসা, তবে P/E স্বাভাবিক বা বেশি। সিদ্ধান্তের আগে গবেষণা করুন।',
   'Passes the quality checks; the price is near its 52-week high.': 'মান-পরীক্ষায় উত্তীর্ণ; দাম ৫২-সপ্তাহের সর্বোচ্চের কাছে।',
   'High risk by these rules.': 'এই নিয়মে উচ্চ ঝুঁকি।',
-  'A warning rule fired. Read the latest disclosures and quarterly results.': 'একটি সতর্কতা-নিয়ম চালু হয়েছে। সর্বশেষ ঘোষণা ও ত্রৈমাসিক ফলাফল পড়ুন।',
+  'Caution for these reasons:': 'এই কারণে সতর্কতা:',
+  'A warning sign was found (see Safety checks).': 'একটি সতর্ক সংকেত পাওয়া গেছে (নিরাপত্তা পরীক্ষা দেখুন)।',
+  'Earnings fell two years in a row.': 'পরপর দুই বছর আয় কমেছে।',
+  'The latest quarterly result is a loss.': 'সর্বশেষ ত্রৈমাসিক ফলাফলে লোকসান।',
+  'Earnings are shrinking over the years.': 'বছরের পর বছর আয় কমছে।',
+  'P/E is more than twice the sector median.': 'P/E খাতের মধ্যমার দ্বিগুণের বেশি।',
+  'The price is more than 5× book value.': 'দাম বুক ভ্যালুর ৫ গুণের বেশি।',
+  'Few shares trade each day.': 'প্রতিদিন অল্প শেয়ার লেনদেন হয়।',
+  'Read the latest disclosures and quarterly results.': 'সর্বশেষ ঘোষণা ও ত্রৈমাসিক ফলাফল পড়ুন।',
   'No strong signal. Research more before you decide.': 'জোরালো সংকেত নেই। সিদ্ধান্তের আগে আরও গবেষণা করুন।',
   'Is it cheap or expensive now?': 'এখন সস্তা না দামি?', 'Price vs last 5 years': 'দাম বনাম গত ৫ বছর', 'P/E vs last 5 years': 'P/E বনাম গত ৫ বছর',
   'Possible value': 'সম্ভাব্য সুযোগ', 'Cheap for a reason': 'কারণ আছে বলেই সস্তা', 'Priced high': 'দাম বেশি', 'Expensive and weakening': 'দামি এবং দুর্বল হচ্ছে', 'Fairly priced': 'ন্যায্য দাম',
@@ -423,6 +444,14 @@ export const BN: Record<string, string> = {
   'Fits your rules': 'আপনার নিয়মের সাথে মেলে',
   'No rule triggered': 'কোনো নিয়ম চালু হয়নি',
 
+  // Start investing example plan
+  'The market recovered strongly in FY26, then the market cap fell. In this example, the purchases are spread over 3–6 months.': '২০২৫–২৬ অর্থবছরে বাজার জোরালোভাবে ঘুরে দাঁড়ায়, তারপর বাজার মূলধন কমে। এই উদাহরণে কেনাকাটা ৩–৬ মাসে ভাগ করা হয়েছে।',
+  'In this worked example, it did not pass the 5-year checks because earnings fell in 2025.': 'এই উদাহরণে এটি ৫ বছরের পরীক্ষায় উত্তীর্ণ হয়নি, কারণ ২০২৫ সালে আয় কমেছে।',
+  'In this worked example, it did not pass because one share costs more than a small monthly budget allows.': 'এই উদাহরণে এটি উত্তীর্ণ হয়নি, কারণ একটি শেয়ারের দাম ছোট মাসিক বাজেটের চেয়ে বেশি।',
+  'Square Pharma (example)': 'স্কয়ার ফার্মা (উদাহরণ)',
+  'BRAC Bank (example)': 'ব্র্যাক ব্যাংক (উদাহরণ)',
+  'This example does not buy every month. When the price is above its range, it keeps the cash.': 'এই উদাহরণে প্রতি মাসে কেনা হয় না। দাম নিজের সীমার উপরে থাকলে টাকা নগদ রাখা হয়।',
+
   // 52-week range page
   'Near the 52-week low': 'বার্ষিক সর্বনিম্নের কাছে',
   'Risen from the low': 'সর্বনিম্ন থেকে উঠেছে',
@@ -460,6 +489,7 @@ export const BN: Record<string, string> = {
   'No holdings yet. Add trades on': 'এখনো হোল্ডিং নেই। লেনদেন যোগ করুন',
   'Your avg price': 'আপনার গড় দাম',
   'Your gain %': 'আপনার লাভ %',
+  'Data looks wrong: the price is far outside its 52-week range.': 'তথ্য ভুল মনে হচ্ছে: দাম ৫২-সপ্তাহের সীমার অনেক বাইরে।',
   'Loading 52-week range…': '৫২ সপ্তাহের সীমা লোড হচ্ছে…',
   'A price near its low can fall further. Automatic figures and your own rules, not advice.': 'সর্বনিম্নের কাছের দাম আরো কমতে পারে। স্বয়ংক্রিয় তথ্য ও আপনার নিয়ম, পরামর্শ নয়।',
 
@@ -484,4 +514,16 @@ export const BN: Record<string, string> = {
   'Price is in the lower half of its 52-week range.': 'দাম ৫২ সপ্তাহের সীমার নিচের অর্ধেকে।',
   'Price is in the upper half of its 52-week range.': 'দাম ৫২ সপ্তাহের সীমার উপরের অর্ধেকে।',
   '52-week range is not known.': '৫২ সপ্তাহের সীমা জানা নেই।',
+
+  // Portfolio page (trades)
+  'Your shares, worked out from your buys and sells. Saved in your own Google Sheet, so every device shows the same numbers.': 'আপনার কেনা-বেচা থেকে হিসাব করা আপনার শেয়ার। আপনার নিজের Google Sheet-এ রাখা, তাই প্রতিটি ডিভাইসে একই সংখ্যা দেখায়।',
+  'Your shares, worked out from your buys and sells. Saved in this browser only. To see them on other devices, turn on Google Sheet sync in Settings at the bottom.': 'আপনার কেনা-বেচা থেকে হিসাব করা আপনার শেয়ার। শুধু এই ব্রাউজারে রাখা। অন্য ডিভাইসে দেখতে নিচের সেটিংসে Google Sheet সিঙ্ক চালু করুন।',
+  'Add a trade': 'লেনদেন যোগ করুন', 'Add a practice trade': 'অনুশীলনের লেনদেন যোগ করুন',
+  'Holdings': 'হোল্ডিং', 'Avg cost': 'গড় খরচ', 'Value': 'মূল্য', 'Profit / loss': 'লাভ / ক্ষতি', 'Status': 'অবস্থা',
+  'The status comes from fixed rules on your numbers and public DSE data. It is a learning aid, not advice. Tap a status to see why.': 'অবস্থা আসে আপনার সংখ্যা ও DSE-এর পাবলিক তথ্যের উপর নির্দিষ্ট নিয়ম থেকে। এটি শেখার সহায়ক, পরামর্শ নয়। কারণ দেখতে অবস্থায় চাপ দিন।',
+  'Details': 'বিস্তারিত', 'Hide': 'লুকান', 'Your limits': 'আপনার সীমা', 'stop-loss': 'স্টপ-লস', 'target': 'লক্ষ্য',
+  'Allocation and dividend income': 'বরাদ্দ ও লভ্যাংশ আয়', 'Dividend income': 'লভ্যাংশ আয়',
+  'How your money is spread, by value now.': 'বর্তমান মূল্য অনুযায়ী আপনার টাকা কোথায় কতটা আছে।',
+  'Settings': 'সেটিংস', 'Phone alerts': 'ফোন অ্যালার্ট', 'My data': 'আমার তথ্য', 'Your stop-loss and target, phone alerts, backup and Google Sheet sync.': 'আপনার স্টপ-লস ও লক্ষ্য, ফোন অ্যালার্ট, ব্যাকআপ ও Google Sheet সিঙ্ক।',
+  'Invested': 'বিনিয়োগ', 'Profit / loss now': 'এখন লাভ / ক্ষতি', 'Profit / loss from sales': 'বিক্রি থেকে লাভ / ক্ষতি', 'Broker fees paid': 'দেওয়া ব্রোকার ফি',
 };

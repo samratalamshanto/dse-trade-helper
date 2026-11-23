@@ -13,7 +13,7 @@ import { useWatchlist } from '@/components/Watchlist';
 import { MyRules } from '@/components/range/MyRules';
 import { QuickPickChips } from '@/components/QuickPickChips';
 import { pickTest, QUICK_PICK_KEYS, type QuickPickKey } from '@/lib/quick-picks';
-import { rangeStats, gainFromBuyPct, type RangeRow, type Owned } from '@/lib/range';
+import { rangeStats, rangeLooksWrong, gainFromBuyPct, type RangeRow, type Owned } from '@/lib/range';
 import type { CompanyRow } from '@/lib/service';
 import type { MarketSession } from '@/lib/dse';
 
@@ -292,6 +292,7 @@ export function RangePage() {
                 <td>
                   <b className="mono"><a href={'/c/' + encodeURIComponent(r.code)} onClick={(e) => e.stopPropagation()}>{r.code}</a></b>
                   <div className="small muted">{r.name}</div>
+                  {rangeLooksWrong(r) ? <div className="small t-warn"><Tr text="Data looks wrong: the price is far outside its 52-week range." /></div> : null}
                 </td>
                 <td className="n mono" data-label={t('Price')}>{r.price != null ? `৳${fmt(r.price)}` : '—'}</td>
                 <td className="n mono" data-label={t('52-wk low')}>{r.weekLow52 != null ? `৳${fmt(r.weekLow52)}` : '—'}</td>

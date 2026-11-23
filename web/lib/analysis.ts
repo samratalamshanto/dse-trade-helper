@@ -286,9 +286,9 @@ const HOLDER: Record<Analysis['signal'], string> = {
   research: 'If you own it, re-read its disclosures after the next results.',
 };
 
-function buyLine(signal: Analysis['signal'], m: Metrics, c: Company): string {
+function buyLine(signal: Analysis['signal'], m: Metrics, c: Company, cautions: string[] = []): string {
   if (signal === 'avoid') return 'High risk by these rules.';
-  if (signal === 'caution') return 'A warning rule fired. Read the latest disclosures and quarterly results.';
+  if (signal === 'caution') return ['Caution for these reasons:', ...cautions, 'Read the latest disclosures and quarterly results.'].join(' ');
   if (signal === 'neutral') return m.epsNow == null ? `${NOT_RATED}, so the profit checks cannot run. Judge it on its dividends and reports.` : 'No strong signal. Research more before you decide.';
   const nearHigh = !m.illiquid && c.weekHigh52 && c.weekLow52 != null && m.priceNow && (m.priceNow - c.weekLow52) / (c.weekHigh52 - c.weekLow52 || 1) > HIGH_ZONE;
   if (nearHigh) return 'Passes the quality checks; the price is near its 52-week high.';
@@ -296,7 +296,6 @@ function buyLine(signal: Analysis['signal'], m: Metrics, c: Company): string {
     : 'Good business at a normal or higher P/E than usual. Research it before deciding.';
 }
 
-const suggestion = (signal: Analysis['signal'], m: Metrics, c: Company): string => `${buyLine(signal, m, c)} ${HOLDER[signal]}`;
 
 const NOT_RATED = 'Not rated — no EPS published';
 
@@ -334,8 +333,17 @@ export function analyze(c: Company, sectorPe: number | null, now = new Date()): 
 
   const quality = checks.every((x) => x.ok);
   const bad = fraud.level === 'high' || (m.epsNow != null && m.epsNow < 0);
-  const warn = fraud.level === 'suspicious' || m.epsFellTwice || m.interimLoss || (m.epsCagr != null && m.epsCagr < 0)
-    || (m.pe != null && sectorPe != null && m.pe > 2 * sectorPe) || (m.pb ?? 0) > STRETCHED_PB || (m.avgDailyValue != null && m.avgDailyValue < LIQUID_DAILY_VALUE_BDT);
+  // Each fixed sentence is one reason a company is Caution; the header shows them, so they need a Bangla entry each.
+  const cautions = ([
+    [fraud.level === 'suspicious', 'A warning sign was found (see Safety checks).'],
+    [m.epsFellTwice, 'Earnings fell two years in a row.'],
+    [m.interimLoss, 'The latest quarterly result is a loss.'],
+    [m.epsCagr != null && m.epsCagr < 0, 'Earnings are shrinking over the years.'],
+    [m.pe != null && sectorPe != null && m.pe > 2 * sectorPe, 'P/E is more than twice the sector median.'],
+    [(m.pb ?? 0) > STRETCHED_PB, `The price is more than ${STRETCHED_PB}× book value.`],
+    [m.avgDailyValue != null && m.avgDailyValue < LIQUID_DAILY_VALUE_BDT, 'Few shares trade each day.'],
+  ] as const).filter(([on]) => on).map(([, text]) => text);
+  const warn = cautions.length > 0;
   const signal = bad ? 'avoid' : quality ? 'research' : warn ? 'caution' : 'neutral';
 
   const [lo, hi] = SCORE_BANDS[signal];
@@ -343,12 +351,12 @@ export function analyze(c: Company, sectorPe: number | null, now = new Date()): 
 
   const metricsOut: Metrics = { ...m, pe: round(m.pe, 2), pb: round(m.pb, 2), avgDailyValue: round(m.avgDailyValue, 0), volumeSpike: round(m.volumeSpike), epsYears: undefined };
 
-  const buyLinePart = buyLine(signal as Analysis['signal'], m, c);
+  const buyLinePart = buyLine(signal as Analysis['signal'], m, c, cautions);
   const holderPart = HOLDER[signal as Analysis['signal']];
   return {
     signal: signal as Analysis['signal'], score, quality, notRated: m.epsNow == null, fraud, checks, reasons,
     history: history(c, m),
-    suggestion: suggestion(signal as Analysis['signal'], m, c),
+    suggestion: `${buyLinePart} ${holderPart}`,
     suggestionParts: { buyLine: buyLinePart, holder: holderPart },
     metrics: metricsOut,
   };

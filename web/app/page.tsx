@@ -1,15 +1,13 @@
 'use client';
 
-import { useMode } from '@/components/portfolio-store';
 import Link from 'next/link';
 import { useCallback, useState, type ReactNode } from 'react';
-import { useWatchlist } from '@/components/Watchlist';
 import { useStoredValue } from '@/components/useStored';
 import { useLang } from '@/components/i18n';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { useRouter } from 'next/navigation';
 import { useApi } from '@/components/AppProvider';
-import { ChartBox, useChartColors } from '@/components/charts';
+import { ChartBox, dateTicks, useChartColors } from '@/components/charts';
 import { CompanyCard } from '@/components/CompanyCard';
 import { isTooLate, LastBuy } from '@/components/LastBuy';
 import { HoldingsToday } from '@/components/HoldingsToday';
@@ -54,15 +52,18 @@ function StartGuide() {
 }
 
 function TrustCard() {
+  const [hidden, setHidden] = useStoredValue('trustHidden', '0');
+  if (hidden === '1') return null;
   return (
-    <section className="panel trust" aria-labelledby="trust-title">
-      <h2 className="h3" id="trust-title"><Icon name="info" /> <Tr text="Can I trust these numbers?" /></h2>
+    <section className="panel start trust" aria-labelledby="trust-title">
+      <div><h2 className="h3" id="trust-title"><Icon name="info" /> <Tr text="Can I trust these numbers?" /></h2>
       <ul className="small">
         <li><b><Tr text="Source:" /></b> <Tr text="the public Dhaka Stock Exchange website (dse.com.bd): prices, company pages and news." /></li>
         <li><b><Tr text="Updates:" /></b> <Tr text="prices every minute while the market is open; company figures about once a day." /></li>
         <li><b><Tr text="What it is:" /></b> <Tr text="a free learning tool. Signals come from fixed rules you can read on How it works. It is not investment advice." /></li>
         <li><b><Tr text="Who made it:" /></b> <Tr text="an independent developer. It is not linked to DSE, BSEC or any broker, and it does not sell shares." /></li>
-      </ul>
+      </ul></div>
+      <button className="btn primary" type="button" onClick={() => setHidden('1')}><Tr text="Got it" /></button>
     </section>
   );
 }
@@ -90,10 +91,11 @@ function MarketCharts({ d, liveNow }: { d: Dashboard; liveNow: boolean }) {
           </ChartBox></div>
         <div className="panel"><h3>Turnover, last 10 days <Info text="Value of shares traded each day, in crore taka." /></h3>
           <ChartBox label="Daily turnover for the last 10 sessions">
-            <Bar data={{ labels: d.daily.map((x) => x.date.slice(5)), datasets: [{ data: d.daily.map((x) => x.turnover / 10), backgroundColor: colors['--accent'], borderRadius: 3 }] }}
+            <Bar data={{ labels: d.daily.map((x) => x.date), datasets: [{ data: d.daily.map((x) => x.turnover / 10), backgroundColor: colors['--accent'], borderRadius: 3 }] }}
               options={{ maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { displayColors: false, callbacks: {
                 title: (items) => d.daily[items[0].dataIndex].date,
-                label: (ctx) => `৳${fmt(ctx.parsed.y, 0)} crore · ${d.daily[ctx.dataIndex].advanced} up / ${d.daily[ctx.dataIndex].declined} down` } } } }} />
+                label: (ctx) => `৳${fmt(ctx.parsed.y, 0)} crore · ${d.daily[ctx.dataIndex].advanced} up / ${d.daily[ctx.dataIndex].declined} down` } } },
+                scales: { x: { ticks: { ...dateTicks, maxRotation: 0 } } } }} />
           </ChartBox></div>
       </div>
     </>
@@ -118,9 +120,6 @@ export default function DashboardPage() {
   const { data: d, error } = useApi<Dashboard>('/api/dashboard');
   const [held, setHeld] = useState<string[]>([]);
   const onHeld = useCallback((codes: string[]) => setHeld(codes), []);
-  // Someone with nothing saved yet sees the start guide near the top; everyone else finds it near the end.
-  const tradesKey = useMode().mode === 'sheet';
-  const isNew = useWatchlist().codes.length === 0 && held.length === 0 && !tradesKey;
   if (error && !d) return <div className="note bad">Could not load the dashboard: {error}. Try Refresh in a minute.</div>;
   if (!d) return <><h1 className="sr-title">{t('DSE dashboard')}</h1><Skeleton label="Loading dashboard" rows={7} /></>;
 
@@ -138,6 +137,8 @@ export default function DashboardPage() {
   return (
     <>
       <h1 className="sr-title">{t('DSE dashboard')}</h1>
+      <StartGuide />
+      <TrustCard />
       <section className="panel market" aria-label={t('Market')}>
         {d.live ? null : <p className="small muted session-note">{t('Showing the last session')}, <b>{fmtDate(d.showingDate)}</b>. {t("Today's figures appear when trading starts.")}</p>}
         <div className="market-top">
@@ -162,7 +163,6 @@ export default function DashboardPage() {
         <div className="small breadth-labels"><span className="up">{b.advanced} {t('up')}</span><span className="muted">{b.unchanged} {t('unchanged')}</span><span className="down">{b.declined} {t('down')}</span>
           {notTraded ? <span className="muted">+ {notTraded} {t('not traded')}</span> : null}</div>
       </section>
-      {isNew ? <StartGuide /> : null}
       <HoldingsToday onHeld={onHeld} />
       <MyStocks exclude={held} />
       <PlansMini />
@@ -203,8 +203,6 @@ export default function DashboardPage() {
       <p className="muted small">{t('Companies that pass every research check, best score first. A place to start research, not a buy order.')}</p>
       <div className="grid g3">{d.shortlist.length ? d.shortlist.map((r) => <CompanyCard key={r.code} r={r} />) : <div className="empty panel">No company has passed yet.</div>}</div>
       <p><Link href="/all?signal=research">{t('See the whole shortlist →')}</Link></p>
-      {isNew ? null : <StartGuide />}
-      <TrustCard />
     </>
   );
 }
