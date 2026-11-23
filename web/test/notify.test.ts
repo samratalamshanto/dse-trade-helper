@@ -84,7 +84,7 @@ test('the morning summary includes pick price and reason, and no footer', () => 
     plans: [{ id: '1', code: 'A', until: null, targetPrice: 1, live: { status: 'reached', remaining: 1 } }, { id: '2', code: 'B', until: null, targetPrice: 1, live: { status: 'waiting', remaining: 1 } }],
     picks: [{ code: 'A&B', name: 'x', price: 10, reason: 'lower half of its 52-week range' }],
   }));
-  assert.equal(s, '<b>Morning summary (DSE data) — 2026-11-19</b>\nHoldings: ৳12,346 (today -৳1,234)\nBuy plans: 1 reached, 1 waiting\nResearch list: A&amp;B ৳10.00 (lower half of its 52-week range)');
+  assert.equal(s, '<b>Morning summary (DSE data) — 2026-11-19</b>\nHoldings: ৳12,346 (today -৳1,234)\nBuy plans: 1 reached, 1 waiting\nResearch list: A&amp;B ৳10.00 (lower half of its 52-week range) — https://dse-trade-helper.vercel.app/c/A%26B');
 });
 
 test('dedupe: a sent key is never sent again; the summary comes once a day after 09:45', () => {
@@ -200,7 +200,7 @@ test('range rule match lines include price, 52-week low, and high', () => {
   const row = { code: 'GP', price: 220, weekLow52: 200, weekHigh52: 300 };
   const a = alertsFor(base({ rangeRules: [rule], rangeRows: [row], owned: [] }), {});
   assert.deepEqual(a.map((x) => x.key), ['range:nr1:2026-11-19']);
-  assert.equal(a[0].text, '<b>Your rule:</b> within 10% of the 52-week low (all companies)\n• <b>GP</b> ৳220.00 (low ৳200.00, high ৳300.00): 10% above its 52-week low');
+  assert.equal(a[0].text, '<b>Your rule:</b> within 10% of the 52-week low (all companies)\n• <b>GP</b> ৳220.00 (low ৳200.00, high ৳300.00): 10% above its 52-week low — https://dse-trade-helper.vercel.app/c/GP');
 });
 
 test('range match line omits numbers when price or range is missing', () => {
@@ -302,10 +302,12 @@ test('sessionDate equal to today does not skip price-sensitive alerts', () => {
   assert.equal(a.some((x) => x.key === 'plan:p1:reached:2026-11-19'), true);
 });
 
-test('null sessionDate does not skip alerts', () => {
+test('null sessionDate on a trading day is treated as stale (session fetch failed); on a non-trading day it is not', () => {
   const plans = [{ id: 'p1', code: 'GP', until: null, targetPrice: 100, live: { status: 'reached', remaining: 1 } }];
-  const a = alertsFor(base({ plans, sessionDate: null }), {});
-  assert.equal(a.some((x) => x.key === 'plan:p1:reached:2026-11-19'), true);
+  const tradingDay = alertsFor(base({ plans, sessionDate: null }), {}); // base() clock is Thursday
+  assert.equal(tradingDay.some((x) => x.key === 'plan:p1:reached:2026-11-19'), false, 'stale on trading day');
+  const friday = { ...base({ plans, sessionDate: null }), clock: at('2026-11-20T04:00:00Z') }; // Friday
+  assert.equal(alertsFor(friday, {}).some((x) => x.key.startsWith('plan:p1:reached')), true, 'not stale on non-trading day');
 });
 
 test('dataError adds a data-error alert once per day, deduped by decide', () => {
@@ -354,4 +356,57 @@ test('buildChunks each chunk has the footer appended', () => {
   assert.equal(chunks.length, 2);
   assert.ok(chunks[0].text.endsWith('<i>FOOTER</i>'));
   assert.ok(chunks[1].text.endsWith('<i>FOOTER</i>'));
+});
+
+test('buildChunks truncates an alert that alone would exceed maxLen', () => {
+  const big = 'x'.repeat(5000);
+  const due = [{ key: 'k1', text: big }];
+  const chunks = buildChunks(due, 'H', 'F', 4096);
+  assert.equal(chunks.length, 1);
+  assert.ok(chunks[0].text.length <= 4096, 'truncated to fit');
+  assert.ok(chunks[0].text.includes('…'), 'ends with ellipsis marker');
+});
+
+test('buildChunks omits the header when it is an empty string', () => {
+  const due = [{ key: 'k1', text: 'Alert' }];
+  const chunks = buildChunks(due, '', 'Footer');
+  assert.equal(chunks.length, 1);
+  assert.equal(chunks[0].text, 'Alert\n\n<i>Footer</i>');
+});
+
+test('stale tick does not record the holding action, so the alert fires on the next fresh tick', () => {
+  const holdings = [{ code: 'AAA', shares: 1, value: 1, check: { action: 'review', reasons: [] } }];
+  const staleTick = base({ holdings, sessionDate: null }); // null + tradingDay = stale
+  const s = nextState(emptyState(), staleTick, [], [], '2026-11-19T04:00:00.000Z');
+  assert.equal(s.actions.AAA ?? '', '', 'stale tick keeps action empty');
+  const freshTick = base({ holdings, sessionDate: '2026-11-19' });
+  assert.equal(decide(freshTick, s).due.some((a) => a.key.startsWith('pos:AAA')), true, 'fresh tick fires the alert');
+});
+
+test('a failed company list sets dataError only when the user has range rules', () => {
+  assert.equal(alertsFor(base({ dataError: false }), {}).some((a) => a.key.startsWith('data-error:')), false);
+  assert.equal(alertsFor(base({ dataError: true }), {}).some((a) => a.key.startsWith('data-error:')), true);
+  assert.equal(alertsFor(base({ dataError: false, rangeRules: [{ id: 'r', kind: 'nearLow' as const, pct: 10, scope: 'all' as const }] }), {}).some((a) => a.key.startsWith('data-error:')), false, 'no data-error when dataError=false even with rules');
+});
+
+test('every alert line carries a company link', () => {
+  const plans = [
+    { id: 'p1', code: 'GP', until: null, targetPrice: 100, live: { status: 'reached', remaining: 1 } },
+    { id: 'p2', code: 'BATBC', until: '2026-11-22', targetPrice: 300, live: { status: 'waiting', remaining: 2 } },
+  ];
+  const holdings = [
+    { code: 'ROBI', shares: 1, value: 100, check: { action: 'review', reasons: [] } },
+    { code: 'BRAC', shares: 1, value: 100, check: null },
+  ];
+  const rule = { id: 'r1', kind: 'nearLow' as const, pct: 10, scope: 'all' as const };
+  const row = { code: 'GP', price: 220, weekLow52: 200, weekHigh52: 300 };
+  const alerts = alertsFor(base({
+    plans, holdings,
+    lastBuyDates: { BRAC: '2026-11-19' },
+    rangeRules: [rule], rangeRows: [row],
+    sessionDate: '2026-11-19',
+  }), {});
+  for (const a of alerts.filter((a) => !a.key.startsWith('data-error:'))) {
+    assert.match(a.text, /https:\/\/dse-trade-helper\.vercel\.app\/c\//, `alert ${a.key} has no company link`);
+  }
 });

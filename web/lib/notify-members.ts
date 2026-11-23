@@ -1,10 +1,9 @@
-import { checkOnce, type NotifyState } from './notify.ts';
+import { checkOnce, SITE, type NotifyState } from './notify.ts';
 import { SIGN_IN_AGAIN, userTarget } from './google-user.ts';
 import { SheetsError, withSheet } from './sheets.ts';
 import { sendMessage } from './telegram.ts';
 import { connectedMembers, refreshTokenOf, saveMemberState, type Member } from './telegram-registry.ts';
 
-const SITE = process.env.SITE_URL ?? 'https://dse-trade-helper.vercel.app';
 const ASK_SIGN_IN = `Your Google sign-in for Trade Helper has ended, so alerts are paused. Sign in with Google again at ${SITE}/portfolio and alerts resume by themselves.`;
 
 export interface MembersResult { users: number; sent: number; failed: number }
