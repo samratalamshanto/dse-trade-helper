@@ -115,7 +115,7 @@ function TodaysPicks() {
   return (
     <View style={{ gap: 10 }}>
       <SectionTitle icon="sparkles-outline" title="Today's picks" />
-      <Text style={s.muted}>Worth researching, no fraud flag, low in its 1-year range or under its 20-day average, not sliding.</Text>
+      <Text style={s.muted}>Passes the checks, no warning signs, low in its 1-year range or under its 20-day average, not sliding.</Text>
       <TextInput
         accessibilityLabel="Budget in taka for today's picks"
         style={[s.searchBox, s.input, { flex: 0 }]}
@@ -237,7 +237,7 @@ function DividendsSoon({ data }: { data: DashboardResponse }) {
   return (
     <View style={{ gap: 10 }}>
       <SectionTitle icon="cash-outline" title="Dividends you can still catch" action={{ label: 'See all', href: '/dividends' }} />
-      <Text style={s.muted}>Buy by the date shown to get the dividend. Clean companies first.</Text>
+      <Text style={s.muted}>Buy by the date shown to get the dividend. No-flag companies first.</Text>
       <View style={[s.card, { padding: 0, gap: 0 }]}>
         {items.slice(0, DIVIDENDS_PREVIEW).map((x) => <DividendLine key={x.d.code} item={x} />)}
       </View>
@@ -312,7 +312,7 @@ export default function Home() {
             {error && <Text style={[s.muted, { color: colors.warn }]}>Showing older data: {error}</Text>}
             <View style={[s.sectionRow, { opacity: 0.8 }]}>
               <Ionicons name="information-circle-outline" size={16} color={colors.muted} />
-              <Text style={[s.muted, { flex: 1, fontSize: 12 }]}>Signals are learning aids from fixed rules, not investment advice.</Text>
+              <Text style={[s.muted, { flex: 1, fontSize: 12 }]}>Automatic rule results, not advice.</Text>
             </View>
           </>
         )}

@@ -73,7 +73,7 @@ export default function Learn() {
       <SectionTitle icon="book-outline" title="Words you will see" />
       <Text style={s.muted}>Tap a word to see what it means.</Text>
       <View style={[s.card, { padding: 0, gap: 0 }]}>{TERMS.map(([t, d]) => <Term key={t} term={t} text={d} />)}</View>
-      <SectionTitle icon="warning-outline" title="Fraud warning patterns" />
+      <SectionTitle icon="warning-outline" title="Warning-sign patterns" />
       <View style={[s.card, { padding: 0, gap: 0 }]}>{FLAGS.map(([t, d]) => <Term key={t} term={t} text={d} />)}</View>
       <Text style={[s.muted, { fontSize: 12 }]}>These rules do not see news, auditor opinions or bank loan quality. A flag is a pattern, not proof.</Text>
     </ScrollView>

@@ -188,7 +188,7 @@ export function DividendLine({ item }: { item: Catchable }) {
     <Link href={`/c/${encodeURIComponent(d.code)}`} asChild>
       <Pressable style={s.row}>
         <View style={{ flex: 1, gap: 2 }}>
-          <Text style={s.code}>{d.code}{d.fraud !== 'clean' ? '  ⚠ risky' : ''}</Text>
+          <Text style={s.code}>{d.code}{d.fraud !== 'clean' ? '  ⚠ warning signs' : ''}</Text>
           <Text style={s.muted} numberOfLines={1}>{parts}{d.yieldPct != null ? ` · ${fmtNum(d.yieldPct)}% yield` : ''}</Text>
         </View>
         <View style={{ alignItems: 'flex-end', gap: 2 }}>

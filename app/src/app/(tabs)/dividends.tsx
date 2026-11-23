@@ -23,7 +23,7 @@ export default function Dividends() {
         ListHeaderComponent={
           <View style={{ padding: 16, gap: 6 }}>
             <Text style={s.text}>Own the share at the end of the last day to buy, and you get the dividend. Buying on the record date itself is too late.</Text>
-            <Text style={s.muted}>{items.length} dividends you can still catch · ⚠ marks companies with fraud warning signs.</Text>
+            <Text style={s.muted}>{items.length} dividends you can still catch · ⚠ marks companies with warning signs.</Text>
           </View>
         }
         ListEmptyComponent={<Text style={[s.muted, { padding: 16 }]}>No upcoming dividend can still be bought. Check again after new announcements.</Text>}

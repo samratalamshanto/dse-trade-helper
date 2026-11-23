@@ -9,14 +9,14 @@ env:
     visible: "How it works"
     timeout: 90000
 - assertVisible: "The four signals"
-- assertVisible: "Worth researching"
+- assertVisible: "Passes the checks"
 - scrollUntilVisible:
     element: "Words you will see"
     direction: DOWN
 - tapOn: "Tap a word to see what it means."
 - takeScreenshot: learn-01-top
 - scrollUntilVisible:
-    element: "Fraud warning patterns"
+    element: "Warning-sign patterns"
     direction: DOWN
 - scrollUntilVisible:
     element: "Price pump"

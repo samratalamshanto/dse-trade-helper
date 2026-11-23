@@ -55,6 +55,7 @@ export default function Companies() {
               {SORTS.map((o) => <Chip key={o.key} label={o.label} active={sort === o.key} onPress={() => setSort(o.key)} />)}
             </View>
             <Text style={s.muted}>{rows.length} {rows.length === 1 ? 'company' : 'companies'}{signal ? ` · ${SIGNAL[signal].text}` : ''}</Text>
+            <Text style={[s.muted, { fontSize: 12 }]}>Automatic rule results, not advice.</Text>
           </View>
         }
         ListEmptyComponent={<Text style={[s.muted, { padding: 16 }]}>No company matches. Try another name or the “All” filter.</Text>}
