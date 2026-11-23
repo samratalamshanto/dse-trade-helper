@@ -420,3 +420,15 @@ summary.toggle-btn:hover { border-color: var(--accent); background: var(--accent
 
 /* Help page */
 .help-video { width: 100%; border-radius: 10px; margin: 10px 0; max-height: 400px; }
+
+/* 52-week range: My rules. Each rule is a small block; its delete button is a full 44 px target. */
+.range-rule { border-top: 1px solid var(--border); padding-top: 10px; margin-top: 10px; }
+.range-rule-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.range-rule-head .btn { min-width: 44px; min-height: 44px; }
+.range-matches { margin: 6px 0 0; padding-left: 18px; }
+.range-matches li { margin-bottom: 4px; }
+.range-rule-form { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.range-rule-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.range-rule-form select { min-width: 170px; }
+.range-rule-form input { width: 90px; min-height: 44px; }
+.range-rule-error { color: var(--down); margin: 0; flex-basis: 100%; }
