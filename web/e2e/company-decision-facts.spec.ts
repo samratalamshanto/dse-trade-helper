@@ -24,7 +24,7 @@ test.describe('/c/GP decision facts', () => {
     await page.getByRole('tab', { name: 'Price vs own history' }).click();
     const pane = page.getByRole('tabpanel');
     await expect(pane.getByText('Price at its usual P/E')).toBeVisible();
-    for (const k of ['low', 'average', 'high']) await expect(pane.getByText(`Price if P/E were at its 5-year ${k}`)).toBeVisible();
+    for (const k of ['low', 'average', 'high']) await expect(pane.getByText(`Price if P/E were at its year-end ${k}`)).toBeVisible();
     await expect(pane.getByText(/not a forecast/).first()).toBeVisible();
     await expect(pane).not.toContainText(/fair value|target/i);
   });
