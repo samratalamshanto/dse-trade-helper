@@ -43,7 +43,7 @@ export const median = (xs: (number | null | undefined)[]): number | null => {
 };
 const mean = (xs: number[]): number | null => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
 
-const expectedLatestYear = (now: Date): number => { const d = toDhaka(now); return d.getUTCFullYear() - (d.getUTCMonth() >= 6 ? 1 : 2); };
+export const expectedLatestYear = (now: Date): number => { const d = toDhaka(now); return d.getUTCFullYear() - (d.getUTCMonth() >= 6 ? 1 : 2); };
 
 function pickedInterimPeriod(interim: NonNullable<Company['interim']>): string | null {
   const row = interim.eps;

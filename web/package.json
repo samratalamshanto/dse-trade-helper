@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test test/company.test.ts test/price-history.test.ts test/analysis.test.ts test/announcements.test.ts test/watchlist.test.ts test/portfolio.test.ts test/alerts.test.ts test/cache.test.ts test/real-data.test.ts test/service.test.ts test/trades.test.ts test/positions.test.ts test/buy-planner.test.ts test/plans.test.ts test/scorecard.test.ts test/notify.test.ts test/planner-ui.test.ts test/dev-key.test.ts test/browser-data.test.ts test/prefs.test.ts test/google-sign-in.test.ts test/telegram-users.test.ts test/user-guide.test.ts test/range.test.ts test/quick-picks.test.ts",
+    "test": "node --test test/company.test.ts test/price-history.test.ts test/analysis.test.ts test/announcements.test.ts test/watchlist.test.ts test/portfolio.test.ts test/alerts.test.ts test/cache.test.ts test/real-data.test.ts test/service.test.ts test/trades.test.ts test/positions.test.ts test/buy-planner.test.ts test/plans.test.ts test/scorecard.test.ts test/notify.test.ts test/planner-ui.test.ts test/dev-key.test.ts test/browser-data.test.ts test/prefs.test.ts test/google-sign-in.test.ts test/telegram-users.test.ts test/user-guide.test.ts test/range.test.ts test/quick-picks.test.ts test/dividend-checks.test.ts",
     "test:fuzz": "node --test test/fuzz-pure.test.ts test/fuzz-http.test.ts",
     "e2e": "playwright test"
   },
