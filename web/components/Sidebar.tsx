@@ -27,6 +27,7 @@ const NAV: { group: string; items: { href: string; label: string; icon: IconName
   { group: 'HELP', items: [
     { href: '/learn', label: 'How it works', icon: 'help' },
     { href: '/plan', label: 'Start investing', icon: 'file' },
+    { href: '/help', label: 'Guide', icon: 'info' },
   ] },
 ];
 
