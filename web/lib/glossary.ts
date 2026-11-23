@@ -3,7 +3,7 @@ export const SIGNAL_TEXT = {
   research: { label: 'Passes the checks', text: 'Passes all 8 rule checks and has no warning sign.' },
   neutral: { label: 'No strong signal', text: 'Not bad, but misses one or more quality checks.' },
   caution: { label: 'Caution', text: 'Has a warning: falling profit, high price, thin trading or one warning sign.' },
-  avoid: { label: 'High risk', text: 'Loss-making, category Z, or several warning-sign patterns. If you hold it, re-read its disclosures.' },
+  avoid: { label: 'High risk', text: 'Loss-making, category Z, or several warning-sign patterns. Its latest disclosures explain the reasons.' },
 } as const;
 
 // Pill label from the real number of flags. The level (colour) is separate: one Category Z flag is still high risk.
@@ -35,7 +35,7 @@ export const TERMS: [string, string][] = [
   ['AGM (annual general meeting)', 'The yearly meeting where shareholders approve the dividend. Payment usually follows within about a month.'],
   ['Quarterly (interim) results', 'Unaudited results for 3, 6 or 9 months. A loss there is an early warning, even when the last full year was profitable.'],
   ['Price vs own history', 'Compares today\'s P/E with the company\'s own P/E over the last 5 years, then checks whether earnings still grow. Near its low with growing earnings is "Possible value". Near its low with falling earnings is "Cheap for a reason". It is not a prediction: a cheap share can stay cheap.'],
-  ['Score', 'Each signal has its own range: High risk 0–30, Caution 31–60, No strong signal 61–75, Passes the checks 76–100. Inside a range, a company ranks higher for passing more checks, faster earnings growth, a P/E below its sector and its own past, and a higher dividend yield.'],
+  ['Score', 'Each signal has its own range: High risk 0–30, Caution 31–60, No strong signal 61–75, Passes the checks 76–100. Inside a range, a company ranks higher for passing more of the 8 checks, faster earnings growth, a P/E below its sector and its own past, and a higher dividend yield.'],
 ];
 
 export const CATEGORY_TEXT: Record<string, string> = {

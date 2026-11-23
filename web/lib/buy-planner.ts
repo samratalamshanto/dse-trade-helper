@@ -24,11 +24,11 @@ export type PlanAction = 'avoid' | 'buy-before-dividend' | 'buy-now' | 'split' |
 export type Trend = 'rising' | 'falling' | 'sideways' | null;
 
 export const PLAN_TEXT: Record<PlanAction, { label: string; tone: 'bad' | 'warn' | 'info' | 'good' | 'neutral' }> = {
-  avoid: { label: 'Rules flag risks — review before buying', tone: 'bad' },
+  avoid: { label: 'Rules flag risks', tone: 'bad' },
   'buy-before-dividend': { label: 'Dividend deadline is close', tone: 'info' },
-  'buy-now': { label: 'Rules see no reason to wait', tone: 'good' },
-  split: { label: 'Split: part now, price alert for the rest', tone: 'info' },
-  wait: { label: 'Rules say wait — set a price alert', tone: 'warn' },
+  'buy-now': { label: 'All 8 checks pass; price not high vs its history', tone: 'good' },
+  split: { label: 'Rules met; mid-range or falling price — some now, rest at alert level', tone: 'info' },
+  wait: { label: 'Priced high against its own history', tone: 'warn' },
 };
 
 export interface Holding { shares: number; avgCost: number; portfolioValue: number }
@@ -177,7 +177,7 @@ export function planBuy(p: PlannerInput): BuyPlan {
 
   const warnings: string[] = [];
   if (p.illiquid) warnings.push('No trades in the last 52 weeks — an order may never fill, and you may not be able to sell');
-  if (p.avgDailyValue != null && p.avgDailyValue < THIN_TRADING_BDT) warnings.push('Thinly traded — it can be hard to buy or sell at a fair price');
+  if (p.avgDailyValue != null && p.avgDailyValue < THIN_TRADING_BDT) warnings.push('Thinly traded — prices can jump between trades');
   if (p.avgDailyValue != null && p.avgDailyValue > 0 && cost / p.avgDailyValue > ORDER_SHARE_OF_DAY_WARN) {
     warnings.push(`Your order is ${((cost / p.avgDailyValue) * 100).toFixed(0)}% of a normal day's trading — it may move the price; use a limit order`);
   }
@@ -222,20 +222,20 @@ export function planBuy(p: PlannerInput): BuyPlan {
   }
   if ((pos != null && pos >= HIGH_POSITION) || p.zone === 'high') {
     const target = s20 != null && s20 < p.price ? toTick(s20) : dipAlert;
-    return plan('wait', 0, target, ['Priced high against its own past — no rush to buy at the top of its range', `Alert at ৳${fmt(target)}, nearer its usual level`]);
+    return plan('wait', 0, target, ['Priced high against its own past — near the top of its range', `Alert at ৳${fmt(target)}, nearer its usual level`]);
   }
   if (trend === 'falling') {
     return p.quantity >= 2
-      ? plan('split', half, dipAlert, [`Still in a falling trend — buy only ${half} now and the other ${p.quantity - half} if it reaches ৳${fmt(dipAlert)}`])
-      : plan('wait', 0, dipAlert, [`Still in a falling trend — wait for ৳${fmt(dipAlert)} or for the slide to stop`]);
+      ? plan('split', half, dipAlert, [`Still in a falling trend — ${half} shares now; alert at ৳${fmt(dipAlert)} for the other ${p.quantity - half}`])
+      : plan('wait', 0, dipAlert, [`Still in a falling trend — no entry signal yet; alert at ৳${fmt(dipAlert)}`]);
   }
   if (p.quantity >= 2 && (main.fell ?? 0) >= SPLIT_IF_DIP_ODDS && (main.fell ?? 0) > (main.rose ?? 0)) {
-    return plan('split', half, dipAlert, [`A ${DEFAULT_DIP_PCT}% dip within a week was more common than a ${DEFAULT_DIP_PCT}% rise — buy ${half} now, alert at ৳${fmt(dipAlert)} for the rest`]);
+    return plan('split', half, dipAlert, [`A ${DEFAULT_DIP_PCT}% dip within a week was more common than a ${DEFAULT_DIP_PCT}% rise — ${half} shares now, alert at ৳${fmt(dipAlert)} for the rest`]);
   }
   if ((pos != null && pos <= LOW_POSITION) || (vsSma != null && vsSma <= -1)) {
     return plan('buy-now', p.quantity, null, ['Already near the low end of its range — waiting for a deeper dip rarely paid off']);
   }
-  if (p.quantity >= 2) return plan('split', half, dipAlert, [`Mid-range price — buy ${half} now and alert at ৳${fmt(dipAlert)} for the other ${p.quantity - half}`]);
+  if (p.quantity >= 2) return plan('split', half, dipAlert, [`Mid-range price — ${half} shares now, alert at ৳${fmt(dipAlert)} for the other ${p.quantity - half}`]);
   return plan('buy-now', p.quantity, null, ['Mid-range price; one share is too few to split']);
 }
 

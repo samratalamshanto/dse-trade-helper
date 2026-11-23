@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { parseCompanyPage } from '../lib/company.ts';
+import { parseCompanyPage, titleCaseName } from '../lib/company.ts';
 import { todayTrading } from '../lib/service.ts';
 import type { SnapshotRow } from '../lib/dse.ts';
 
@@ -53,4 +53,20 @@ test('before the first trade (ltp 0) today trading falls back to the saved sessi
   assert.strictEqual(todayTrading(undefined, {}), null);
   assert.strictEqual(todayTrading(undefined, undefined), null);
   assert.strictEqual(todayTrading(undefined, { sessionQuote: 'bad' })?.close ?? null, null);
+});
+
+test('titleCaseName converts entirely-lowercase DSE names; leaves mixed-case unchanged', () => {
+  // All-lowercase input is title-cased
+  assert.strictEqual(titleCaseName('aamra networks limited'), 'Aamra Networks Limited');
+  assert.strictEqual(titleCaseName('square pharmaceuticals ltd.'), 'Square Pharmaceuticals Ltd.');
+  assert.strictEqual(titleCaseName('brac bank plc'), 'Brac Bank PLC');
+  assert.strictEqual(titleCaseName('bsrm steels limited'), 'Bsrm Steels Limited');
+  assert.strictEqual(titleCaseName('ific bank plc'), 'Ific Bank PLC');
+  assert.strictEqual(titleCaseName('lafargeholcim'), 'Lafargeholcim');
+  assert.strictEqual(titleCaseName('rak ceramics (bangladesh) limited'), 'Rak Ceramics (Bangladesh) Limited');
+  assert.strictEqual(titleCaseName('x-y company'), 'X-Y Company');
+  // Already mixed-case: returned unchanged
+  assert.strictEqual(titleCaseName('BRAC Bank PLC'), 'BRAC Bank PLC');
+  assert.strictEqual(titleCaseName('LafargeHolcim Bangladesh Limited'), 'LafargeHolcim Bangladesh Limited');
+  assert.strictEqual(titleCaseName(''), '');
 });

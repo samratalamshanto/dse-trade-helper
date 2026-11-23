@@ -15,7 +15,8 @@ import Link from 'next/link';
 import { useLang } from '@/components/i18n';
 import { WatchButton } from '@/components/Watchlist';
 import { fmt, fmtDateLang, sectorName } from '@/components/format';
-import { CATEGORY_TEXT } from '@/lib/glossary';
+import { CATEGORY_TEXT, flagCountText } from '@/lib/glossary';
+import { Tr } from '@/components/Tr';
 import { FRAUD, Icon, Info, SignalPill, type FraudLevel, type IconName, type Signal } from '@/components/ui';
 import type { CompanyDetail } from '@/lib/service';
 
@@ -106,7 +107,7 @@ export function CompanyView({ code }: { code: string }) {
           return (
             <button key={q.q} type="button" className="panel qcard" onClick={() => { show(q.tab as Tab, false); tablist.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>
               <div className="small muted">{t(q.q)}</div>
-              <div className={`qans ${cls}`}><Icon name={icon} /> {t(q.q === FRAUD_QUESTION ? FRAUD[a.fraud.level as FraudLevel] : q.label || label)}</div>
+              <div className={`qans ${cls}`}><Icon name={icon} /> {q.q === FRAUD_QUESTION ? <Tr text={flagCountText(a.fraud.flags.length)} n={a.fraud.flags.length > 1 ? a.fraud.flags.length : undefined} /> : t(q.label || label)}</div>
               <div className="small">{t(q.text)}</div><div className="small more">{t('See details →')}</div>
             </button>
           );

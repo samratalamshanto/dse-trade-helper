@@ -108,7 +108,7 @@ test.describe('/range', () => {
   });
 
   test('a quick pick narrows the table, and the tabs keep it', async ({ page }) => {
-    await page.getByRole('button', { name: 'Good companies' }).click();
+    await page.getByRole('button', { name: 'Passes the checks' }).click();
     await expect(page).toHaveURL(/pick=good/);
     await expect.poll(() => codes(page)).toEqual(['SQURPHARMA', 'GP']);
     await page.getByRole('link', { name: 'Risen from the low' }).click();
@@ -124,7 +124,7 @@ test.describe('/range', () => {
     // BRAC is nearer its low (16.7%) but does not pass the checks; SQURPHARMA (22.2%) does.
     await expect(page.locator('.range-matches li')).toHaveCount(1);
     await expect(page.locator('.range-matches li').first()).toContainText('SQURPHARMA');
-    await expect(page.locator('.range-rule-head')).toContainText('Good companies');
+    await expect(page.locator('.range-rule-head')).toContainText('Passes the checks');
   });
 
   test('no holdings shows the empty state with a Portfolio link', async ({ page }) => {

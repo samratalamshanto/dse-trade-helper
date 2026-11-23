@@ -63,13 +63,13 @@ test.describe('/all', () => {
     await expect(chip).toHaveClass(/active/);
   });
 
-  test('"Good companies" lists only Passes the checks rows at any price, more than "Low P/E vs sector"', async ({ page }) => {
+  test('"Passes the checks" lists only research-signal rows at any price, more than "Low P/E vs sector"', async ({ page }) => {
     const group = page.getByRole('group', { name: 'Quick picks:' });
     const cheapChip = group.getByRole('button', { name: 'Low P/E vs sector' });
     await cheapChip.click();
     await expect(cheapChip).toHaveAttribute('aria-pressed', 'true');
     const cheap = await rows(page).count();
-    const goodChip = group.getByRole('button', { name: 'Good companies' });
+    const goodChip = group.getByRole('button', { name: 'Passes the checks' });
     await goodChip.click();
     await expect(goodChip).toHaveAttribute('aria-pressed', 'true');
     await expect(page).toHaveURL(/preset=good/);

@@ -54,7 +54,7 @@ export function Icon({ name, className = '' }: { name: IconName; className?: str
 export const SIGNALS = SIGNAL_TEXT;
 export type Signal = keyof typeof SIGNALS;
 
-export const FRAUD = { clean: 'No flags', suspicious: '1 flag pattern', high: 'Several flags' } as const;
+export const FRAUD = { clean: 'No flags', suspicious: 'Warning signs: some', high: 'Warning signs: strong' } as const;
 export type FraudLevel = keyof typeof FRAUD;
 
 export const SIGNAL_ORDER: Record<Signal, number> = { avoid: 0, caution: 1, neutral: 2, research: 3 };

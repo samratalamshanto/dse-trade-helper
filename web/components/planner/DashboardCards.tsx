@@ -35,7 +35,7 @@ export function TodaysPicks() {
 
   return (
     <section className="panel" aria-labelledby="picks-title" style={{ marginTop: 14 }}>
-      <h2 className="h3" id="picks-title"><Icon name="star" /> {t("Today's research list")}</h2>
+      <h2 className="h3" id="picks-title"><Icon name="star" /> {t('Passes all 8 checks and fits your budget')}</h2>
       <p className="small muted">{t('Passes the quality checks, no warning sign, low in its 1-year range or under its 20-day average, and not sliding. Rules on past prices — a list to research, not a buy order.')}</p>
       <form className={css.ask} onSubmit={submit}>
         <label>{t('Your budget ৳')}<input type="number" min={1} step="any" value={draft ?? budget} onChange={(e) => setDraft(e.target.value)} /></label>
