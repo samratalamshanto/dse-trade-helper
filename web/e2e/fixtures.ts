@@ -1,9 +1,12 @@
 import { test as base, expect } from '@playwright/test';
 
 // Every test fails on any console error or uncaught page error. Nothing is allow-listed.
-export const test = base.extend<{ guard: void; allowedConsole: RegExp[] }>({
+export const test = base.extend<{ guard: void; allowedConsole: RegExp[]; guideSeen: boolean }>({
   allowedConsole: [[], { option: true }],
-  guard: [async ({ page, allowedConsole }, use) => {
+  // The first-visit guide covers the page; tests start as returning visitors unless they test the guide itself.
+  guideSeen: [true, { option: true }],
+  guard: [async ({ page, allowedConsole, guideSeen }, use) => {
+    if (guideSeen) await page.addInitScript(() => localStorage.setItem('guideShown', '1'));
     const problems: string[] = [];
     page.on('console', (m) => { if (m.type() === 'error' && !allowedConsole.some((r) => r.test(m.text()))) problems.push(`console.error: ${m.text()} @ ${m.location().url}`); });
     page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));

@@ -1,6 +1,7 @@
 import { test, expect, isPhone } from './fixtures';
 
-// Each test runs in a fresh browser context with empty localStorage.
+// Each test runs in a fresh browser context with empty localStorage: a true first visit.
+test.use({ guideSeen: false });
 
 test('guide shows on first visit and can be dismissed', async ({ page }) => {
   await page.goto('/');

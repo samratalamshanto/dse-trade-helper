@@ -33,7 +33,7 @@ test.describe('browser mode: a new visitor needs no password', () => {
     await addBuy(page, 'gp', '10', '250');
     await expect(holdingsPanel(page).locator('tbody tr').filter({ hasText: 'GP' })).toContainText('10');
     await expect(page.getByText('Invested')).toBeVisible();
-    await expect(page.locator('.panel').filter({ hasText: 'Invested' }).first()).toContainText('৳2,500.00');
+    await expect(page.locator('.panel').filter({ hasText: 'Invested' }).first()).toContainText('৳2,510.00'); // 10 × 250 plus the default 0.4% broker commission (৳10)
     await expect(page.getByRole('link', { name: 'Trades as a spreadsheet (CSV)' })).toHaveAttribute('download', 'my-trades.csv');
     await page.reload();
     await expect(holdingsPanel(page).locator('tbody tr').filter({ hasText: 'GP' })).toContainText('10');
