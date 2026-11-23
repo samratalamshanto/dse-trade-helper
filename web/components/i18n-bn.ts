@@ -462,4 +462,10 @@ export const BN: Record<string, string> = {
   'Your gain %': 'আপনার লাভ %',
   'Loading 52-week range…': '৫২ সপ্তাহের সীমা লোড হচ্ছে…',
   'A price near its low can fall further. Automatic figures and your own rules, not advice.': 'সর্বনিম্নের কাছের দাম আরো কমতে পারে। স্বয়ংক্রিয় তথ্য ও আপনার নিয়ম, পরামর্শ নয়।',
+
+  // Company picker (CompanySearch component, /all, /watchlist, /warning-signs, /range)
+  'Pick a company': 'কোম্পানি বাছুন',
+  'Show all': 'সব দেখুন',
+  'In watchlist': 'ওয়াচলিস্টে আছে',
+  'Already in watchlist': 'ইতিমধ্যে ওয়াচলিস্টে',
 };

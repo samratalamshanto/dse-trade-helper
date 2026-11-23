@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import { useMode } from '@/components/portfolio-store';
 import Link from 'next/link';
 import { Tr } from '@/components/Tr';
@@ -10,14 +11,17 @@ import { LastBuy } from '@/components/LastBuy';
 import { useWatchlist, WatchButton } from '@/components/Watchlist';
 import { fmt, fmtDate, pctNum, sectorName } from '@/components/format';
 import { FraudPill, Icon, SignalPill, type FraudLevel, type Signal } from '@/components/ui';
+import { useLang } from '@/components/i18n';
 import type { CalendarRow, CompanyRow } from '@/lib/service';
 import type { MarketSession } from '@/lib/dse';
+import { CompanySearch } from '@/components/CompanySearch';
 
 interface Companies { rows: CompanyRow[]; session: MarketSession | null }
 interface Calendar { upcoming: CalendarRow[]; session: MarketSession | null }
 
 export default function WatchlistPage() {
-  const { codes } = useWatchlist();
+  const { t } = useLang();
+  const { codes, has, toggle } = useWatchlist();
   const tradesKey = useMode().mode === 'sheet';
   const router = useRouter();
   const { data, error } = useApi<Companies>('/api/companies');
@@ -25,11 +29,45 @@ export default function WatchlistPage() {
   const byCode = Object.fromEntries((data?.rows || []).map((r) => [r.code, r]));
   const nextDividend = Object.fromEntries((cal?.upcoming || []).map((r) => [r.code, r]));
 
+  const [pickQ, setPickQ] = useState('');
+  const [pickedCode, setPickedCode] = useState('');
+  const searchData = useMemo(() => (data?.rows || []).map((r) => ({ code: r.code, name: r.name, signal: r.signal })), [data]);
+  const watchedSet = useMemo(() => new Set(codes), [codes]);
+
+  const addCompany = () => {
+    if (!pickedCode || has(pickedCode)) return;
+    toggle(pickedCode);
+    setPickQ('');
+    setPickedCode('');
+  };
+
+  const alreadyWatched = Boolean(pickedCode) && has(pickedCode);
+
   return (
     <>
       <h1><Tr text="Watchlist" /></h1>
       <p className="muted">{tradesKey ? 'Companies you saved. They are kept in your Google Sheet, so every device shows the same list.' : 'Companies you saved. They are stored in this browser only, so they do not appear on your other devices.'}</p>
       {error && !data ? <div className="note bad">Could not load prices: {error}. Your saved list is safe; try Refresh.</div> : null}
+      <div className="picker-row">
+        <CompanySearch
+          companies={searchData}
+          value={pickQ}
+          onChange={(q) => { setPickQ(q); setPickedCode(''); }}
+          onPick={(code) => { setPickedCode(code); setPickQ(code); }}
+          label={t('Add a company')}
+          placeholder={t('Company code or name')}
+          watched={watchedSet}
+        />
+        <button
+          type="button"
+          className="btn primary"
+          disabled={!pickedCode || alreadyWatched}
+          onClick={addCompany}
+          aria-label={alreadyWatched ? t('Already in watchlist') : t('Add')}
+        >
+          {alreadyWatched ? t('Already in watchlist') : t('Add')}
+        </button>
+      </div>
       {!codes.length ? (
         <div className="panel empty-state">
           <Icon name="star" />
