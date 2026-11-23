@@ -54,7 +54,15 @@ export const BN: Record<string, string> = {
   'Good business at a normal or higher P/E than usual. Research it before deciding.': 'ভালো ব্যবসা, তবে P/E স্বাভাবিক বা বেশি। সিদ্ধান্তের আগে গবেষণা করুন।',
   'Passes the quality checks; the price is near its 52-week high.': 'মান-পরীক্ষায় উত্তীর্ণ; দাম ৫২-সপ্তাহের সর্বোচ্চের কাছে।',
   'High risk by these rules.': 'এই নিয়মে উচ্চ ঝুঁকি।',
-  'A warning rule fired. Read the latest disclosures and quarterly results.': 'একটি সতর্কতা-নিয়ম চালু হয়েছে। সর্বশেষ ঘোষণা ও ত্রৈমাসিক ফলাফল পড়ুন।',
+  'Caution for these reasons:': 'এই কারণে সতর্কতা:',
+  'A warning sign was found (see Safety checks).': 'একটি সতর্ক সংকেত পাওয়া গেছে (নিরাপত্তা পরীক্ষা দেখুন)।',
+  'Earnings fell two years in a row.': 'পরপর দুই বছর আয় কমেছে।',
+  'The latest quarterly result is a loss.': 'সর্বশেষ ত্রৈমাসিক ফলাফলে লোকসান।',
+  'Earnings are shrinking over the years.': 'বছরের পর বছর আয় কমছে।',
+  'P/E is more than twice the sector median.': 'P/E খাতের মধ্যমার দ্বিগুণের বেশি।',
+  'The price is more than 5× book value.': 'দাম বুক ভ্যালুর ৫ গুণের বেশি।',
+  'Few shares trade each day.': 'প্রতিদিন অল্প শেয়ার লেনদেন হয়।',
+  'Read the latest disclosures and quarterly results.': 'সর্বশেষ ঘোষণা ও ত্রৈমাসিক ফলাফল পড়ুন।',
   'No strong signal. Research more before you decide.': 'জোরালো সংকেত নেই। সিদ্ধান্তের আগে আরও গবেষণা করুন।',
   'Is it cheap or expensive now?': 'এখন সস্তা না দামি?', 'Price vs last 5 years': 'দাম বনাম গত ৫ বছর', 'P/E vs last 5 years': 'P/E বনাম গত ৫ বছর',
   'Possible value': 'সম্ভাব্য সুযোগ', 'Cheap for a reason': 'কারণ আছে বলেই সস্তা', 'Priced high': 'দাম বেশি', 'Expensive and weakening': 'দামি এবং দুর্বল হচ্ছে', 'Fairly priced': 'ন্যায্য দাম',
@@ -436,6 +444,14 @@ export const BN: Record<string, string> = {
   'Fits your rules': 'আপনার নিয়মের সাথে মেলে',
   'No rule triggered': 'কোনো নিয়ম চালু হয়নি',
 
+  // Start investing example plan
+  'The market recovered strongly in FY26, then the market cap fell. In this example, the purchases are spread over 3–6 months.': '২০২৫–২৬ অর্থবছরে বাজার জোরালোভাবে ঘুরে দাঁড়ায়, তারপর বাজার মূলধন কমে। এই উদাহরণে কেনাকাটা ৩–৬ মাসে ভাগ করা হয়েছে।',
+  'In this worked example, it did not pass the 5-year checks because earnings fell in 2025.': 'এই উদাহরণে এটি ৫ বছরের পরীক্ষায় উত্তীর্ণ হয়নি, কারণ ২০২৫ সালে আয় কমেছে।',
+  'In this worked example, it did not pass because one share costs more than a small monthly budget allows.': 'এই উদাহরণে এটি উত্তীর্ণ হয়নি, কারণ একটি শেয়ারের দাম ছোট মাসিক বাজেটের চেয়ে বেশি।',
+  'Square Pharma (example)': 'স্কয়ার ফার্মা (উদাহরণ)',
+  'BRAC Bank (example)': 'ব্র্যাক ব্যাংক (উদাহরণ)',
+  'This example does not buy every month. When the price is above its range, it keeps the cash.': 'এই উদাহরণে প্রতি মাসে কেনা হয় না। দাম নিজের সীমার উপরে থাকলে টাকা নগদ রাখা হয়।',
+
   // 52-week range page
   'Near the 52-week low': 'বার্ষিক সর্বনিম্নের কাছে',
   'Risen from the low': 'সর্বনিম্ন থেকে উঠেছে',
@@ -473,6 +489,7 @@ export const BN: Record<string, string> = {
   'No holdings yet. Add trades on': 'এখনো হোল্ডিং নেই। লেনদেন যোগ করুন',
   'Your avg price': 'আপনার গড় দাম',
   'Your gain %': 'আপনার লাভ %',
+  'Data looks wrong: the price is far outside its 52-week range.': 'তথ্য ভুল মনে হচ্ছে: দাম ৫২-সপ্তাহের সীমার অনেক বাইরে।',
   'Loading 52-week range…': '৫২ সপ্তাহের সীমা লোড হচ্ছে…',
   'A price near its low can fall further. Automatic figures and your own rules, not advice.': 'সর্বনিম্নের কাছের দাম আরো কমতে পারে। স্বয়ংক্রিয় তথ্য ও আপনার নিয়ম, পরামর্শ নয়।',
 };

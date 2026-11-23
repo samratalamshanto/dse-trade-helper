@@ -237,6 +237,24 @@ test('review RENATA: shrinking earnings give caution and "good business" is not 
   assert.notStrictEqual(q[0].answer, 'yes');
 });
 
+test('a caution with no warning sign names its real reasons and never a warning rule', () => {
+  const shrinking = [2021, 2022, 2023, 2024, 2025].map((year, i) => ({ year, eps: 40 * 0.78 ** i, pe: 30, nav: 1, profit: null, dividend: null }));
+  const a = analyze(company({ years: shrinking, nav: 15 }), 40, NOW);
+  assert.strictEqual(a.signal, 'caution');
+  assert.strictEqual(a.fraud.level, 'clean');
+  assert.ok(a.suggestionParts.buyLine.includes('Earnings are shrinking over the years.'), a.suggestionParts.buyLine);
+  assert.ok(a.suggestionParts.buyLine.includes('The price is more than 5× book value.'), a.suggestionParts.buyLine);
+  assert.doesNotMatch(a.suggestion, /warning/i);
+});
+
+test('a caution from a warning sign says so', () => {
+  const s = series(120, 100, 100);
+  s[s.length - 1] = { ...s.at(-1)!, volume: 600_000 };
+  const a = analyze(company({ series: s, changePct: 6, sharePattern: [{ sponsor: 40 }, { sponsor: 37.2 }] }), 15, NOW);
+  assert.strictEqual(a.signal, 'caution');
+  assert.ok(a.suggestionParts.buyLine.includes('A warning sign was found'), a.suggestionParts.buyLine);
+});
+
 test('review BXPHARMA: a recent dividend declaration for the new year cancels "old financials"', () => {
   const years = [2020, 2021, 2022, 2023, 2024].map((year, i) => ({ year, eps: 6 + i, pe: 14, nav: null, profit: null, dividend: null }));
   const events = { declarations: [{ announced: '2026-10-29', cashPct: 60, interim: false, periodEnd: '2026-06-30' }], directorTrades: [] };
