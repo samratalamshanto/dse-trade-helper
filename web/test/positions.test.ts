@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { checkPosition, DEFAULT_STOP_PCT, DEFAULT_TARGET_PCT, parseSettings, settingsFromRows, settingsToRows, validLimits, type PositionInput } from '../lib/positions.ts';
+import { breakEvenPrice, checkPosition, dividendsReceived, DEFAULT_STOP_PCT, DEFAULT_TARGET_PCT, parseSettings, settingsFromRows, settingsToRows, validLimits, type PositionInput } from '../lib/positions.ts';
 
 const limits = { stopPct: DEFAULT_STOP_PCT, targetPct: DEFAULT_TARGET_PCT };
 const FRIDAY = '2026-11-20';
@@ -84,4 +84,40 @@ test('booleans and arrays are not numbers for limits', () => {
   assert.equal(validLimits({ stopPct: true, targetPct: 20 }), null);
   assert.equal(validLimits({ stopPct: [5], targetPct: 20 }), null);
   assert.equal(validLimits({ stopPct: ' ', targetPct: 20 }), null);
+});
+
+const GP_DECL = [
+  { recordDate: '2026-12-10', cashPct: 50 },
+  { recordDate: '2026-08-12', cashPct: 105, interim: true },
+  { recordDate: '2026-03-03', cashPct: 105 },
+];
+const trade = (date: string, side: 'BUY' | 'SELL', quantity: number) => ({ id: date + side, date, code: 'GP', side, quantity, price: 260, commission: null, note: '', source: 'manual', createdAt: '' });
+const TODAY = '2026-11-24';
+
+test('dividends count only record dates after the buy and up to today', () => {
+  // GP 100 shares bought 10 Mar 2026: the 3 Mar record date is before it, the 10 Dec one is still ahead.
+  assert.equal(dividendsReceived([trade('2026-03-10', 'BUY', 100)], 'GP', GP_DECL, 10, TODAY), 1050);
+  assert.equal(dividendsReceived([trade('2026-03-01', 'BUY', 100)], 'GP', GP_DECL, 10, TODAY), 2100);
+  assert.equal(dividendsReceived([trade('2026-03-10', 'BUY', 100)], 'ROBI', GP_DECL, 10, TODAY), 0);
+});
+
+test('dividends use the shares held on each record date (partial sells, more buys)', () => {
+  const trades = [trade('2026-09-01', 'BUY', 10), trade('2026-03-01', 'BUY', 100), trade('2026-05-01', 'SELL', 40), trade('2026-08-12', 'BUY', 50)];
+  // 3 Mar: 100 shares; 12 Aug: 60 (a buy on the record date itself is too late).
+  assert.equal(dividendsReceived(trades, 'GP', GP_DECL, 10, TODAY), 1050 + 630);
+  // A sell of more than was held never takes the count below zero.
+  assert.equal(dividendsReceived([trade('2026-02-01', 'SELL', 10), trade('2026-03-01', 'BUY', 5)], 'GP', GP_DECL, 10, TODAY), 105);
+});
+
+test('dividends use the last cum day when the declaration has one', () => {
+  const decl = [{ recordDate: '2026-08-12', lastBuyDate: '2026-08-10', cashPct: 105 }];
+  // A buy after the last cum day is too late; a sell after it still gets the dividend.
+  assert.equal(dividendsReceived([trade('2026-08-11', 'BUY', 100)], 'GP', decl, 10, TODAY), 0);
+  assert.equal(dividendsReceived([trade('2026-08-10', 'BUY', 100), trade('2026-08-11', 'SELL', 100)], 'GP', decl, 10, TODAY), 1050);
+});
+
+test('break-even after the sell commission, and the move needed from today', () => {
+  assert.equal(breakEvenPrice(261.04, 0.4), 262.09);
+  assert.equal(breakEvenPrice(100, 0), 100);
+  assert.equal(((breakEvenPrice(261.04, 0.4) / 226.8 - 1) * 100).toFixed(1), '15.6');
 });
