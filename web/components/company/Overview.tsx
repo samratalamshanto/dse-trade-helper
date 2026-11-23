@@ -8,7 +8,7 @@ import { BuyPlanner } from '@/components/planner/BuyPlanner';
 import { Tr } from '@/components/Tr';
 import { useLang } from '@/components/i18n';
 import { fmt, moneyPerDay, sectorName, signed, tone } from '@/components/format';
-import { Icon, Info, Metric, type IconName } from '@/components/ui';
+import { Icon, Info, type IconName } from '@/components/ui';
 import type { CompanyDetail } from '@/lib/service';
 
 type Company = CompanyDetail['company'];
@@ -87,6 +87,8 @@ function KeyFacts({ d }: { d: CompanyDetail }) {
         <Fact label="Market cap">{crore(c.marketCap)}</Fact>
         <Fact label="Free float" hint={HINTS.freeFloat}>{num(det.freeFloat) != null ? fmt(num(det.freeFloat), 2) + '%' : '—'}</Fact>
         <Fact label="Free-float market cap" hint={HINTS.freeFloatCap}>{crore(num(det.freeFloatMarketCap), 1)}</Fact>
+        <Fact label="Sector P/E" hint="Median P/E of profitable companies in the same sector. Compare it with this company's P/E above.">{fmt(d.sectorPe, 1)}</Fact>
+        <Fact label="Traded a day" hint="Average value traded per day, last 20 days. Higher = easier to sell.">{moneyPerDay(m.avgDailyValue)}</Fact>
         <Fact label="Website">{href ? <a href={href} target="_blank" rel="noopener noreferrer">{c.website} ↗</a> : (c.website || '—')}</Fact>
       </div>
     </div>
@@ -146,24 +148,15 @@ function TodayPanel({ d }: { d: CompanyDetail }) {
 }
 
 export function Overview({ d }: { d: CompanyDetail }) {
-  const m = d.analysis.metrics, c = d.company, sp = c.sharePattern.at(-1);
+  const c = d.company, sp = c.sharePattern.at(-1);
   return (
     <>
-      <BuyPlanner key={c.code} code={c.code} bar={<RangeBar52 c={c} />} />
-      {d.today ? <div style={{ marginTop: 14 }}><TodayPanel d={d} /></div> : null}
-      <div style={{ marginTop: 14 }}><KeyFacts d={d} /></div>
-      {/* P/E and yield are already in the header and the key facts; this row adds only what they lack. */}
-      <div className="grid g2" style={{ marginTop: 14 }}>
-        <Metric label="Sector P/E" value={fmt(d.sectorPe, 1)} hint="Median P/E of profitable companies in the same sector. Compare it with this company's P/E above." />
-        <Metric label="Traded a day" value={moneyPerDay(m.avgDailyValue)} hint="Average value traded per day, last 20 days. Higher = easier to sell." />
-      </div>
+      {d.today ? <TodayPanel d={d} /> : null}
+      <div style={{ marginTop: d.today ? 14 : 0 }}><KeyFacts d={d} /></div>
       <div className="panel" style={{ marginTop: 14 }}><h3><Tr text="Price" /> <Info text="Tap or hover the line to see the price on each day." /></h3><PriceChart c={c} /></div>
-      <div className="grid g2" style={{ marginTop: 14 }}>
-        <div className="panel"><h3><Tr text="52-week range" /></h3><RangeBar52 c={c} />
-          {c.weekHigh52 && c.price ? <p className="why">{fmt(((c.weekHigh52 - c.price) / c.weekHigh52) * 100, 1)}% <Tr text="below the 52-week high." /></p> : null}</div>
-        <div className="panel"><h3><Tr text="Who owns the shares" /></h3><ShareholdingDonut sp={sp} height={200} />
-          <p className="why"><Tr text="As on" /> {sp?.date || '—'}.</p></div>
-      </div>
+      <div style={{ marginTop: 14 }}><BuyPlanner key={c.code} code={c.code} bar={<RangeBar52 c={c} />} /></div>
+      <div className="panel" style={{ marginTop: 14 }}><h3><Tr text="Who owns the shares" /></h3><ShareholdingDonut sp={sp} height={200} />
+        <p className="why"><Tr text="As on" /> {sp?.date || '—'}.</p></div>
       <div className="grid g2" style={{ marginTop: 14 }}>
         <div className="panel"><h3><Tr text="Why this signal" /></h3>
           <ul className="reasons">{d.analysis.reasons.map((r, i) => { const [ic, cls] = TONE_ICON[r.tone] ?? TONE_ICON.neutral; return <li key={i}><Icon name={ic} className={cls} /><span>{r.text}</span></li>; })}</ul></div>
