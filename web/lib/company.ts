@@ -4,6 +4,15 @@ import type { Company, YearRow, Dividend, SharePattern, SeriesPoint, InterimFina
 
 const SERIES_KEEP_DAYS = 260;
 export const DATA_VERSION = 6;
+
+const TITLE_KNOWN: Record<string, string> = { plc: 'PLC', 'ltd.': 'Ltd.', ltd: 'Ltd', bd: 'BD', '(bd)': '(BD)' };
+export function titleCaseName(s: string): string {
+  if (!s) return s;
+  return s.replace(/\S+/g, (w) => {
+    const lo = w.toLowerCase();
+    return Object.hasOwn(TITLE_KNOWN, lo) ? TITLE_KNOWN[lo] : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+  });
+}
 const NEWS_KEEP = 40;
 const NEWS_BODY_CHARS = 700;
 
@@ -136,7 +145,7 @@ export function parseCompanyPage(html: string): Company | null {
   return {
     version: DATA_VERSION,
     code: c.code as string,
-    name: c.name as string,
+    name: titleCaseName(c.name as string),
     sector: c.sector as string,
     category: c.category as string,
     price: (c.price ?? null) as number | null,

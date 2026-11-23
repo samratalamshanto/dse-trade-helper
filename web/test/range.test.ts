@@ -144,7 +144,7 @@ test('parseRangeRules: a valid pick is kept; an unknown pick is dropped from the
 });
 
 test('describeRule mentions the pick label when present', () => {
-  assert.equal(describeRule({ id: 'a', kind: 'nearLow', pct: 10, scope: 'all', pick: 'good' }), 'within 10% of the 52-week low, Good companies (all companies)');
+  assert.equal(describeRule({ id: 'a', kind: 'nearLow', pct: 10, scope: 'all', pick: 'good' }), 'within 10% of the 52-week low, Passes the checks (all companies)');
   assert.equal(describeRule({ id: 'a', kind: 'nearLow', pct: 5, scope: 'all' }), 'within 5% of the 52-week low (all companies)', 'no pick: unchanged format');
 });
 

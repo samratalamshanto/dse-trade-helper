@@ -6,15 +6,15 @@ test.describe('dashboard', () => {
   test('loads with index card and signal/quick cards', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'DSE dashboard' })).toBeAttached();
     await expect(page.getByText('DSEX index')).toBeVisible();
-    await expect(page.getByRole('link', { name: /Shortlist/ })).toHaveAttribute('href', '/all?signal=research');
+    await expect(page.getByRole('link', { name: /Passes the checks/ })).toHaveAttribute('href', '/all?signal=research');
     await expect(page.getByRole('link', { name: /Dividends coming/ })).toHaveAttribute('href', '/dividends');
     await expect(page.getByRole('link', { name: /Warning signs/ }).first()).toBeVisible();
   });
 
   test('signal slices on the doughnut link to /all?signal=', async ({ page }) => {
     await expect(page.getByRole('heading', { name: /companies by signal/ })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'See the whole shortlist →' })).toHaveAttribute('href', '/all?signal=research');
-    await page.getByRole('link', { name: /Shortlist/ }).click();
+    await expect(page.getByRole('link', { name: 'See all →' })).toHaveAttribute('href', '/all?signal=research');
+    await page.getByRole('link', { name: /Passes the checks/ }).click();
     await expect(page).toHaveURL(/\/all\?signal=research/);
     await expect(page.getByLabel('Signal', { exact: true })).toHaveValue('research');
   });

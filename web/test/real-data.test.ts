@@ -82,10 +82,12 @@ test('A10: without P/E history the cheap answer falls back to the 52-week range'
   assert.strictEqual(q.label, 'Near its 52-week low');
 });
 
-test('A10/B4: the fraud answer uses No flags / 1 flag pattern / Several flags', () => {
+test('A10/B4: the fraud answer uses No flags / 1 flag pattern / {n} flag patterns', () => {
   assert.strictEqual(questions(real('GP'))[2].label, 'No flags');
   assert.strictEqual(questions(real('SHEPHERD'))[2].label, '1 flag pattern');
-  assert.strictEqual(questions(real('GP', { category: 'Z' }))[2].label, 'Several flags');
+  assert.strictEqual(questions(real('GP', { category: 'Z' }))[2].label, '1 flag pattern');
+  const twoFlags = real('GP', { category: 'Z', sharePattern: [{ date: '2025-01-01', sponsor: 50 }, { date: '2026-01-01', sponsor: 46 }] });
+  assert.strictEqual(questions(twoFlags)[2].label, '{n} flag patterns');
 });
 
 test('A11: every signal carries a line for a holder', () => {

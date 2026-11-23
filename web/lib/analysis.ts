@@ -1,4 +1,5 @@
 import { directorActivity, isEmptyDeclaration } from './announcements.ts';
+import { flagCountText } from './glossary.ts';
 import { DHAKA_OFFSET_MS, dhakaToday } from './dhaka.ts';
 import { bonusFactor, pbAtYearEnd, payoutPct, roePct, trendChange } from './financial-trends.ts';
 import { lastYearOf, traded, yearAgoClose } from './price-history.ts';
@@ -250,7 +251,7 @@ function qualityChecks(c: Company, m: Metrics, zone: PricePosition['zone']): Che
     { ok: (m.sponsorNow ?? 0) >= SPONSOR_MIN_PCT, label: `Sponsors hold ${SPONSOR_MIN_PCT}%+`, detail: m.sponsorNow != null ? `${m.sponsorNow}%` : 'unknown', why: `BSEC requires sponsors to hold at least ${SPONSOR_MIN_PCT}% together. Owners keep a stake.` },
     { ok: !stretched && !ranUp && zone !== 'high', label: 'Price not stretched',
       detail: `P/E ${m.pe == null ? '—' : round(m.pe)} (limit ${round(peLimit)}), P/B ${m.pb == null ? '—' : round(m.pb)} (limit ${STRETCHED_PB})${zone === 'high' ? ', P/E high in its 5-year range' : ''}${ranUp ? `, price up ${m.change1y}% in a year` : ''}`,
-      why: 'Even a great company is a poor buy at a price far above its own usual P/E, its book value, or after it has doubled in a year.' },
+      why: 'Even a great company can be priced above its own usual P/E, its book value, or after it has doubled in a year.' },
     { ok: (m.avgDailyValue ?? 0) >= LIQUID_DAILY_VALUE_BDT, label: 'Easy to buy and sell', detail: m.avgDailyValue == null ? 'unknown' : `৳${round(m.avgDailyValue / 1e7, m.avgDailyValue >= 1e7 ? 1 : 2)} cr traded a day`, why: 'Thinly traded shares are hard to sell at a fair price.' },
   ];
 }
@@ -315,7 +316,7 @@ export function analyze(c: Company, sectorPe: number | null, now = new Date()): 
   const m = metrics(c, now);
   const fraud = fraudFlags(c, m, now);
   const checks = qualityChecks(c, m, pricePosition(c, m).zone);
-  checks.push({ ok: fraud.level === 'clean', label: 'No warning signs', detail: `${fraud.flags.length} flag(s)`, why: 'Any warning sign removes a company from the shortlist.' });
+  checks.push({ ok: fraud.level === 'clean', label: 'No warning signs', detail: `${fraud.flags.length} flag(s)`, why: 'Any warning sign removes a company from the list of companies that pass all checks.' });
   const reasons: Reason[] = [];
   const add = (tone: string, text: string) => reasons.push({ tone, text });
   if (m.epsNow == null) add('warn', `${NOT_RATED}. Some companies, such as life insurers, do not report EPS, so the profit checks cannot run.`);
@@ -406,7 +407,7 @@ const HIGH_ZONE = 0.75;
 const VALUATION: Record<string, { label: string; tone: string; text: string }> = {
   value: { label: 'Possible value', tone: 'good', text: 'Cheap against its own 5-year history while earnings still grow.' },
   trap: { label: 'Cheap for a reason', tone: 'bad', text: 'Cheap against its history, but earnings are falling. A low price can keep falling. Be careful.' },
-  expensive: { label: 'Priced high', tone: 'warn', text: 'Expensive against its own history, though earnings grow. Good business, but wait for a better price.' },
+  expensive: { label: 'Priced high', tone: 'warn', text: 'Expensive against its own history, though earnings grow. Good business, but priced high against its history.' },
   risky: { label: 'Expensive and weakening', tone: 'bad', text: 'Expensive against its history while earnings fall. High risk at this price.' },
   fair: { label: 'Fairly priced', tone: 'neutral', text: 'In the middle of its usual range. Price alone gives no strong reason to buy or wait.' },
 };
@@ -451,7 +452,6 @@ const ANSWER = { yes: 'yes', partly: 'partly', no: 'no', unknown: 'unknown' } as
 const CHEAP_ANSWER: Record<string, Question['answer']> = { value: 'yes', fair: 'partly', trap: 'partly', expensive: 'no', risky: 'no' };
 const CHEAP_LABEL: Record<string, string> = { trap: 'Cheap, but profits falling' };
 const FRAUD_ANSWER: Record<Analysis['fraud']['level'], Question['answer']> = { clean: 'yes', suspicious: 'partly', high: 'no' };
-export const FRAUD_LABEL: Record<Analysis['fraud']['level'], string> = { clean: 'No flags', suspicious: '1 flag pattern', high: 'Several flags' };
 
 // Without P/E history (no profit), the place of the price in its 52-week range is the only guide.
 function rangeAnswer(c: Company, price: number | null, m: Metrics): Pick<Question, 'answer' | 'label' | 'text'> | null {
@@ -478,8 +478,8 @@ export function declaredText(d: Declaration, face: number): string {
 }
 
 export function fourQuestions(c: Company, a: Analysis, position: PricePosition | null, dividend: DividendStatus | null): Question[] {
-  const passed = a.checks.filter((x) => x.ok && x.label !== 'No warning signs').length;
-  const total = a.checks.length - 1;
+  const passed = a.checks.filter((x) => x.ok).length;
+  const total = a.checks.length;
   const solid = a.metrics.epsAllPositive && !a.metrics.interimLoss;
   const growing = a.metrics.epsCagr != null && a.metrics.epsCagr > 0;
   const good: Question = a.notRated
@@ -494,7 +494,7 @@ export function fourQuestions(c: Company, a: Analysis, position: PricePosition |
     ...(v && !a.metrics.illiquid ? { answer: dearBook && CHEAP_ANSWER[v.key] === 'yes' ? ANSWER.partly : CHEAP_ANSWER[v.key], label: cheapLabel!,
       text: `${cheapLabel}. P/E ${a.metrics.pe ?? '—'} against its usual ${position?.usualPe ?? '—'}${dearBook ? `, but P/B ${a.metrics.pb} is above ${STRETCHED_PB}, so it is expensive against its book value` : ''}.` }
       : rangeAnswer(c, a.metrics.priceNow, a.metrics) ?? { answer: ANSWER.unknown, text: 'Not enough price history.' }) };
-  const safe: Question = { q: 'Any warning signs?', answer: FRAUD_ANSWER[a.fraud.level], label: FRAUD_LABEL[a.fraud.level],
+  const safe: Question = { q: 'Any warning signs?', answer: FRAUD_ANSWER[a.fraud.level], label: flagCountText(a.fraud.flags.length),
     text: a.fraud.flags.length ? a.fraud.flags.map((f) => f.title).join(', ') + '.' : 'No warning pattern found.', tab: 'safety' };
   const d = dividend;
   const lastBuy = (x: { lastBuyDate?: string | null; lastBuyEstimated?: boolean }): string =>

@@ -42,7 +42,7 @@ function StartGuide() {
       <div><b>New here? Start in 3 steps.</b>
         <ol>
           <li><Link className="link-btn" href="/learn">Read &quot;How it works&quot;</Link> (2 minutes): what the signals and words mean.</li>
-          <li><Link className="link-btn" href="/all?signal=research">Open the shortlist</Link>: companies that pass every check.</li>
+          <li><Link className="link-btn" href="/all?signal=research">See companies that pass the checks</Link>: all 8 rule checks passed.</li>
           <li>Open one company and read its <b>four answers</b> at the top. Then check its Dividends tab.</li>
         </ol>
         <p className="small muted">This site helps you choose what to research. It does not tell you what to buy.</p></div>
@@ -168,7 +168,7 @@ export default function DashboardPage() {
       <PlansMini />
 
       <div className="grid g4 quick">
-        <Link className="panel card quick-card" href="/all?signal=research"><Icon name="star" /><div><div className="small muted">{t('Shortlist')}</div><div className="stat mono">{d.counts.research}</div><div className="small muted">{t('pass every check')}</div></div></Link>
+        <Link className="panel card quick-card" href="/all?signal=research"><Icon name="star" /><div><div className="small muted">{t('Passes the checks')}</div><div className="stat mono">{d.counts.research}</div><div className="small muted">{t('all 8 rule checks passed')}</div></div></Link>
         <Link className="panel card quick-card" href="/dividends"><Icon name="calendar" /><div><div className="small muted">{t('Dividends coming')}</div><div className="stat mono">{d.upcomingCount}</div><div className="small muted">{t('upcoming record dates')}</div></div></Link>
         <Link className="panel card quick-card" href="/warning-signs"><Icon name="high" /><div><div className="small muted">{t('Warning signs')}</div><div className="stat mono">{d.fraudCount}</div><div className="small muted">{t('companies with warnings')}</div></div></Link>
         <Link className="panel card quick-card" href="/learn"><Icon name="help" /><div><div className="small muted">{t('New here?')}</div><div className="stat">{t('How it works')}</div><div className="small muted">{t('signals in plain words')}</div></div></Link>
@@ -177,10 +177,10 @@ export default function DashboardPage() {
       <h2>{t(liveNow ? "Today's important things" : 'Important things from the last session')}</h2>
       <div className="grid g3">
         <TodayItem icon="calendar" title="Dividends you can still buy for (record date within 7 days)" count={buyable.length} href="/dividends">
-          {buyable.slice(0, 5).map((r) => <Row key={r.code} code={r.code}>{pctNum(r.cashPct)}% · {t('buy by')} <LastBuy r={r} />{r.fraud !== 'clean' ? <> <FraudPill level={r.fraud as FraudLevel} /></> : null}</Row>)}
+          {buyable.slice(0, 5).map((r) => <Row key={r.code} code={r.code}>{pctNum(r.cashPct)}% · {t('buy by')} <LastBuy r={r} />{r.fraud !== 'clean' ? <> <FraudPill level={r.fraud as FraudLevel} flags={r.flags} /></> : null}</Row>)}
         </TodayItem>
         <TodayItem icon="research" title="Dividends declared this week" count={d.declaredThisWeek.length} href="/dividends">
-          {d.declaredThisWeek.slice(0, 5).map((r) => <Row key={r.code} code={r.code}>{pctNum(r.cashPct)}%{r.stockPct ? ` + ${pctNum(r.stockPct)}% bonus` : ''} · {fmtDate(r.announced)}{r.fraud !== 'clean' ? <> <FraudPill level={r.fraud as FraudLevel} /></> : null}</Row>)}
+          {d.declaredThisWeek.slice(0, 5).map((r) => <Row key={r.code} code={r.code}>{pctNum(r.cashPct)}%{r.stockPct ? ` + ${pctNum(r.stockPct)}% bonus` : ''} · {fmtDate(r.announced)}{r.fraud !== 'clean' ? <> <FraudPill level={r.fraud as FraudLevel} flags={r.flags} /></> : null}</Row>)}
         </TodayItem>
         <TodayItem icon="caution" title="Unusual trading volume" count={d.unusualCount} href="/warning-signs">
           {d.unusual.map((u) => <Row key={u.code} code={u.code}>{fmt(u.x, 1)}× normal volume</Row>)}
@@ -199,10 +199,10 @@ export default function DashboardPage() {
       <TodaysPicks />
       <MarketCharts d={d} liveNow={liveNow} />
 
-      <h2>{t('Top of the shortlist')}</h2>
+      <h2>{t('Top of the list')}</h2>
       <p className="muted small">{t('Companies that pass every research check, best score first. A place to start research, not a buy order.')}</p>
       <div className="grid g3">{d.shortlist.length ? d.shortlist.map((r) => <CompanyCard key={r.code} r={r} />) : <div className="empty panel">No company has passed yet.</div>}</div>
-      <p><Link href="/all?signal=research">{t('See the whole shortlist →')}</Link></p>
+      <p><Link href="/all?signal=research">{t('See all →')}</Link></p>
     </>
   );
 }

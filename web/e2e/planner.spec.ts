@@ -13,9 +13,9 @@ const BASE = {
   daysCheaperPct: 2, dividend: null, afterBuy: null, warnings: [], reasons: ['Still in a falling trend'], sample: 255,
 };
 const PLANS = {
-  split: { ...BASE, action: 'split', label: 'Split: part now, price alert for the rest', tone: 'info', buyNow: 5, later: 5, alertPrice: 222.2 },
-  'buy-now': { ...BASE, action: 'buy-now', label: 'Rules see no reason to wait', tone: 'good', buyNow: 10, later: 0, alertPrice: null },
-  wait: { ...BASE, action: 'wait', label: 'Rules say wait — set a price alert', tone: 'warn', buyNow: 0, later: 10, alertPrice: 220 },
+  split: { ...BASE, action: 'split', label: 'Part now, price alert for the rest', tone: 'info', buyNow: 5, later: 5, alertPrice: 222.2 },
+  'buy-now': { ...BASE, action: 'buy-now', label: 'All rules met — no timing reason to wait', tone: 'good', buyNow: 10, later: 0, alertPrice: null },
+  wait: { ...BASE, action: 'wait', label: 'No entry signal yet — set a price alert', tone: 'warn', buyNow: 0, later: 10, alertPrice: 220 },
   avoid: { ...BASE, action: 'avoid', label: 'Rules flag risks — review before buying', tone: 'bad', buyNow: 0, later: 10, alertPrice: null, warnings: ['Thinly traded — it can be hard to buy or sell at a fair price'] },
   'buy-before-dividend': { ...BASE, action: 'buy-before-dividend', label: 'Dividend deadline is close', tone: 'info', buyNow: 10, later: 0, alertPrice: null,
     dividend: { lastBuyDate: '2026-11-26', tradingDaysLeft: 4, cashPerShare: 12.5 }, afterBuy: { shares: 60, avgCost: 240.1, weightPct: 30 } },
@@ -148,7 +148,7 @@ test.describe('dashboard planner cards (API mocked)', () => {
     await page.route('**/api/plans', (r) => json(r, 200, LIST));
     await page.route('**/api/trades**', (r) => json(r, 200, { trades: [], holdings: [], warnings: [], badRows: [] }));
     await page.goto('/');
-    const picks = page.locator('section').filter({ has: page.getByRole('heading', { name: "Today's research list" }) });
+    const picks = page.locator('section').filter({ has: page.getByRole('heading', { name: "Today's picks" }) });
     await expect(picks.getByRole('row').filter({ hasText: 'DHAKABANK' })).toContainText('1785');
     expect(asked[0]).toBe('?budget=20000');
     await picks.getByLabel('Your budget ৳').fill('50000');

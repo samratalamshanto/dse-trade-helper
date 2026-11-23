@@ -29,9 +29,9 @@ export interface QuickPick {
 }
 
 export const QUICK_PICKS: QuickPick[] = [
-  { key: 'good', label: 'Good companies', hint: 'Passes all quality checks, at any price.', sort: 'score', dir: -1,
+  { key: 'good', label: 'Passes the checks', hint: 'Passes all 8 rule checks, at any price.', sort: 'score', dir: -1,
     test: (r) => r.signal === 'research' },
-  { key: 'cheap', label: 'Low P/E vs sector', hint: 'Passes the checks, with a P/E at or below its sector median.', sort: 'pe', dir: 1,
+  { key: 'cheap', label: 'Low P/E vs sector', hint: 'Passes all checks, with a P/E at or below its sector median.', sort: 'pe', dir: 1,
     test: (r, m) => r.signal === 'research' && r.pe != null && m[r.sector] != null && r.pe <= (m[r.sector] as number) },
   { key: 'dividend', label: 'High dividend', hint: "Yield 5%+ at today's price, no warning sign, easy to trade.", sort: 'dividendYield', dir: -1,
     test: (r) => (r.dividendYield ?? 0) >= 5 && r.fraud === 'clean' && (r.dailyValue ?? 0) >= LIQUID_BDT },
