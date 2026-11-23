@@ -107,6 +107,26 @@ test.describe('/range', () => {
     await expect.poll(() => codes(page)).toEqual(['ROBI']);
   });
 
+  test('a quick pick narrows the table, and the tabs keep it', async ({ page }) => {
+    await page.getByRole('button', { name: 'Good companies' }).click();
+    await expect(page).toHaveURL(/pick=good/);
+    await expect.poll(() => codes(page)).toEqual(['SQURPHARMA', 'GP']);
+    await page.getByRole('link', { name: 'Risen from the low' }).click();
+    await expect(page).toHaveURL(/pick=good/);
+    await expect.poll(() => codes(page)).toEqual(['GP', 'SQURPHARMA']);
+  });
+
+  test('a rule with a quick pick only matches companies that pass it', async ({ page }) => {
+    await page.getByLabel('Kind', { exact: true }).selectOption('nearLow');
+    await page.getByLabel('Within %', { exact: true }).fill('30');
+    await page.getByLabel('Quick pick', { exact: true }).selectOption('good');
+    await page.getByRole('button', { name: 'Add rule' }).click();
+    // BRAC is nearer its low (16.7%) but does not pass the checks; SQURPHARMA (22.2%) does.
+    await expect(page.locator('.range-matches li')).toHaveCount(1);
+    await expect(page.locator('.range-matches li').first()).toContainText('SQURPHARMA');
+    await expect(page.locator('.range-rule-head')).toContainText('Good companies');
+  });
+
   test('no holdings shows the empty state with a Portfolio link', async ({ page }) => {
     await page.getByRole('button', { name: 'My holdings' }).click();
     await expect(page.locator('td').filter({ hasText: /No holdings yet/ })).toBeVisible();

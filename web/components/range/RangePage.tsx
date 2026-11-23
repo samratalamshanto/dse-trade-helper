@@ -11,11 +11,13 @@ import { compareNullsLast, fmt, signed, tone } from '@/components/format';
 import { listTrades, useMode } from '@/components/portfolio-store';
 import { useWatchlist } from '@/components/Watchlist';
 import { MyRules } from '@/components/range/MyRules';
+import { QuickPickChips } from '@/components/QuickPickChips';
+import { pickTest, QUICK_PICK_KEYS, type QuickPickKey } from '@/lib/quick-picks';
 import { rangeStats, gainFromBuyPct, type RangeRow, type Owned } from '@/lib/range';
 import type { CompanyRow } from '@/lib/service';
 import type { MarketSession } from '@/lib/dse';
 
-interface CompaniesResponse { rows: CompanyRow[]; session: MarketSession | null }
+interface CompaniesResponse { rows: CompanyRow[]; medians?: Record<string, number | null>; session: MarketSession | null }
 
 interface TableRow {
   code: string;
@@ -99,6 +101,8 @@ export function RangePage() {
   const view = params.get('view') === 'risen' ? 'risen' : 'low';
   const whoParam = params.get('who');
   const who = whoParam === 'holdings' || whoParam === 'watchlist' ? whoParam : '';
+  const pickParam = params.get('pick');
+  const pick = QUICK_PICK_KEYS.includes(pickParam as QuickPickKey) ? pickParam as QuickPickKey : null;
   const within = Number(params.get('within') || '');
   const withinActive = Number.isFinite(within) && within > 0;
 
@@ -146,14 +150,29 @@ export function RangePage() {
 
   const shown = useMemo(() => {
     let list = rows;
+    if (pick) {
+      const all = data?.rows ?? [];
+      const test = pickTest(pick, all, data?.medians);
+      const passes = new Set(all.filter(test).map((c) => c.code));
+      list = list.filter((r) => passes.has(r.code));
+    }
     if (withinActive) list = list.filter((r) => r.aboveLowPct != null && r.aboveLowPct <= within);
     return [...list].sort((a, b) => compareNullsLast(sortKey(a, sortKeyParam), sortKey(b, sortKeyParam), sortDirVal));
-  }, [rows, sortKeyParam, sortDirVal, withinActive, within]);
+  }, [rows, data, pick, sortKeyParam, sortDirVal, withinActive, within]);
+
+  // A tab keeps who, pick and within; the sort resets to the tab's own default.
+  const tabHref = (v: 'low' | 'risen') => {
+    const q = new URLSearchParams(params.toString());
+    q.delete('sort'); q.delete('dir');
+    if (v === 'risen') q.set('view', 'risen'); else q.delete('view');
+    const qs = q.toString();
+    return pathname + (qs ? '?' + qs : '');
+  };
 
   const setParams = (patch: Record<string, string | number>) => {
     const q = new URLSearchParams(params.toString());
     for (const [k, v] of Object.entries(patch)) {
-      if (v === '' || (k === 'view' && v === 'low') || (k === 'who' && v === '') || (k === 'within' && v === '')) q.delete(k);
+      if (v === '' || (k === 'view' && v === 'low') || (k === 'who' && v === '') || (k === 'within' && v === '') || (k === 'pick' && v === '')) q.delete(k);
       else q.set(k, String(v));
     }
     router.replace(pathname + (q.toString() ? '?' + q : ''), { scroll: false });
@@ -174,20 +193,24 @@ export function RangePage() {
       <h1><Tr text="52-week range" /></h1>
       <p className="small muted"><Tr text="A price near its low can fall further. Automatic figures and your own rules, not advice." /></p>
 
-      <MyRules rows={rangeRows} watchlist={watchlistCodes} holdings={holdings} />
+      <MyRules rows={rangeRows} companies={data?.rows ?? []} medians={data?.medians} watchlist={watchlistCodes} holdings={holdings} />
 
       <nav className="tabs" aria-label={t('Range views')}>
         <Link
           className="tab-link"
           aria-current={view === 'low' ? 'page' : undefined}
-          href={pathname + (params.get('who') || params.get('within') ? '?' + new URLSearchParams({ ...(params.get('who') ? { who: params.get('who')! } : {}), ...(params.get('within') ? { within: params.get('within')! } : {}) }).toString() : '')}
+          href={tabHref('low')}
         ><Tr text="Near the 52-week low" /></Link>
         <Link
           className="tab-link"
           aria-current={view === 'risen' ? 'page' : undefined}
-          href={pathname + '?' + new URLSearchParams({ view: 'risen', ...(params.get('who') ? { who: params.get('who')! } : {}), ...(params.get('within') ? { within: params.get('within')! } : {}) }).toString()}
+          href={tabHref('risen')}
         ><Tr text="Risen from the low" /></Link>
       </nav>
+
+      <div className="panel filter-panel">
+        <QuickPickChips active={pick} onPick={(p) => setParams({ pick: p ? p.key : '' })} />
+      </div>
 
       <div className="panel filter-panel" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
         <div role="group" aria-label={t('Who to show')}>

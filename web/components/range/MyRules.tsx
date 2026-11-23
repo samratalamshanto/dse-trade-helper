@@ -11,9 +11,14 @@ import {
   RANGE_RULES_STORE, RANGE_RULES_MAX, RANGE_PCT_MIN, RANGE_PCT_MAX,
   type RangeMatch, type RangeRow, type RangeRule, type RangeRuleKind, type RangeScope, type Owned,
 } from '@/lib/range';
+import { QUICK_PICKS, type QuickPickKey } from '@/lib/quick-picks';
+import type { CompanyRow } from '@/lib/service';
 
 interface Props {
   rows: readonly RangeRow[];
+  // Full company rows, so a rule's quick pick (e.g. Good companies) can be checked.
+  companies: readonly CompanyRow[];
+  medians?: Record<string, number | null>;
   watchlist: readonly string[];
   holdings: readonly Owned[];
 }
@@ -43,7 +48,7 @@ function rawList(raw: string): unknown[] {
   try { const v: unknown = JSON.parse(raw); return Array.isArray(v) ? v : []; } catch { return []; }
 }
 
-export function MyRules({ rows, watchlist, holdings }: Props) {
+export function MyRules({ rows, companies, medians, watchlist, holdings }: Props) {
   const { t } = useLang();
   const [rawRules, setRawRules] = useStoredValue(RANGE_RULES_STORE, '[]');
   const rules = useMemo<RangeRule[]>(() => parseRangeRules(rawList(rawRules)), [rawRules]);
@@ -51,10 +56,11 @@ export function MyRules({ rows, watchlist, holdings }: Props) {
   const [kind, setKind] = useState<RangeRuleKind>('nearLow');
   const [pct, setPct] = useState('10');
   const [scope, setScope] = useState<RangeScope>('all');
+  const [pick, setPick] = useState<QuickPickKey | ''>('');
   const [addError, setAddError] = useState('');
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
 
-  const feed = useMemo(() => rangeFeed(rules, { rows, watchlist, holdings }), [rules, rows, watchlist, holdings]);
+  const feed = useMemo(() => rangeFeed(rules, { rows, companies, medians, watchlist, holdings }), [rules, rows, companies, medians, watchlist, holdings]);
   const byRule = useMemo(() => {
     const m = new Map<string, RangeMatch[]>();
     for (const x of feed) m.set(x.rule.id, [...(m.get(x.rule.id) ?? []), x]);
@@ -64,7 +70,8 @@ export function MyRules({ rows, watchlist, holdings }: Props) {
   const kindLabel = (k: RangeRuleKind) => t(KIND_LABELS.find((x) => x.kind === k)?.label ?? k);
   const ruleTitle = (r: RangeRule) => {
     const where = BUY_KINDS.has(r.kind) ? '' : ` · ${t(SCOPE_LABELS.find((s) => s.scope === r.scope)?.label ?? r.scope)}`;
-    return `${kindLabel(r.kind)} ${r.pct}%${where}`;
+    const picked = r.pick ? ` · ${t(QUICK_PICKS.find((q) => q.key === r.pick)?.label ?? r.pick)}` : '';
+    return `${kindLabel(r.kind)} ${r.pct}%${picked}${where}`;
   };
   // Same facts as describeMatch in lib/range.ts (used by Telegram), worded through the translation table.
   const matchText = (m: RangeMatch) => {
@@ -90,7 +97,7 @@ export function MyRules({ rows, watchlist, holdings }: Props) {
       setAddError(t('You have reached the maximum of {max} rules.').replace('{max}', String(RANGE_RULES_MAX)));
       return;
     }
-    const newRule: RangeRule = { id: newId(), kind, pct: n, scope: BUY_KINDS.has(kind) ? 'holdings' : scope };
+    const newRule: RangeRule = { id: newId(), kind, pct: n, scope: BUY_KINDS.has(kind) ? 'holdings' : scope, ...(pick ? { pick } : {}) };
     setRawRules(JSON.stringify([...rawList(rawRules), newRule]));
     setPct('10');
     setAddError('');
@@ -156,6 +163,13 @@ export function MyRules({ rows, watchlist, holdings }: Props) {
               </select>
             </label>
           )}
+          <label>
+            <span><Tr text="Quick pick" /></span>
+            <select aria-label={t('Quick pick')} value={pick} onChange={(e) => setPick(e.target.value as QuickPickKey | '')}>
+              <option value="">{t('Any company')}</option>
+              {QUICK_PICKS.map((q) => <option key={q.key} value={q.key}>{t(q.label)}</option>)}
+            </select>
+          </label>
           <button type="submit" className="btn">
             <Icon name="check" /><Tr text="Add rule" />
           </button>

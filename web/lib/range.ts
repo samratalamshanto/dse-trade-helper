@@ -1,4 +1,8 @@
 // 52-week range figures and the user's own range rules. Pure functions, shared by the /range page, Sheet sync and alerts.
+import { QUICK_PICKS, QUICK_PICK_KEYS, pickTest, type Medians, type QuickPickKey } from './quick-picks.ts';
+import type { CompanyRow } from './service.ts';
+
+const QUICK_PICKS_LABEL: Record<QuickPickKey, string> = Object.fromEntries(QUICK_PICKS.map((p) => [p.key, p.label])) as Record<QuickPickKey, string>;
 
 export interface RangeRow { code: string; price: number | null; weekLow52: number | null; weekHigh52: number | null }
 export interface RangeStats { aboveLowPct: number; belowHighPct: number; position: number }
@@ -6,7 +10,7 @@ export interface Owned { code: string; shares: number; avgCost: number }
 
 export type RangeRuleKind = 'nearLow' | 'nearHigh' | 'upFromBuy' | 'downFromBuy';
 export type RangeScope = 'all' | 'watchlist' | 'holdings';
-export interface RangeRule { id: string; kind: RangeRuleKind; pct: number; scope: RangeScope }
+export interface RangeRule { id: string; kind: RangeRuleKind; pct: number; scope: RangeScope; pick?: QuickPickKey }
 export interface RangeMatch { rule: RangeRule; code: string; valuePct: number }
 
 export const RANGE_RULES_STORE = 'rangeRules';
@@ -62,12 +66,18 @@ function matches(rule: RangeRule, value: number): boolean {
   return rule.kind === 'nearLow' || rule.kind === 'nearHigh' ? value >= -EPS && value <= rule.pct + EPS : value >= rule.pct - EPS;
 }
 
-export interface FeedInput { rows: readonly RangeRow[]; watchlist: readonly string[]; holdings: readonly Owned[] }
+export interface FeedInput { rows: readonly RangeRow[]; watchlist: readonly string[]; holdings: readonly Owned[]; companies?: readonly CompanyRow[]; medians?: Medians }
 
 // Every company that matches at least one rule, in rule order, each rule's matches sorted closest-first.
 export function rangeFeed(rules: readonly RangeRule[], input: FeedInput): RangeMatch[] {
   const owned = new Map(input.holdings.filter((h) => ok(h.shares)).map((h) => [h.code, h]));
   const watched = new Set(input.watchlist);
+  const companyMap = input.companies ? new Map(input.companies.map((c) => [c.code, c])) : null;
+  const checkers = new Map<QuickPickKey, (row: CompanyRow) => boolean>();
+  const checker = (k: QuickPickKey) => {
+    if (!checkers.has(k)) checkers.set(k, pickTest(k, input.companies ?? [], input.medians));
+    return checkers.get(k)!;
+  };
   const out: RangeMatch[] = [];
   for (const rule of rules) {
     const scope = NEEDS_HOLDING.has(rule.kind) ? 'holdings' : rule.scope;
@@ -75,6 +85,11 @@ export function rangeFeed(rules: readonly RangeRule[], input: FeedInput): RangeM
     for (const row of input.rows) {
       if (scope === 'holdings' && !owned.has(row.code)) continue;
       if (scope === 'watchlist' && !watched.has(row.code)) continue;
+      // A rule with a pick but no company list matches nothing: it never falls open to every company.
+      if (rule.pick) {
+        const company = companyMap?.get(row.code);
+        if (!company || !checker(rule.pick)(company)) continue;
+      }
       const value = ruleValue(rule, row, owned.get(row.code));
       if (value != null && matches(rule, value)) found.push({ rule, code: row.code, valuePct: round1(value) });
     }
@@ -99,21 +114,27 @@ export function parseRangeRules(raw: unknown): RangeRule[] {
     // Only a plain number or a plain decimal string: no booleans, hex, exponents or blanks.
     const n = typeof pct === 'number' ? pct : typeof pct === 'string' && /^\d+(\.\d+)?$/.test(pct.trim()) ? Number(pct.trim()) : Number.NaN;
     if (!Number.isFinite(n) || n < RANGE_PCT_MIN || n > RANGE_PCT_MAX) continue;
+    const { pick } = r as Record<string, unknown>;
+    const validPick = typeof pick === 'string' && (QUICK_PICK_KEYS as readonly string[]).includes(pick) ? pick as QuickPickKey : undefined;
     seen.add(id);
-    out.push({ id, kind: kind as RangeRuleKind, pct: round1(n), scope: NEEDS_HOLDING.has(kind as RangeRuleKind) ? 'holdings' : scope as RangeScope });
+    const rule: RangeRule = { id, kind: kind as RangeRuleKind, pct: round1(n), scope: NEEDS_HOLDING.has(kind as RangeRuleKind) ? 'holdings' : scope as RangeScope };
+    if (validPick) rule.pick = validPick;
+    out.push(rule);
     if (out.length === RANGE_RULES_MAX) break;
   }
   return out;
 }
 
-// Plain words for a rule, e.g. "within 5% of the 52-week low (your holdings)".
+// Plain words for a rule, e.g. "within 5% of the 52-week low (your holdings)" or "within 10% of the 52-week low, Good companies (all companies)".
 export function describeRule(r: RangeRule): string {
   const where = r.scope === 'holdings' ? 'your holdings' : r.scope === 'watchlist' ? 'your watchlist' : 'all companies';
+  const pickLabel = r.pick ? QUICK_PICKS_LABEL[r.pick] : null;
+  const suffix = pickLabel ? `, ${pickLabel} (${where})` : ` (${where})`;
   switch (r.kind) {
-    case 'nearLow': return `within ${r.pct}% of the 52-week low (${where})`;
-    case 'nearHigh': return `within ${r.pct}% of the 52-week high (${where})`;
-    case 'upFromBuy': return `up ${r.pct}% or more from your buy (${where})`;
-    default: return `down ${r.pct}% or more from your buy (${where})`;
+    case 'nearLow': return `within ${r.pct}% of the 52-week low${suffix}`;
+    case 'nearHigh': return `within ${r.pct}% of the 52-week high${suffix}`;
+    case 'upFromBuy': return `up ${r.pct}% or more from your buy${suffix}`;
+    default: return `down ${r.pct}% or more from your buy${suffix}`;
   }
 }
 

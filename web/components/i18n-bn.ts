@@ -375,6 +375,8 @@ export const BN: Record<string, string> = {
     '১ বছরের পরিবর্তন ইচ্ছাকৃতভাবে ধূসর: দ্রুত দাম বৃদ্ধি এখানে অনুসন্ধানের ধরন, ভালো খবর নয়।',
   'If you own it, re-read its disclosures after the next results.': 'আপনার কাছে থাকলে পরবর্তী ফলাফলের পরে এর ঘোষণা আবার পড়ুন।',
   'disclosures': 'ঘোষণা',
+  'Any company': 'যেকোনো কোম্পানি',
+  'Quick pick': 'দ্রুত বাছাই',
   'My watchlist': 'আমার ওয়াচলিস্ট',
   '{v}% above its 52-week low': '৫২ সপ্তাহের সর্বনিম্নের চেয়ে {v}% বেশি',
   '{v}% below its 52-week low': '৫২ সপ্তাহের সর্বনিম্নের চেয়ে {v}% কম',
