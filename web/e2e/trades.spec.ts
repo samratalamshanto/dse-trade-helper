@@ -12,7 +12,7 @@ const LIST = {
   ],
   holdings: [{ code: 'GP', shares: 60, avgCost: 250.5, invested: 15030, realised: 1950, trades: 2, price: 280, value: 16800, unrealised: 1770,
     limits: { stopPct: 10, targetPct: 20 },
-    check: { action: 'take-profit', label: 'Consider taking some profit', tone: 'warn', reasons: ['Up 21.0% — past your 20% target', 'P/E is high against its own 5-year history'], plPct: 21 } }],
+    check: { action: 'take-profit', label: 'Above your target', tone: 'warn', reasons: ['Up 21.0% — past your 20% target', 'P/E is high against its own 5-year history'], plPct: 21 } }],
   settings: { default: { stopPct: 10, targetPct: 20 }, perCode: {} },
 };
 
@@ -104,10 +104,25 @@ test.describe('/trades (API mocked)', () => {
     const row = tbody.locator('tr').filter({ hasText: 'GP' });
     const reason = tbody.getByText('Up 21.0% — past your 20% target');
     await expect(reason).toBeHidden();
-    await row.getByRole('button', { name: /Consider taking some profit/ }).click();
-    await expect(row.locator('.pill.s-caution:visible')).toHaveText('Consider taking some profit');
+    await row.getByRole('button', { name: /Above your target/ }).click();
+    await expect(row.locator('.pill.s-caution:visible')).toHaveText('Above your target');
     await expect(reason).toBeVisible();
     await expect(tbody.getByText('Your limits: stop-loss 10%, target 20%')).toBeVisible();
+  });
+
+  test('selling facts: profit with dividends on the shares held at each record date, break-even and portfolio share', async ({ page }) => {
+    await page.route('**/api/trades**', (r) => json(r, 200, LIST));
+    // 20 Jan: 100 shares held × ৳10 = ৳1,000; 3 Mar (after the sell of 40): 60 × ৳10.50 = ৳630; 1 Jan is before the buy.
+    await page.route('**/api/company/GP', (r) => json(r, 200, { company: { faceValue: 10, events: { declarations: [
+      { recordDate: '2026-03-03', cashPct: 105 }, { recordDate: '2026-01-20', cashPct: 100 }, { recordDate: '2026-01-01', cashPct: 100 }] } } }));
+    await unlock(page);
+    await expect(page.locator('.panel').filter({ hasText: 'Profit / loss with dividends' }).first()).toContainText('+৳3,400.00');
+    await expect(page.getByText('includes ৳1,630.00 cash dividends')).toBeVisible();
+    const tbody = page.locator('.panel').filter({ has: page.getByRole('heading', { name: 'Holdings', exact: true }) }).locator('tbody');
+    await tbody.locator('tr').filter({ hasText: 'GP' }).getByRole('button', { name: /Details/ }).click();
+    await expect(tbody.getByText('(+৳1,770.00 on price + ৳1,630.00 cash dividends)')).toBeVisible();
+    await expect(tbody.getByText('Break-even after the 0.4% sell commission')).toContainText('৳251.51 (-10.2% from the price now)');
+    await expect(tbody.getByText('100% of your portfolio — above the 25% line the planner uses')).toBeVisible();
   });
 
   test('my limits: save sends the PUT, shows the 400 message inline, then saves and reloads', async ({ page }) => {
@@ -287,10 +302,10 @@ test.describe('dashboard: My holdings today (API mocked)', () => {
     await page.goto('/');
     const card = page.locator('section').filter({ has: page.getByRole('heading', { name: 'My holdings today' }) });
     await expect(card).toContainText('৳16,800.00');
-    await expect(card.locator('.pill.s-caution')).toHaveText('Consider taking some profit');
+    await expect(card.locator('.pill.s-caution')).toHaveText('Above your target');
     await expect(card.getByText('Changed since last visit')).toHaveAttribute('title', 'Was: Hold');
     await expect(card.getByRole('link', { name: 'Open portfolio →' })).toHaveAttribute('href', '/portfolio');
-    expect(JSON.parse((await page.evaluate(() => localStorage.getItem('holdingChecks')))!).labels).toEqual({ GP: 'Consider taking some profit' });
+    expect(JSON.parse((await page.evaluate(() => localStorage.getItem('holdingChecks')))!).labels).toEqual({ GP: 'Above your target' });
   });
 
   test('hidden with nothing saved, and hidden on a 401', async ({ page }) => {

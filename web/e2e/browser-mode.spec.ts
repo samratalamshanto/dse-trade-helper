@@ -152,6 +152,7 @@ test.describe('browser mode: export and import my data', () => {
     await seed(page, [trade('a1', 'GP', 7), trade('a2', 'ACI', 2)]);
     await page.goto('/portfolio');
     await expect(summary(page)).toContainText('৳900.00');
+    await expect(summary(page)).toContainText('cash dividends');
     const before = await summary(page).innerText();
     const { file, body } = await exportFile(page);
     expect(body).toMatchObject({ app: 'trade-helper', version: 1, plans: [], limits: null, watchlist: [] });
@@ -165,6 +166,7 @@ test.describe('browser mode: export and import my data', () => {
     page.once('dialog', (d) => void d.accept());
     await page.getByRole('button', { name: 'Replace what is here' }).click();
     await expect(summary(page)).toContainText('৳900.00');
+    await expect(summary(page)).toContainText('cash dividends');
     expect(await summary(page).innerText()).toBe(before);
   });
 

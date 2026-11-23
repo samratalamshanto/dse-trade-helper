@@ -14,8 +14,10 @@ import { commissionFor, MAX_COMMISSION_PCT, tradesCsv, type Account, type Trade,
 import { useApi } from '@/components/AppProvider';
 import { useStoredValue } from '@/components/useStored';
 import { BROKER_COMMISSION_PCT } from '@/lib/buy-planner';
+import { dividendsReceived } from '@/lib/positions';
+import type { Declaration } from '@/lib/types';
 import { aggregateLots, type Lot } from '@/lib/portfolio';
-import { signed, Summary, tone } from '@/components/portfolio/Summary';
+import { SellFacts, signed, Summary, tone } from '@/components/portfolio/Summary';
 import { LimitsPanel } from '@/components/portfolio/LimitsPanel';
 import { OldLots } from '@/components/portfolio/OldLots';
 import { SyncPanel } from '@/components/portfolio/SyncPanel';
@@ -29,6 +31,7 @@ import css from './trades.module.css';
 
 interface Companies { rows: CompanyRow[]; session: MarketSession | null }
 interface Dividends { upcoming: CalendarRow[]; recent: CalendarRow[]; expected: CalendarRow[]; session: MarketSession | null }
+type PastDividends = { declarations: Declaration[]; faceValue: number } | null;
 
 const blank = (): Record<Exclude<keyof TradeInput, 'account'>, string> => ({ date: dhakaToday(), code: '', side: 'BUY', quantity: '', price: '', commission: '', note: '' });
 // What the trade cost (buy) or brought in (sell) after commission.
@@ -79,6 +82,20 @@ export default function PortfolioPage() {
   const lots = useMemo<Lot[]>(() => (data?.holdings ?? []).filter((h) => h.shares > 0).map((h) => ({ code: h.code, shares: h.shares, buyPrice: h.avgCost })), [data]);
   const liveMap = useMemo(() => Object.fromEntries(companies.map((c) => [c.code, { price: c.price, changePct: c.changePct ?? null }])), [companies]);
   const grouped = useMemo(() => aggregateLots(lots, liveMap), [lots, liveMap]);
+  // Every past declaration of each held code, from the company page's data; a code that fails to load shows "—".
+  const heldCodes = useMemo(() => (data?.holdings ?? []).filter((h) => h.shares > 0).map((h) => h.code).join(','), [data]);
+  const [pastDividends, setPastDividends] = useState<Record<string, PastDividends>>({});
+  useEffect(() => {
+    if (!heldCodes) return;
+    let active = true;
+    void Promise.all(heldCodes.split(',').map((code) => fetch(`/api/company/${encodeURIComponent(code)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((b: { company?: { events?: { declarations?: Declaration[] }; faceValue?: number | null } } | null): [string, PastDividends] =>
+        [code, b?.company ? { declarations: b.company.events?.declarations ?? [], faceValue: b.company.faceValue || 10 } : null],
+      (): [string, PastDividends] => [code, null])))
+      .then((pairs) => { if (active) setPastDividends(Object.fromEntries(pairs)); });
+    return () => { active = false; };
+  }, [heldCodes]);
 
   const loadSeq = useRef(0);
   const load = useCallback(async (acc: Account = 'real') => {
@@ -176,6 +193,13 @@ export default function PortfolioPage() {
   const changePct = (v: string) => { setForm((f) => (isAuto(f) ? { ...f, commission: commissionFor(f.quantity, f.price, v) } : f)); setFeePct(v); };
   const badPct = feePct.trim() !== '' && commissionFor('1', '1', feePct) === '';
   const commissionPaid = (data?.trades ?? []).reduce((a, t) => a + (t.commission ?? 0), 0);
+  // Selling facts: dividends on the shares held at each record date, break-even after the sell fee, and share of the portfolio.
+  const held = (data?.holdings ?? []).filter((h) => h.shares > 0);
+  const today = dhakaToday();
+  const dividendsOf = (code: string) => { const p = pastDividends[code]; return p && data ? dividendsReceived(data.trades, code, p.declarations, p.faceValue, today) : null; };
+  const allDividends = held.reduce<number | null>((a, h) => { const d = dividendsOf(h.code); return a == null || d == null ? null : a + d; }, 0);
+  const sellFeePct = feePct.trim() !== '' && !badPct ? Number(feePct) : BROKER_COMMISSION_PCT;
+  const portfolioValue = held.reduce((a, h) => a + (h.value ?? h.invested), 0);
 
   const openAdd = () => { setAddOpen(true); requestAnimationFrame(() => addRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })); };
 
@@ -203,7 +227,7 @@ export default function PortfolioPage() {
       {data?.badRows.length ? <div className="note warn">Rows {data.badRows.join(', ')} in your Google Sheet could not be read; fix them in the Sheet.</div> : null}
       {paper ? null : <OldLots busy={busy} postLot={postOldLot} onDone={oldLotsDone} />}
       {data ? (
-        <Summary holdings={data.holdings} commissionPaid={commissionPaid}>
+        <Summary holdings={data.holdings} commissionPaid={commissionPaid} dividends={held.length ? allDividends : undefined}>
           <button type="button" className="btn primary" onClick={openAdd}>{tr(paper ? 'Add a practice trade' : 'Add a trade')}</button>
         </Summary>
       ) : busy ? <Skeleton label="Loading trades" rows={4} /> : null}
@@ -218,14 +242,15 @@ export default function PortfolioPage() {
               <Fragment key={h.code}>
                 <tr><td><Link href={`/c/${encodeURIComponent(h.code)}`}><b>{h.code}</b></Link></td><td className="n" data-label={tr('Shares')}>{h.shares}</td><td className="n" data-label={tr('Avg cost')}>৳{fmt(h.avgCost)}</td>
                   <td className="n" data-label={tr('Price now')}>{h.price == null ? '—' : `৳${fmt(h.price)}`}</td><td className="n" data-label={tr('Value')}>{h.value == null ? '—' : `৳${fmt(h.value)}`}</td><td className={`n ${tone(h.unrealised)}`} data-label={tr('Profit / loss')}>{signed(h.unrealised)}</td>
-                  <td className={css.check}>{h.check ? (
+                  <td className={css.check}>{h.check || h.shares > 0 ? (
                     <button type="button" className={css.checkToggle} aria-expanded={open} onClick={() => setOpenReasons((c) => (c === h.code ? null : h.code))}>
-                      <CheckBadge check={{ ...h.check, label: tr(h.check.label) }} /><span className="small">{tr(open ? 'Hide' : 'Details')}</span>
+                      {h.check ? <CheckBadge check={{ ...h.check, label: tr(h.check.label) }} /> : null}<span className="small">{tr(open ? 'Hide' : 'Details')}</span>
                     </button>
                   ) : <span className="muted">—</span>}</td></tr>
-                {h.check && open ? (
+                {open ? (
                   <tr className={css.detail}><td colSpan={7}>
-                    <ul className={css.reasons}>{h.check.reasons.map((r) => <li key={r}>{r}</li>)}</ul>
+                    {h.check ? <ul className={css.reasons}>{h.check.reasons.map((r) => <li key={r}>{r}</li>)}</ul> : null}
+                    {h.shares > 0 ? <SellFacts h={h} dividends={dividendsOf(h.code)} feePct={sellFeePct} weightPct={portfolioValue > 0 ? ((h.value ?? h.invested) / portfolioValue) * 100 : null} /> : null}
                     {h.limits ? <p className="small muted">{tr('Your limits')}: {tr('stop-loss')} {h.limits.stopPct}%, {tr('target')} {h.limits.targetPct}%</p> : null}
                   </td></tr>
                 ) : null}

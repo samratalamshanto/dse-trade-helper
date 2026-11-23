@@ -503,4 +503,9 @@ export const BN: Record<string, string> = {
   'How your money is spread, by value now.': 'বর্তমান মূল্য অনুযায়ী আপনার টাকা কোথায় কতটা আছে।',
   'Settings': 'সেটিংস', 'Phone alerts': 'ফোন অ্যালার্ট', 'My data': 'আমার তথ্য', 'Your stop-loss and target, phone alerts, backup and Google Sheet sync.': 'আপনার স্টপ-লস ও লক্ষ্য, ফোন অ্যালার্ট, ব্যাকআপ ও Google Sheet সিঙ্ক।',
   'Invested': 'বিনিয়োগ', 'Profit / loss now': 'এখন লাভ / ক্ষতি', 'Profit / loss from sales': 'বিক্রি থেকে লাভ / ক্ষতি', 'Broker fees paid': 'দেওয়া ব্রোকার ফি',
+  'Profit / loss with dividends': 'লভ্যাংশসহ লাভ / ক্ষতি', 'includes {d} cash dividends': '{d} নগদ লভ্যাংশসহ',
+  '{p} on price + {d} cash dividends': 'দামে {p} + {d} নগদ লভ্যাংশ',
+  'Break-even after the {f}% sell commission': '{f}% বিক্রয় কমিশনের পর সমান-সমান দাম', '{m} from the price now': 'এখনকার দাম থেকে {m}',
+  '{w}% of your portfolio': 'আপনার পোর্টফোলিওর {w}%',
+  '{w}% of your portfolio — above the {max}% line the planner uses': 'আপনার পোর্টফোলিওর {w}% — প্ল্যানার যে {max}% সীমা ধরে তার উপরে',
 };
