@@ -176,20 +176,20 @@ export default function DashboardPage() {
 
       <h2>{t(liveNow ? "Today's important things" : 'Important things from the last session')}</h2>
       <div className="grid g3">
-        <TodayItem icon="calendar" title="Dividends you can still buy for (record date within 7 days)" count={buyable.length} href="/dividends">
-          {buyable.slice(0, 5).map((r) => <Row key={r.code} code={r.code}>{pctNum(r.cashPct)}% · {t('buy by')} <LastBuy r={r} />{r.fraud !== 'clean' ? <> <FraudPill level={r.fraud as FraudLevel} /></> : null}</Row>)}
+        <TodayItem icon="calendar" title="Dividends with a record date ahead" count={buyable.length} href="/dividends">
+          {buyable.slice(0, 5).map((r) => <Row key={r.code} code={r.code}>{r.cashPerShare != null ? `৳${fmt(r.cashPerShare, 2)}/share` : `${pctNum(r.cashPct)}% of face`}{r.yieldPct != null ? ` · ${fmt(r.yieldPct, 2)}% yield` : ''} · {t('last day to buy')} <LastBuy r={r} />{r.fraud !== 'clean' ? <> <FraudPill level={r.fraud as FraudLevel} flags={r.flags as string[]} /></> : null}</Row>)}
         </TodayItem>
         <TodayItem icon="research" title="Dividends declared this week" count={d.declaredThisWeek.length} href="/dividends">
           {d.declaredThisWeek.slice(0, 5).map((r) => <Row key={r.code} code={r.code}>{pctNum(r.cashPct)}%{r.stockPct ? ` + ${pctNum(r.stockPct)}% bonus` : ''} · {fmtDate(r.announced)}{r.fraud !== 'clean' ? <> <FraudPill level={r.fraud as FraudLevel} /></> : null}</Row>)}
         </TodayItem>
         <TodayItem icon="caution" title="Unusual trading volume" count={d.unusualCount} href="/warning-signs">
-          {d.unusual.map((u) => <Row key={u.code} code={u.code}>{fmt(u.x, 1)}× normal volume</Row>)}
+          {d.unusual.map((u) => <Row key={u.code} code={u.code}>{fmt(u.x, 1)}× normal volume{u.fraud !== 'clean' ? <> <FraudPill level={u.fraud as FraudLevel} flags={u.flags as string[]} /></> : null}</Row>)}
         </TodayItem>
         <TodayItem icon="trend" title={liveNow ? 'Top gainers today' : "Last session's top gainers"} count={d.gainers.length} href="/all">
-          {d.gainers.map((g) => <Row key={g.code} code={g.code}><span className="up mono">{signed(g.percent, 2)}</span> · ৳{fmt(g.price)}</Row>)}
+          {d.gainers.map((g) => <Row key={g.code} code={g.code}><span className="up mono">{signed(g.percent, 2)}</span> · ৳{fmt(g.price)}{g.fraud !== 'clean' ? <> <FraudPill level={g.fraud as FraudLevel} flags={g.flags as string[]} /></> : null}</Row>)}
         </TodayItem>
         <TodayItem icon="avoid" title={liveNow ? 'Top losers today' : "Last session's top losers"} count={d.losers.length} href="/all">
-          {d.losers.map((g) => <Row key={g.code} code={g.code}><span className="down mono">{signed(g.percent, 2)}</span> · ৳{fmt(g.price)}</Row>)}
+          {d.losers.map((g) => <Row key={g.code} code={g.code}><span className="down mono">{signed(g.percent, 2)}</span> · ৳{fmt(g.price)}{g.fraud !== 'clean' ? <> <FraudPill level={g.fraud as FraudLevel} flags={g.flags as string[]} /></> : null}</Row>)}
         </TodayItem>
         <TodayItem icon="high" title="Warning signs (outside category Z)" count={d.fraudCount} href="/warning-signs">
           {d.fraudTop.map((f) => <Row key={f.code} code={f.code}><span className="small">{f.flags.join(', ')}</span></Row>)}

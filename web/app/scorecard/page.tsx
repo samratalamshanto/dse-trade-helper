@@ -12,6 +12,8 @@ type Report = Scorecard & { note: string; session?: null };
 
 // Below this many graded calls a percentage moves a lot with each new call.
 const SMALL_SAMPLE = 30;
+// Until this many trading days of snapshots exist the % right figures and best/worst calls are hidden.
+const MIN_DAYS = 20;
 const LABEL: Record<string, string> = { research: 'Passes the checks', caution: 'Caution', avoid: 'High risk' };
 const RIGHT_WHEN: Record<string, string> = { research: 'right when it beat DSEX', caution: 'right when it lagged DSEX', avoid: 'right when it lagged DSEX' };
 
@@ -41,6 +43,7 @@ export default function ScorecardPage() {
   if (!d) return <Skeleton label="Loading scorecard" />;
   const weak = weakestGroup(d.bySignal);
   const graded = GRADED_SIGNALS.some((s) => HORIZONS.some((h) => d.bySignal[s][h].n > 0));
+  const tooEarly = (d.days ?? 0) < MIN_DAYS;
 
   return (
     <>
@@ -61,34 +64,45 @@ export default function ScorecardPage() {
         </div>
       ) : (
         <>
-          {weak ? <div className="note warn"><b>{t('Weak spot:')}</b> {t(LABEL[weak.signal])} {t('calls after')} {days(weak.horizon)} {t('were right')} {fmt(weak.group.pctRight, 0)}% {t('of the time')}
-            ({weak.group.right} of {weak.group.n}). {t('Treat that signal with extra care.')}</div> : null}
+          {tooEarly ? (
+            <div className="note">
+              <b><Tr text="Too early:" /></b> {d.days} <Tr text="of 20 trading days so far" />. <Tr text="Percentages and best/worst calls appear after 20 trading days." />
+            </div>
+          ) : weak ? (
+            <div className="note warn"><b>{t('Weak spot:')}</b> {t(LABEL[weak.signal])} {t('calls after')} {days(weak.horizon)} {t('were right')} {fmt(weak.group.pctRight, 0)}% {t('of the time')}
+              ({weak.group.right} of {weak.group.n}). {t('Treat that signal with extra care.')}</div>
+          ) : null}
           <div className="grid g3">{GRADED_SIGNALS.map((s) => (
             <section key={s} className="panel" aria-labelledby={'sc-' + s}>
-              <h2 id={'sc-' + s}><span className={'pill s-' + s}>{t(LABEL[s])}</span></h2>
+              <h2 id={'sc-' + s} style={{ marginTop: 0 }}><span className={'pill s-' + s}>{t(LABEL[s])}</span></h2>
               <p className="small muted">{t(RIGHT_WHEN[s])}</p>
               <table>
-                <thead><tr><th><Tr text="After" /></th><th className="n"><Tr text="Right" /></th><th className="n"><Tr text="Avg vs DSEX" /></th><th className="n"><Tr text="Calls" /></th></tr></thead>
+                <thead><tr><th><Tr text="After" /></th>{!tooEarly ? <th className="n"><Tr text="Right" /></th> : null}<th className="n"><Tr text="Avg vs DSEX" /></th><th className="n"><Tr text="Calls" /></th></tr></thead>
                 <tbody>{HORIZONS.map((h) => {
                   const g = d.bySignal[s][h];
                   return (
                     <tr key={h}>
                       <td>{days(h)}</td>
-                      <td className="n mono">{g.pctRight == null ? '—' : fmt(g.pctRight, 0) + '%'}</td>
+                      {!tooEarly ? <td className="n mono">{g.pctRight == null ? '—' : fmt(g.pctRight, 0) + '%'}</td> : null}
                       <td className={'n mono ' + tone(g.avgExcess == null ? null : g.avgExcess * (s === 'research' ? 1 : -1))}>{signed(g.avgExcess)}</td>
                       <td className="n mono">{g.n}</td>
                     </tr>
                   );
                 })}</tbody>
               </table>
-              {HORIZONS.some((h) => d.bySignal[s][h].n > 0 && d.bySignal[s][h].n < SMALL_SAMPLE)
+              {!tooEarly && HORIZONS.some((h) => d.bySignal[s][h].n > 0 && d.bySignal[s][h].n < SMALL_SAMPLE)
                 ? <p className="small muted"><Tr text="Some rows have fewer than " />{SMALL_SAMPLE}<Tr text=" graded calls: those percentages can still change a lot." /></p> : null}
             </section>
           ))}</div>
-          <div className="grid g2 quick">
-            <CallList title="Best calls" list={d.best} />
-            <CallList title="Worst calls" list={d.worst} />
-          </div>
+          {!tooEarly ? (
+            <>
+              <p className="small muted"><Tr text="The 5 calls that best and worst matched the market, by excess return at their longest graded horizon." /></p>
+              <div className="grid g2 quick">
+                <CallList title="Best calls" list={d.best} />
+                <CallList title="Worst calls" list={d.worst} />
+              </div>
+            </>
+          ) : null}
         </>
       )}
     </>

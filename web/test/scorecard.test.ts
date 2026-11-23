@@ -84,6 +84,13 @@ test('snapshot validation rejects bad headers and drops bad calls', () => {
   assert.deepEqual(s?.calls.map((c) => c.code), ['GP']);
 });
 
+test('scorecard.days is below 20 for fewer than 20 snapshots and 20+ when enough exist', () => {
+  const make = (n: number) => Array.from({ length: n }, (_, i) => day(`2026-10-${String(i + 1).padStart(2, '0')}`, 1000, []));
+  assert.ok(scorecard(make(19)).days < 20, '19 days is too early');
+  assert.ok(scorecard(make(20)).days >= 20, '20 days is enough');
+  assert.equal(scorecard(make(0)).days, 0);
+});
+
 test('snapshot is due Sunday to Thursday from 14:45 Dhaka time', () => {
   const at = (iso: string) => Date.parse(iso); // UTC; Dhaka = UTC+6
   assert.equal(snapshotDue(at('2026-11-19T08:44:00Z')), false); // Thu 14:44
