@@ -450,11 +450,4 @@ table.div-value span.sub { display: inline; }
   table.div-value tbody tr:hover > :first-child { background: var(--panel-2); }
   table.div-value td.nw, table.div-value td[data-label="12-month cash yield"] { white-space: nowrap; }
 }
-/* Dividends: the "Passes N of 5" pill opens a small list of the five checks. */
-.chk-pop { position: relative; display: inline-block; }
-.chk-pop > button { border: 1px solid var(--control-border); cursor: pointer; font-family: inherit; min-height: 32px; }
-.chk-list { position: fixed; z-index: 50; width: max-content; max-width: min(300px, 85vw); margin: 0; padding: 10px 12px; list-style: none;
-  background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 6px 18px rgba(0,0,0,.18); font-size: 13px; line-height: 1.4; text-align: left; white-space: normal; }
-.chk-list li { display: flex; gap: 6px; padding: 3px 0; }
-.chk-pass > span { color: var(--up); } .chk-fail > span { color: var(--down); } .chk-unknown > span { color: var(--muted); }
-@media (max-width: 640px) { table.cards td.chk-cell { grid-column: 1 / -1; } .chk-pop > button { min-height: 44px; } }
+@media (max-width: 640px) { table.cards td.chk-cell { grid-column: 1 / -1; } }

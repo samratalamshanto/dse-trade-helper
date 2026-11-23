@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import { Tr } from '@/components/Tr';
 import { useLang } from '@/components/i18n';
 import { fmt } from '@/components/format';
 import { SignalPill, type Signal } from '@/components/ui';
+import { PillPopover } from '@/components/PillPopover';
+import { PositionBar } from '@/components/PositionBar';
 import { dividendChecks, dividendPerTenK, paidFromProfit, passCount, PAID_YEARS_WINDOW, perTenK, rangePos, yieldVsUsual, type DividendCheck } from '@/lib/dividend-checks';
 import type { CalendarRow } from '@/lib/service';
 
@@ -12,50 +13,12 @@ const MARK: Record<DividendCheck['state'], string> = { pass: '✔', fail: '✖',
 
 export const checksOf = (r: CalendarRow): DividendCheck[] => dividendChecks(r);
 
-// Same look as the /range page bar. shortcut: a copy of RangePage's PositionBar; share it when that page is next changed.
-function PositionBar({ position }: { position: number }) {
-  return (
-    <span role="img" aria-label={`${Math.round(position * 100)}%`} style={{ display: 'inline-block', width: '56px', height: '8px', background: 'var(--border)', borderRadius: '4px', position: 'relative', verticalAlign: 'middle' }}>
-      <span style={{ position: 'absolute', left: `${Math.round(position * 44)}px`, top: '-2px', width: '12px', height: '12px', borderRadius: '50%', background: 'var(--accent)' }} />
-    </span>
-  );
-}
-
-const POP_WIDTH = 300;
-
-// Fixed position so the scrolling table cannot clip it. shortcut: local popover; move to the shared components/PillPopover.tsx once it lands.
 function ChecksPill({ checks }: { checks: DividendCheck[] }) {
   const { t } = useLang();
-  const [pos, setPos] = useState<CSSProperties | null>(null);
-  const id = useId();
-  const box = useRef<HTMLSpanElement>(null);
-  const show = (el: Element) => {
-    const b = el.getBoundingClientRect();
-    const left = Math.max(8, Math.min(b.left, window.innerWidth - Math.min(POP_WIDTH, window.innerWidth * 0.85) - 8));
-    setPos(b.bottom + 180 < window.innerHeight ? { left, top: b.bottom } : { left, bottom: window.innerHeight - b.top });
-  };
-  useEffect(() => {
-    if (!pos) return;
-    const close = () => setPos(null);
-    const outside = (e: PointerEvent) => { if (!box.current?.contains(e.target as Node)) setPos(null); };
-    addEventListener('scroll', close, true);
-    addEventListener('pointerdown', outside);
-    return () => { removeEventListener('scroll', close, true); removeEventListener('pointerdown', outside); };
-  }, [pos]);
-  const open = pos != null;
   return (
-    <span ref={box} className="chk-pop" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Escape') setPos(null); }}
-      onPointerEnter={(e) => { if (e.pointerType === 'mouse') show(e.currentTarget); }} onPointerLeave={(e) => { if (e.pointerType === 'mouse') setPos(null); }}>
-      {/* Hover already opened it for a mouse, so a mouse click keeps it open; a tap or Enter toggles. */}
-      <button type="button" className="pill s-neutral" aria-expanded={open} aria-controls={open ? id : undefined} onClick={(e) => (open && (e.nativeEvent as PointerEvent).pointerType !== 'mouse' ? setPos(null) : show(e.currentTarget))}>
-        {t('Passes {n} of 5').replace('{n}', String(passCount(checks)))}
-      </button>
-      {open ? (
-        <ul id={id} className="chk-list" style={pos}>
-          {checks.map((c) => <li key={c.key} className={`chk-${c.state}`}><span aria-hidden="true">{MARK[c.state]}</span> {t(c.text)}</li>)}
-        </ul>
-      ) : null}
-    </span>
+    <PillPopover className="pill s-neutral" pill={t('Passes {n} of 5').replace('{n}', String(passCount(checks)))}
+      meaning="Five fixed rules about this dividend. Facts, not advice." title="The five checks"
+      items={checks.map((c) => `${MARK[c.state]} ${t(c.text)}`)} />
   );
 }
 

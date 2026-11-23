@@ -38,16 +38,16 @@ test('dividends: value columns, the checks popover, the 30-day filter and the ch
     await expect(upcoming.first().locator(`td[data-label="${label}"]`)).toHaveCount(1);
   }
   // Every table has the checks pill; tapping it lists the five checks and does not open the company page.
-  for (const table of await page.locator('table.cards').all()) await expect(table.locator('.chk-pop').first()).toBeVisible();
-  const pill = upcoming.first().locator('.chk-pop > button');
+  for (const table of await page.locator('table.cards').all()) await expect(table.locator('td.chk-cell .pill-pop').first()).toBeVisible();
+  const pill = upcoming.first().locator('td.chk-cell .pill-pop > button');
   await expect(pill).toHaveText(/^Passes [0-5] of 5$/);
   await pill.scrollIntoViewIfNeeded();
   await pill.click();
   await expect(pill).toHaveAttribute('aria-expanded', 'true');
-  await expect(upcoming.first().locator('.chk-list li')).toHaveCount(5);
+  await expect(upcoming.first().locator('td.chk-cell .pop-box li')).toHaveCount(5);
   await expect(page).toHaveURL(/\/dividends/);
   await page.keyboard.press('Escape');
-  await expect(upcoming.first().locator('.chk-list')).toHaveCount(0);
+  await expect(upcoming.first().locator('td.chk-cell .pop-box')).toHaveCount(0);
 
   const all = await upcoming.count();
   await page.getByRole('checkbox', { name: 'Record date within 30 days' }).check();
@@ -67,7 +67,7 @@ test('dividends: value columns, the checks popover, the 30-day filter and the ch
     await expect(page.locator('th[data-sort="checks"]')).toHaveAttribute('aria-sort', 'descending');
   }
   // Rows without a warning sign stay first; inside that group more passes come first.
-  const counts = (await upcoming.locator('.chk-pop > button').allInnerTexts()).map((t) => Number(/Passes (\d)/.exec(t)?.[1]));
+  const counts = (await upcoming.locator('td.chk-cell .pill-pop > button').allInnerTexts()).map((t) => Number(/Passes (\d)/.exec(t)?.[1]));
   const flagged = await upcoming.evaluateAll((rows) => rows.map((r) => !!r.querySelector('td:first-child .pill')));
   const clean = counts.filter((_, i) => !flagged[i]);
   expect(clean).toEqual([...clean].sort((a, b) => b - a));

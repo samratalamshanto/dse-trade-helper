@@ -514,6 +514,7 @@ export const BN: Record<string, string> = {
   'Price is in the lower half of its 52-week range.': 'দাম ৫২ সপ্তাহের সীমার নিচের অর্ধেকে।',
   'Price is in the upper half of its 52-week range.': 'দাম ৫২ সপ্তাহের সীমার উপরের অর্ধেকে।',
   '52-week range is not known.': '৫২ সপ্তাহের সীমা জানা নেই।',
+  'Five fixed rules about this dividend. Facts, not advice.': 'এই লভ্যাংশ নিয়ে পাঁচটি নির্দিষ্ট নিয়ম। তথ্য, পরামর্শ নয়।', 'The five checks': 'পাঁচটি পরীক্ষা',
 
   // Portfolio page (trades)
   'Your shares, worked out from your buys and sells. Saved in your own Google Sheet, so every device shows the same numbers.': 'আপনার কেনা-বেচা থেকে হিসাব করা আপনার শেয়ার। আপনার নিজের Google Sheet-এ রাখা, তাই প্রতিটি ডিভাইসে একই সংখ্যা দেখায়।',
