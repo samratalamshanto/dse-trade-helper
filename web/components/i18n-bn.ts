@@ -555,4 +555,7 @@ export const BN: Record<string, string> = {
   'Price if P/E were at its year-end average': 'P/E বছর-শেষের গড়ে থাকলে দাম', 'Price if P/E were at its year-end high': 'P/E বছর-শেষের সর্বোচ্চে থাকলে দাম',
   'the lowest, average and highest of its own year-end P/Es': 'এর নিজের বছর-শেষ P/E-র সর্বনিম্ন, গড় ও সর্বোচ্চ', 'years': 'বছর',
   'This is arithmetic on past P/Es, not a forecast. The P/E can stay outside its usual range.': 'এটি অতীত P/E দিয়ে হিসাব, পূর্বাভাস নয়। P/E তার স্বাভাবিক সীমার বাইরে থেকে যেতে পারে।',
+  // Watchlist decision facts and next steps
+  'Decision facts': 'সিদ্ধান্তের তথ্য', 'Alert': 'সতর্কতা', 'Plan': 'পরিকল্পনা',
+  'results ~': 'ফলাফল ~',
 };

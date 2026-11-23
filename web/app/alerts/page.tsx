@@ -1,7 +1,7 @@
 'use client';
 
 import { useMode } from '@/components/portfolio-store';
-import { useState, useSyncExternalStore } from 'react';
+import { useState, useEffect, useSyncExternalStore } from 'react';
 import { useApi } from '@/components/AppProvider';
 import { useStoredValue } from '@/components/useStored';
 import { useWatchlist } from '@/components/Watchlist';
@@ -65,6 +65,10 @@ export default function AlertsPage() {
 
   const [formType, setFormType] = useState<RuleType | ''>('');
   const [formCode, setFormCode] = useState('');
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get('code');
+    if (p) setFormCode(p.toUpperCase());
+  }, []);
   const [formTarget, setFormTarget] = useState('');
   const [formDays, setFormDays] = useState('3');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});

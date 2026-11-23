@@ -15,9 +15,17 @@ import { useLang } from '@/components/i18n';
 import type { CalendarRow, CompanyRow } from '@/lib/service';
 import type { MarketSession } from '@/lib/dse';
 import { CompanySearch } from '@/components/CompanySearch';
+import { PositionBar } from '@/components/PositionBar';
+import { rangeStats } from '@/lib/range';
 
 interface Companies { rows: CompanyRow[]; session: MarketSession | null }
-interface Calendar { upcoming: CalendarRow[]; session: MarketSession | null }
+interface Calendar { upcoming: CalendarRow[]; recent: CalendarRow[]; session: MarketSession | null }
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const monthLabel = (ym: string): string => {
+  const [y, m] = ym.split('-');
+  return `${MONTHS[parseInt(m, 10) - 1]} ${y}`;
+};
 
 export default function WatchlistPage() {
   const { t } = useLang();
@@ -28,6 +36,7 @@ export default function WatchlistPage() {
   const { data: cal } = useApi<Calendar>('/api/dividends');
   const byCode = Object.fromEntries((data?.rows || []).map((r) => [r.code, r]));
   const nextDividend = Object.fromEntries((cal?.upcoming || []).map((r) => [r.code, r]));
+  const recentDividend = Object.fromEntries((cal?.recent || []).map((r) => [r.code, r]));
 
   const [pickQ, setPickQ] = useState('');
   const [pickedCode, setPickedCode] = useState('');
@@ -83,20 +92,45 @@ export default function WatchlistPage() {
         </div>
       ) : (
         <div className="panel table-wrap"><table className="cards">
-          <thead><tr><th>Company</th><th className="n">Price</th><th className="n">Today</th><th>Signal</th><th>Warning-sign check</th><th className="n">Yield</th><th>Next dividend</th></tr></thead>
+          <thead><tr><th>Company</th><th className="n">Price</th><th className="n">Today</th><th>Signal</th><th>Warning-sign check</th><th className="n">Yield</th><th>Next dividend</th><th>{t('Decision facts')}</th></tr></thead>
           <tbody>{codes.map((code) => {
             const r = byCode[code];
             const dv = nextDividend[code];
+            const rdv = recentDividend[code];
+            const rs = r ? rangeStats({ code: r.code, price: r.price ?? null, weekLow52: r.weekLow52, weekHigh52: r.weekHigh52 }) : null;
             return (
               <tr key={code} onClick={() => router.push('/c/' + encodeURIComponent(code))}>
-                <td><div className="co-cell"><WatchButton code={code} /><div><a className="mono" href={'/c/' + encodeURIComponent(code)} onClick={(e) => e.stopPropagation()}><b>{code}</b></a>
-                  <div className="small muted">{r ? `${r.name} · ${sectorName(r.sector)} · Cat ${r.category}` : data ? 'Not in the latest DSE list' : 'Loading…'}</div></div></div></td>
+                <td><div className="co-cell"><WatchButton code={code} /><div>
+                  <a className="mono" href={'/c/' + encodeURIComponent(code)} onClick={(e) => e.stopPropagation()}><b>{code}</b></a>
+                  <div className="small muted">{r ? `${r.name} · ${sectorName(r.sector)} · Cat ${r.category}` : data ? 'Not in the latest DSE list' : 'Loading…'}</div>
+                  <div className="small" onClick={(e) => e.stopPropagation()}>
+                    <a href={'/alerts?code=' + encodeURIComponent(code)} className="muted">{t('Alert')}</a>
+                    {' · '}
+                    <a href={'/c/' + encodeURIComponent(code) + '#planner-title'} className="muted">{t('Plan')}</a>
+                  </div>
+                </div></div></td>
                 <td className="n mono" data-label="Price">{r ? '৳' + fmt(r.price) : '—'}</td>
                 <td className="n mono" data-label="Today">{r ? <ChangeText pct={r.changePct} /> : '—'}</td>
                 <td data-label="Signal">{r ? <SignalPill signal={r.signal as Signal} href={'/c/' + encodeURIComponent(code)} missed={r.missed} /> : '—'}</td>
                 <td data-label="Warning-sign check">{r ? <FraudPill level={r.fraud as FraudLevel} href={'/c/' + encodeURIComponent(code) + '#safety'} flags={r.flags} /> : '—'}</td>
                 <td className="n mono" data-label="Yield">{r?.dividendYield != null ? fmt(r.dividendYield, 1) + '%' : '—'}</td>
-                <td data-label="Next dividend">{dv ? <>{pctNum(dv.cashPct)}% · buy by <LastBuy r={dv} /><div className="small muted">record date {fmtDate(dv.recordDate)}</div></> : <span className="muted">none announced</span>}</td>
+                <td data-label="Next dividend">
+                  {dv
+                    ? <>{pctNum(dv.cashPct)}% · buy by <LastBuy r={dv} /><div className="small muted">record date {fmtDate(dv.recordDate)}</div></>
+                    : rdv && rdv.cashPct != null
+                      ? <span className="muted">declared ৳{fmt((rdv.cashPct / 100) * rdv.faceValue, 2)} · record date passed</span>
+                      : <span className="muted">none announced</span>}
+                </td>
+                <td data-label="Decision facts">
+                  {r ? (
+                    <div className="small">
+                      {rs ? <div><PositionBar position={rs.position} /> {fmt(rs.aboveLowPct, 1)}% above 52-wk low</div> : null}
+                      {r.pe != null && r.avgPastPe != null ? <div className="muted">P/E {fmt(r.pe, 1)} vs usual {fmt(r.avgPastPe, 1)}</div> : null}
+                      {r.epsCagr != null ? <div className="muted">EPS {r.epsCagr >= 0 ? '↑' : '↓'}{fmt(Math.abs(r.epsCagr), 1)}%/yr</div> : null}
+                      {r.nextExpected ? <div className="muted">{t('results ~')}{monthLabel(r.nextExpected)}</div> : null}
+                    </div>
+                  ) : '—'}
+                </td>
               </tr>
             );
           })}</tbody>
