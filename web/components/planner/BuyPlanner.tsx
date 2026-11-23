@@ -8,7 +8,7 @@ import { Info } from '@/components/ui';
 import { call, readKey } from '@/components/trades-client';
 import { holdingQuery, savePlan } from '@/components/portfolio-store';
 import { dhakaToday } from '@/lib/dhaka';
-import type { BuyPlan } from '@/lib/buy-planner';
+import type { BuyPlan, SellEase as Ease } from '@/lib/buy-planner';
 import { PlanForm, type PlanDraft } from './PlanForm';
 import { moveSentence, plusTradingDays, TONE_PILL } from './plan-text';
 import css from './planner.module.css';
@@ -25,6 +25,18 @@ const draftFrom = (p: BuyPlan): PlanDraft => ({
   code: p.code, quantity: String(p.quantity), boughtNow: '0', targetPrice: p.alertPrice == null ? '' : String(p.alertPrice),
   until: plusTradingDays(dhakaToday(), PLAN_DAYS), note: p.label, status: 'active',
 });
+
+const SELL_HINT = 'Days of normal trading = the value of the shares ÷ the average value traded a day over the last 20 days. More days means selling takes longer or moves the price more.';
+
+// "1,000 shares (৳7,03,500) ≈ 1.7 days of its normal trading", with a thin-trading mark.
+export function SellEase({ what, ease }: { what: ReactNode; ease: Ease | null }) {
+  const { t } = useLang();
+  if (!ease) return <>—</>;
+  return (
+    <>{what}{Number.isFinite(ease.days) ? <> ≈ <span className="mono">{ease.days < 0.1 ? '< 0.1' : fmt(ease.days, ease.days < 10 ? 1 : 0)}</span> {t('days of its normal trading')}</> : <>: {t('no trades in the last 20 days')}</>}
+      {ease.thin ? <> <span className="pill s-caution">{t('Thin trading')}</span></> : null} <Info text={t(SELL_HINT)} /></>
+  );
+}
 
 function Result({ p, bar }: { p: BuyPlan; bar: ReactNode }) {
   const { t } = useLang();
@@ -57,6 +69,7 @@ function Result({ p, bar }: { p: BuyPlan; bar: ReactNode }) {
       {p.dividend ? <p className="small">{t('Dividend')}: {t('own it at the end of')} {p.dividend.lastBuyDate} ({p.dividend.tradingDaysLeft} {t('trading days left')}){p.dividend.cashPerShare != null ? ` · ৳${fmt(p.dividend.cashPerShare)} ${t('a share')}` : ''}.</p> : null}
       <p className="small">{t('Planned cost')}: <span className="mono">৳{fmt(p.totalWithCommission)}</span> = {p.quantity} {t('shares at an average')} ৳{fmt(p.avgPrice)} + ৳{fmt(p.commission)} {t('broker commission')}
         <Info text={`Commission is an estimate at ${p.commissionPct}% of the trade value (brokers charge about 0.3–0.5%, levies included). Ask your broker for the exact rate.`} /></p>
+      {p.sellEase ? <p className="small">{t('How easy to sell')}: <SellEase what={<>{p.quantity} {t('shares')} (৳{fmt(p.cost, 0)})</>} ease={p.sellEase} /></p> : null}
       {p.afterBuy ? <p className="small">{t(p.later > 0 && p.alertPrice != null ? 'After this buy, if the alert price fills' : 'After this buy')}: {p.afterBuy.shares} {t('shares at an average')} ৳{fmt(p.afterBuy.avgCost)}{p.afterBuy.weightPct != null ? ` · ${fmt(p.afterBuy.weightPct, 0)}% ${t('of your holdings')}` : ` · ${t('add your trades on Portfolio to see its share of your holdings')}`}.</p> : null}
       <p className="why">{t('Rules on past prices: what happened before, never a forecast. Learning aid, not investment advice.')}</p>
     </div>

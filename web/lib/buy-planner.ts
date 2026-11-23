@@ -66,6 +66,8 @@ export interface BuyPlan {
   vsSma20Pct: number | null;
   trend: Trend;
   typicalDailyMovePct: number | null;
+  // The planned shares at today's price as days of normal trading.
+  sellEase: SellEase | null;
   moveOdds: MoveOdds[];
   daysCheaperPct: number | null;
   dividend: { lastBuyDate: string; tradingDaysLeft: number; cashPerShare: number | null } | null;
@@ -99,6 +101,14 @@ export function sma(prices: readonly number[], days: number, endOffset = 0): num
   const end = prices.length - endOffset;
   if (end < days) return null;
   return prices.slice(end - days, end).reduce((a, b) => a + b, 0) / days;
+}
+
+// How many days of normal trading (avgDailyValue, ৳ a day) a holding worth `value` taka equals; thin under THIN_TRADING_BDT a day.
+export interface SellEase { days: number; thin: boolean }
+export function sellEase(value: number, avgDailyValue: number | null | undefined): SellEase | null {
+  if (avgDailyValue == null || !(value > 0)) return null;
+  // No trades in the last 20 days: no number of days covers it.
+  return avgDailyValue > 0 ? { days: value / avgDailyValue, thin: avgDailyValue < THIN_TRADING_BDT } : { days: Infinity, thin: true };
 }
 
 export function typicalDailyMove(prices: readonly number[]): number | null {
@@ -190,6 +200,7 @@ export function planBuy(p: PlannerInput): BuyPlan {
     return {
       code: p.code, quantity: p.quantity, price: p.price, cost, position52: pos, sma20: s20 == null ? null : round2(s20), sma50: s50 == null ? null : round2(s50),
       vsSma20Pct: vsSma == null ? null : round2(vsSma), trend, typicalDailyMovePct: typical == null ? null : round2(typical), moveOdds,
+      sellEase: sellEase(cost, p.avgDailyValue),
       daysCheaperPct: daysCheaper(prices, p.price), dividend, avgPrice, commission, commissionPct: BROKER_COMMISSION_PCT, totalWithCommission: round2(value + commission),
       afterBuy, warnings: [...concentrated, ...warnings], action, ...PLAN_TEXT[action], buyNow, later, alertPrice,
       reasons: [...why, ...facts], sample: Math.max(0, prices.length - MOVE_WINDOW_DAYS),

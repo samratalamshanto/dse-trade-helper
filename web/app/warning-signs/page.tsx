@@ -2,23 +2,44 @@
 
 import Link from 'next/link';
 import { Tr } from '@/components/Tr';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useApi } from '@/components/AppProvider';
 import { fmt, sectorName, signed } from '@/components/format';
-import { FraudPill, Skeleton, type FraudLevel } from '@/components/ui';
+import { FraudPill, Icon, Skeleton, type FraudLevel } from '@/components/ui';
+import { useLang } from '@/components/i18n';
 import type { CompanyRow } from '@/lib/service';
 import type { MarketSession } from '@/lib/dse';
+import { CompanySearch } from '@/components/CompanySearch';
 
 function WarningSigns() {
+  const { t } = useLang();
   const { data, error } = useApi<{ rows: CompanyRow[]; session: MarketSession | null }>('/api/companies');
-  const lane = useSearchParams().get('lane') === 'z' ? 'z' : 'warn';
+  const params = useSearchParams();
+  const lane = params.get('lane') === 'z' ? 'z' : 'warn';
   const router = useRouter();
-  if (error && !data) return <div className="note bad">Could not load the list: {error}</div>;
+  const pathname = usePathname();
+  const codeFilter = params.get('code') || '';
+  const [companyQ, setCompanyQ] = useState(codeFilter);
+  useEffect(() => { setCompanyQ(codeFilter); }, [codeFilter]);
   const rows = data?.rows ?? [];
+  const searchData = useMemo(() => {
+    const r = data?.rows ?? [];
+    if (lane === 'z') return r.filter((row) => row.category === 'Z').map((row) => ({ code: row.code, name: row.name }));
+    return r.filter((row) => row.fraud !== 'clean' && row.category !== 'Z').map((row) => ({ code: row.code, name: row.name }));
+  }, [data, lane]);
+
+  const setParams = (patch: Record<string, string>) => {
+    const q = new URLSearchParams(params.toString());
+    for (const [k, v] of Object.entries(patch)) { if (v === '') q.delete(k); else q.set(k, v); }
+    router.replace(pathname + (q.toString() ? '?' + q : ''), { scroll: false });
+  };
+
+  if (error && !data) return <div className="note bad">Could not load the list: {error}</div>;
   const warn = rows.filter((r) => r.fraud !== 'clean' && r.category !== 'Z').sort((a, b) => b.flags.length - a.flags.length || (b.change1y ?? 0) - (a.change1y ?? 0));
   const z = rows.filter((r) => r.category === 'Z').sort((a, b) => (b.change1y ?? -Infinity) - (a.change1y ?? -Infinity));
-  const list = lane === 'z' ? z : warn;
+  const baseList = lane === 'z' ? z : warn;
+  const list = codeFilter ? baseList.filter((r) => r.code === codeFilter) : baseList;
 
   return (
     <>
@@ -31,6 +52,21 @@ function WarningSigns() {
       <p className="muted small">{lane === 'z'
         ? <Tr text="Category Z companies missed AGMs, paid no dividend or stopped operating. Sorted by 1-year price change: a fast rise in a Z share is a pattern to investigate." />
         : <Tr text="Sorted by number of flags, then by 1-year price change." />} <Tr text="The 1-year change is grey on purpose: fast rises are a pattern to investigate here, not good news." /></p>
+      <div className="picker-row">
+        <CompanySearch
+          companies={searchData}
+          value={companyQ}
+          onChange={(q) => { setCompanyQ(q); if (codeFilter) setParams({ code: '' }); }}
+          onPick={(code) => { setCompanyQ(code); setParams({ code }); }}
+          label={t('Pick a company')}
+          placeholder={t('Pick a company')}
+        />
+        {codeFilter && (
+          <button type="button" className="btn ghost" onClick={() => { setCompanyQ(''); setParams({ code: '' }); }}>
+            <Icon name="cross" />{t('Show all')}
+          </button>
+        )}
+      </div>
       <div className="panel table-wrap"><table className="cards">
         <thead><tr><th>Company</th><th><Tr text="Warning-sign check" /></th><th><Tr text="Flags" /></th><th className="n">Price</th><th className="n">1 year</th></tr></thead>
         <tbody>{!data ? <tr><td colSpan={5} className="empty">Loading…</td></tr> : list.length ? list.map((r) => (

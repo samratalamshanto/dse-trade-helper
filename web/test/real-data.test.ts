@@ -3,6 +3,7 @@ import assert from 'node:assert';
 import { analyze, metrics, pricePosition, fourQuestions, dividendStatus, sectorMedians } from '../lib/analysis.ts';
 import { tradingDaysBetween } from '../lib/dhaka.ts';
 import { real } from './real-companies.ts';
+import { priceHistory } from '../lib/price-history.ts';
 import type { Company } from '../lib/types.ts';
 
 const NOW = new Date('2026-11-20T06:00:00Z');
@@ -112,4 +113,26 @@ test('A20: DSE trading days count Sunday to Thursday, both ends included', () =>
   assert.strictEqual(tradingDaysBetween('2026-11-22', '2026-11-26'), 5);
   assert.strictEqual(tradingDaysBetween('2026-11-19', '2026-11-22'), 2);
   assert.strictEqual(tradingDaysBetween('2026-11-23', '2026-11-22'), 0);
+});
+
+test('one 1-year change: the list row, the company notes and the Price history tab agree, also with a live price', () => {
+  for (const c of [real('GP'), real('GP', { price: 230.4 }), real('BNIPLC'), real('BRACBANK'), real('HWAWELLTEX', { price: 49.1 })]) {
+    const a = run(c);
+    const h = priceHistory(c.series, c.events?.declarations ?? [], c.faceValue ?? null, a.metrics.priceNow)!;
+    assert.notStrictEqual(a.metrics.change1y, null, c.code);
+    assert.strictEqual(Math.round(h.changePct! * 10) / 10, a.metrics.change1y, c.code);
+    const sign = a.metrics.change1y! > 0 ? '+' : '';
+    assert.ok(a.history.some((n) => n.includes(`moved ${sign}${a.metrics.change1y}% in the last year`)), c.code);
+  }
+});
+
+test('usual-P/E price band: EPS now × its own year-end P/E low, average and high', () => {
+  const c = real('GP', { price: 226.7 });
+  assert.deepStrictEqual(pricePosition(c, metrics(c, NOW)).usualPeBand, { eps: 21.9, low: 256.23, avg: 272.35, high: 302.88, years: 5 });
+  const loss = real('TITASGAS');
+  assert.strictEqual(pricePosition(loss, metrics(loss, NOW)).usualPeBand, null, 'EPS ≤ 0: no band');
+  const short = real('GP', { years: real('GP').years.map((y) => (y.year < 2024 ? { ...y, pe: null } : y)) });
+  assert.strictEqual(pricePosition(short, metrics(short, NOW)).usualPeBand, null, 'under 3 years of P/E: no band');
+  const still = real('GP', { series: real('GP').series.map((p) => ({ ...p, volume: 0, trades: 0 })) });
+  assert.strictEqual(pricePosition(still, metrics(still, NOW)).usualPeBand, null, 'no trades in 52 weeks: no band');
 });

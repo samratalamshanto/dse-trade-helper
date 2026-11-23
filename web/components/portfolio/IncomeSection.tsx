@@ -22,6 +22,13 @@ function next12Months(): string[] {
   return months;
 }
 
+// "Nov", "Dec", "Jan 27": the year shows only where it changes, so labels fit without turning.
+function shortMonth(ym: string): string {
+  const d = new Date(ym + '-01T00:00:00Z');
+  const mon = d.toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' });
+  return ym.endsWith('-01') ? `${mon} ${ym.slice(2, 4)}` : mon;
+}
+
 interface Props {
   lots: Lot[];
   dividends: CalendarRow[];
@@ -44,7 +51,7 @@ export function IncomeSection({ lots, dividends, totalCost }: Props) {
   const yieldOnCost = totalCost > 0 && yearlyTotal > 0 ? (yearlyTotal / totalCost) * 100 : null;
 
   const data = colors ? {
-    labels: months.map(monthName),
+    labels: months.map(shortMonth),
     datasets: [{
       label: t('Expected income (৳)'),
       data: chartData,
@@ -54,12 +61,13 @@ export function IncomeSection({ lots, dividends, totalCost }: Props) {
   } : null;
 
   const options = {
+    maintainAspectRatio: false,
     plugins: { legend: { display: false }, tooltip: { callbacks: {
       label: (ctx: { parsed: { y: number } }) => ` ৳${fmt(ctx.parsed.y)}`,
     } } },
     scales: {
       y: { ticks: { callback: (v: number | string) => '৳' + fmt(Number(v), 0) } },
-      x: { ticks: { maxRotation: 45 } },
+      x: { ticks: { maxRotation: 0 } },
     },
   };
 

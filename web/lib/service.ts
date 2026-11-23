@@ -1,6 +1,7 @@
-import { analyze, currentYield, sectorMedians, fiveYearSummary, pricePosition, metrics, fourQuestions, dividendRecord, hasSector } from './analysis.ts';
+import { analyze, currentYield, expectedLatestYear, sectorMedians, fiveYearSummary, pricePosition, metrics, fourQuestions, dividendRecord, hasSector } from './analysis.ts';
 import { dividendStatus, dhakaToday, previousTradingDay, toIso } from './announcements.ts';
 import { DATA_VERSION } from './company.ts';
+import { paidYears } from './dividend-checks.ts';
 import { priceHistory } from './price-history.ts';
 import { snapshot, intraday, livePrices, marketSession, seen, remember, SNAPSHOT_TTL_MS, FAILURE_TTL_MS, type MarketSession, type SnapshotRow, type Intraday, type Snapshot } from './dse.ts';
 import { allCompanies, fetchCompany, readLastSession, saveCompanies, saveLastSession, storeVersion, NotFoundError, type StoredCompany, type LastSession } from './store.ts';
@@ -131,6 +132,8 @@ async function buildDividendCalendar() {
   const now = new Date();
   const live: Live = await livePrices().catch(() => ({}));
   const rows = Object.values(allCompanies()).filter((c) => c.events).map((c) => ({ c: withLive(c, live), s: dividendStatus(c.events, now) }));
+  // The same score and signal the Companies page shows (it compares P/E with the sector median).
+  const listed = new Map((await listCompanies().catch(() => null))?.rows.map((r) => [r.code, r]));
   const brief = ({ c, s }: (typeof rows)[number], d: Declaration | null) => {
     const cashPerShare = d?.cashPct != null ? (d.cashPct / 100) * (c.faceValue || 10) : null;
     const a = analyze(c, null, now);
@@ -139,7 +142,9 @@ async function buildDividendCalendar() {
       cashPct: d?.cashPct ?? null, stockPct: d?.stockPct ?? null, interim: !!d?.interim, partial: !!d?.partial,
       // yearlyCashPerShare: every cash declaration of the last 12 months (interims + final), the same sum the yield uses.
       cashPerShare, yearlyCashPerShare: currentYield(c, null, now).cash, yieldPct: a.metrics.latestYield, yieldBasis: a.metrics.yieldBasis,
-      fraud: a.fraud.level, flags: a.fraud.flags.map((f) => f.title),
+      fraud: a.fraud.level, flags: a.fraud.flags.map((f) => f.title), eps: a.metrics.epsNow, avgYieldPct: fiveYearSummary(c).average.dividendYield,
+      paidYears: paidYears(c.dividends, expectedLatestYear(now)), weekLow52: c.weekLow52 ?? null, weekHigh52: c.weekHigh52 ?? null,
+      score: listed.get(c.code)?.score ?? null, signal: listed.get(c.code)?.signal ?? null,
       announced: d?.announced ?? null, recordDate: d?.recordDate ?? null, agmDate: d?.agmDate ?? null,
       lastBuyDate: d?.lastBuyDate ?? (d?.recordDate ? previousTradingDay(d.recordDate) : null),
       lastBuyEstimated: d?.lastBuyDate ? !!d.lastBuyEstimated : true, nextExpected: s.nextExpected, regular: s.regular,
@@ -195,8 +200,10 @@ export async function dashboard() {
   const last = daily.at(-1);
   const eq = Object.values(await livePrices()).filter((p) => p.assetType === 'EQ' && p.ltp > 0);
   const byPct = eq.filter((p) => p.trades > 0 && isNum(p.percent)).sort((a, b) => (b.percent as number) - (a.percent as number));
-  const brief = (p: SnapshotRow) => ({ code: p.code, price: p.ltp, percent: p.percent as number });
-  const fromTop = (x: { code: string; closep: number; pct: number }) => ({ code: x.code, price: x.closep, percent: x.pct });
+  const fraudMap = new Map(list.rows.map((r) => [r.code, { fraud: r.fraud, flags: r.flags }]));
+  const withFraud = (code: string) => { const f = fraudMap.get(code); return { fraud: (f?.fraud ?? 'clean') as string, flags: (f?.flags ?? []) as string[] }; };
+  const brief = (p: SnapshotRow) => ({ code: p.code, price: p.ltp, percent: p.percent as number, ...withFraud(p.code) });
+  const fromTop = (x: { code: string; closep: number; pct: number }) => ({ code: x.code, price: x.closep, percent: x.pct, ...withFraud(x.code) });
   const sectors: Record<string, number[]> = {};
   if (traded) for (const p of byPct) (sectors[p.sector] ||= []).push(p.percent as number);
   else for (const c of Object.values(allCompanies())) if (isNum(c.changePct)) (sectors[c.sector] ||= []).push(c.changePct);
@@ -206,7 +213,7 @@ export async function dashboard() {
     const s = c.series || [];
     const prev = s.slice(-61, -1).map((x) => x.volume);
     const avg = prev.length >= 20 ? prev.reduce((a, b) => a + b, 0) / prev.length : 0;
-    return { code: c.code, name: c.name, x: avg > 0 && s.length ? (s.at(-1)?.volume ?? 0) / avg : 0 };
+    return { code: c.code, name: c.name, x: avg > 0 && s.length ? (s.at(-1)?.volume ?? 0) / avg : 0, ...withFraud(c.code) };
   }).filter((u) => u.x >= UNUSUAL_VOLUME_X).sort((a, b) => b.x - a.x);
   const warned = list.rows.filter((r) => r.fraud !== 'clean' && r.category !== 'Z');
   return {
@@ -292,7 +299,8 @@ export async function companyDetail(code: string, fresh: boolean) {
     dividendRecord: dividendRecord(current),
     questions: fourQuestions(current, analysis, position, dividend), sectorPe: sectorPe ?? null, freshSkipped, dataStale: isStale(company),
     today: todayTrading(live[code], company.details, session, analysis.metrics.lastTradeDate),
-    priceHistory: priceHistory(company.series ?? [], company.events?.declarations ?? [], company.faceValue ?? null),
+    // Live price, like the lists, so the 1-year change is the same number everywhere.
+    priceHistory: priceHistory(company.series ?? [], company.events?.declarations ?? [], company.faceValue ?? null, analysis.metrics.priceNow),
     session, updatedAt: Date.now(),
   };
 }

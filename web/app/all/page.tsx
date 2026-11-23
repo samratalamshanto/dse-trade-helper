@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Tr } from '@/components/Tr';
 import { CompanyTabs } from '@/components/CompanyTabs';
 import { useLang } from '@/components/i18n';
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useApi } from '@/components/AppProvider';
 import { SortHeader } from '@/components/SortHeader';
 import { WatchButton } from '@/components/Watchlist';
@@ -14,6 +14,7 @@ import type { CompanyRow } from '@/lib/service';
 import type { MarketSession } from '@/lib/dse';
 import { QUICK_PICKS } from '@/lib/quick-picks';
 import { QuickPickChips } from '@/components/QuickPickChips';
+import { CompanySearch } from '@/components/CompanySearch';
 
 interface CompaniesResponse { rows: CompanyRow[]; codes: { code: string; sector: string }[]; medians: Record<string, number | null>; session: MarketSession | null }
 
@@ -43,6 +44,9 @@ function AllCompanies() {
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const codeFilter = params.get('code') || '';
+  const [companyQ, setCompanyQ] = useState(codeFilter);
+  useEffect(() => { setCompanyQ(codeFilter); }, [codeFilter]);
   // A stored page can lack the sector ("—"); the live DSE list still knows it.
   const rows = useMemo(() => {
     const live = Object.fromEntries((data?.codes ?? []).map((c) => [c.code, c.sector]));
@@ -70,12 +74,14 @@ function AllCompanies() {
     .filter((r) => (!state.signal || r.signal === state.signal) && (!state.sector || r.sector === state.sector) && (!state.fraud || r.fraud === state.fraud)
       && (!state.cat || r.category === state.cat) && (!state.yield || (r.dividendYield ?? 0) >= Number(state.yield))
       && (!state.liquid || (r.dailyValue ?? 0) >= Number(state.liquid) * 1e5))
+    .filter((r) => !codeFilter || r.code === codeFilter)
     .sort((a, b) => compareNullsLast(key(a), key(b), sort.dir));
+  const searchData = useMemo(() => rows.map((r) => ({ code: r.code, name: r.name, signal: r.signal })), [rows]);
 
   if (error && !data) return <div className="note bad">Could not load the companies: {error}</div>;
   const fresh = rows.filter((r) => !r.stale).length;
   const activeFilters = FILTERS.filter((k) => state[k]).length;
-  const filtered = Boolean(preset) || activeFilters > 0;
+  const filtered = Boolean(preset) || activeFilters > 0 || Boolean(codeFilter);
 
   const select = (k: Filter, label: string, icon: IconName, options: [string, string][]) => (
     <span className="select-ic"><Icon name={icon} />
@@ -93,6 +99,21 @@ function AllCompanies() {
       <p className="muted">{data ? <>{rows.length} companies listed{fresh < rows.length ? `, ${fresh} with the newest data` : ''}. </> : null}Click a row for the full explanation.</p>
       <div className="panel filter-panel">
         <QuickPickChips active={preset?.key ?? null} onPick={(p) => setParams(p ? { preset: p.key, sort: p.sort, dir: p.dir } : { preset: '', sort: 'score', dir: -1 })} />
+        <div className="picker-row">
+          <CompanySearch
+            companies={searchData}
+            value={companyQ}
+            onChange={(q) => { setCompanyQ(q); if (codeFilter) setParams({ code: '' }); }}
+            onPick={(code) => { setCompanyQ(code); setParams({ code }); }}
+            label={t('Pick a company')}
+            placeholder={t('Pick a company')}
+          />
+          {codeFilter && (
+            <button type="button" className="btn ghost" onClick={() => { setCompanyQ(''); setParams({ code: '' }); }}>
+              <Icon name="cross" />{t('Show all')}
+            </button>
+          )}
+        </div>
         {/* On a phone the six selects fold behind this button, so the list is visible without scrolling. */}
         <button type="button" className="btn filter-toggle" aria-expanded={filtersOpen} aria-controls="all-filters" onClick={() => setFiltersOpen(!filtersOpen)}>
           <Icon name="list" />{t('Filters')}{activeFilters ? ` (${activeFilters})` : ''}</button>
@@ -109,7 +130,7 @@ function AllCompanies() {
         <span className="small muted" aria-live="polite">{data ? t('Showing {n} companies').replace('{n}', String(shown.length)) : t('Loading companies…')}</span>
         {/* Disabled, not removed, when nothing is set, so keyboard focus is not lost after a click. */}
         <button type="button" className="btn ghost" disabled={!filtered}
-          onClick={() => setParams({ preset: '', sort: 'score', dir: -1, ...Object.fromEntries(FILTERS.map((k) => [k, ''])) })}>
+          onClick={() => { setCompanyQ(''); setParams({ preset: '', sort: 'score', dir: -1, code: '', ...Object.fromEntries(FILTERS.map((k) => [k, ''])) }); }}>
           <Icon name="cross" />{t('Clear filters')}</button>
         <button type="button" className="btn ghost" onClick={() => downloadCsv(shown)} disabled={!shown.length}>
           <Icon name="download" />{t('Download list')} <span className="small muted">CSV</span></button>

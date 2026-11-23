@@ -1,20 +1,23 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { fmt, fmtDate } from '@/components/format';
 import { dhakaToday } from '@/lib/dhaka';
 import { Icon, Skeleton } from '@/components/ui';
 import TelegramTestButton from '@/components/TelegramTestButton';
 import { TelegramConnect } from '@/components/TelegramConnect';
 import { CheckBadge, KEY_STORE, SIGNED_IN_STORE, type TradesList as List } from '@/components/trades-client';
-import { deleteTrade, dropRefusedKey, importFile, listTrades, saveLimits, saveTrade, useBrowserData, useMode, type ImportResult } from '@/components/portfolio-store';
+import { deleteTrade, dropRefusedKey, importFile, listTrades, saveLimits, saveTrade, useBrowserData, useKeyStopped, useMode, type ImportResult } from '@/components/portfolio-store';
+import { useLang } from '@/components/i18n';
 import { commissionFor, MAX_COMMISSION_PCT, tradesCsv, type Account, type Trade, type TradeInput } from '@/lib/trades';
 import { useApi } from '@/components/AppProvider';
 import { useStoredValue } from '@/components/useStored';
 import { BROKER_COMMISSION_PCT } from '@/lib/buy-planner';
+import { dividendsReceived } from '@/lib/positions';
+import type { Declaration } from '@/lib/types';
 import { aggregateLots, type Lot } from '@/lib/portfolio';
-import { signed, Summary, tone } from '@/components/portfolio/Summary';
+import { SellFacts, signed, Summary, tone } from '@/components/portfolio/Summary';
 import { LimitsPanel } from '@/components/portfolio/LimitsPanel';
 import { OldLots } from '@/components/portfolio/OldLots';
 import { SyncPanel } from '@/components/portfolio/SyncPanel';
@@ -28,6 +31,7 @@ import css from './trades.module.css';
 
 interface Companies { rows: CompanyRow[]; session: MarketSession | null }
 interface Dividends { upcoming: CalendarRow[]; recent: CalendarRow[]; expected: CalendarRow[]; session: MarketSession | null }
+type PastDividends = { declarations: Declaration[]; faceValue: number } | null;
 
 const blank = (): Record<Exclude<keyof TradeInput, 'account'>, string> => ({ date: dhakaToday(), code: '', side: 'BUY', quantity: '', price: '', commission: '', note: '' });
 // What the trade cost (buy) or brought in (sell) after commission.
@@ -46,7 +50,17 @@ export default function PortfolioPage() {
   const [ownerKey] = useStoredValue(KEY_STORE, '');
   const [signedIn] = useStoredValue(SIGNED_IN_STORE, '');
   const ownerMode = !!ownerKey && signedIn !== '1';
-  const browserTrades = useBrowserData().trades.good;
+  const browserData = useBrowserData();
+  const browserTrades = browserData.trades.good;
+  const { t: tr } = useLang();
+  const keyStopped = useKeyStopped();
+  // Settings opens by itself when the Sheet panel inside needs the user (same test as SyncPanel's "pending").
+  const settingsNeeded = keyStopped || (sheet && (browserTrades.length + browserData.plans.good.length > 0 || browserData.hasLimits));
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  // Opens once when it becomes needed; the user can still fold it again.
+  const [wasNeeded, setWasNeeded] = useState(false);
+  if (settingsNeeded !== wasNeeded) { setWasNeeded(settingsNeeded); if (settingsNeeded) setSettingsOpen(true); }
+  const [tab, setTab] = useState<'allocation' | 'income'>('allocation');
   const [data, setData] = useState<List | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -68,6 +82,20 @@ export default function PortfolioPage() {
   const lots = useMemo<Lot[]>(() => (data?.holdings ?? []).filter((h) => h.shares > 0).map((h) => ({ code: h.code, shares: h.shares, buyPrice: h.avgCost })), [data]);
   const liveMap = useMemo(() => Object.fromEntries(companies.map((c) => [c.code, { price: c.price, changePct: c.changePct ?? null }])), [companies]);
   const grouped = useMemo(() => aggregateLots(lots, liveMap), [lots, liveMap]);
+  // Every past declaration of each held code, from the company page's data; a code that fails to load shows "—".
+  const heldCodes = useMemo(() => (data?.holdings ?? []).filter((h) => h.shares > 0).map((h) => h.code).join(','), [data]);
+  const [pastDividends, setPastDividends] = useState<Record<string, PastDividends>>({});
+  useEffect(() => {
+    if (!heldCodes) return;
+    let active = true;
+    void Promise.all(heldCodes.split(',').map((code) => fetch(`/api/company/${encodeURIComponent(code)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((b: { company?: { events?: { declarations?: Declaration[] }; faceValue?: number | null } } | null): [string, PastDividends] =>
+        [code, b?.company ? { declarations: b.company.events?.declarations ?? [], faceValue: b.company.faceValue || 10 } : null],
+      (): [string, PastDividends] => [code, null])))
+      .then((pairs) => { if (active) setPastDividends(Object.fromEntries(pairs)); });
+    return () => { active = false; };
+  }, [heldCodes]);
 
   const loadSeq = useRef(0);
   const load = useCallback(async (acc: Account = 'real') => {
@@ -165,12 +193,21 @@ export default function PortfolioPage() {
   const changePct = (v: string) => { setForm((f) => (isAuto(f) ? { ...f, commission: commissionFor(f.quantity, f.price, v) } : f)); setFeePct(v); };
   const badPct = feePct.trim() !== '' && commissionFor('1', '1', feePct) === '';
   const commissionPaid = (data?.trades ?? []).reduce((a, t) => a + (t.commission ?? 0), 0);
+  // Selling facts: dividends on the shares held at each record date, break-even after the sell fee, and share of the portfolio.
+  const held = (data?.holdings ?? []).filter((h) => h.shares > 0);
+  const today = dhakaToday();
+  const dividendsOf = (code: string) => { const p = pastDividends[code]; return p && data ? dividendsReceived(data.trades, code, p.declarations, p.faceValue, today) : null; };
+  const allDividends = held.reduce<number | null>((a, h) => { const d = dividendsOf(h.code); return a == null || d == null ? null : a + d; }, 0);
+  const sellFeePct = feePct.trim() !== '' && !badPct ? Number(feePct) : BROKER_COMMISSION_PCT;
+  const portfolioValue = held.reduce((a, h) => a + (h.value ?? h.invested), 0);
+
+  const openAdd = () => { setAddOpen(true); requestAnimationFrame(() => addRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })); };
 
   return (
     <>
-      <h1>Portfolio</h1>
-      {sheet ? <p className="muted">Your shares, worked out from your buys and sells. They are saved in your own Google Sheet, so every page and device shows the same numbers.</p> : (
-        <p className="muted">Your shares, worked out from your buys and sells. Saved in this browser only. Export a copy, or turn on Google Sheet sync to use it on other devices.
+      <h1>{tr('Portfolio')}</h1>
+      {sheet ? <p className="muted">{tr('Your shares, worked out from your buys and sells. Saved in your own Google Sheet, so every device shows the same numbers.')}</p> : (
+        <p className="muted">{tr('Your shares, worked out from your buys and sells. Saved in this browser only. To see them on other devices, turn on Google Sheet sync in Settings at the bottom.')}
           {browserTrades.length ? <> <a href={'data:text/csv;charset=utf-8,' + encodeURIComponent(tradesCsv(browserTrades))} download="my-trades.csv">Trades as a spreadsheet (CSV)</a></> : null}</p>
       )}
       <KeyStoppedNote />
@@ -189,32 +226,57 @@ export default function PortfolioPage() {
       {data?.warnings.map((w) => <div key={w} className="note warn">{w}</div>)}
       {data?.badRows.length ? <div className="note warn">Rows {data.badRows.join(', ')} in your Google Sheet could not be read; fix them in the Sheet.</div> : null}
       {paper ? null : <OldLots busy={busy} postLot={postOldLot} onDone={oldLotsDone} />}
-      {data ? <Summary holdings={data.holdings} commissionPaid={commissionPaid} /> : busy ? <Skeleton label="Loading trades" rows={4} /> : null}
+      {data ? (
+        <Summary holdings={data.holdings} commissionPaid={commissionPaid} dividends={held.length ? allDividends : undefined}>
+          <button type="button" className="btn primary" onClick={openAdd}>{tr(paper ? 'Add a practice trade' : 'Add a trade')}</button>
+        </Summary>
+      ) : busy ? <Skeleton label="Loading trades" rows={4} /> : null}
       {data?.holdings.length ? (
-        <div className={`panel table-wrap ${css.section}`}><h2 className="h3">Holdings</h2>
-        <p className="small muted">Checks use fixed rules on your numbers and public DSE data — a learning aid, not investment advice.</p>
+        <div className={`panel table-wrap ${css.section}`}><h2 className="h3">{tr('Holdings')}</h2>
+        <p className="small muted">{tr('The status comes from fixed rules on your numbers and public DSE data. It is a learning aid, not advice. Tap a status to see why.')}</p>
         <table className="cards">
-          <thead><tr><th>Code</th><th className="n">Shares</th><th className="n">Avg cost</th><th className="n">Price now</th><th className="n">Value</th><th className="n">P/L</th><th>Check</th></tr></thead>
-          <tbody>{data.holdings.map((h) => (
-            <tr key={h.code}><td><Link href={`/c/${encodeURIComponent(h.code)}`}><b>{h.code}</b></Link></td><td className="n" data-label="Shares">{h.shares}</td><td className="n" data-label="Avg cost">৳{fmt(h.avgCost)}</td>
-              <td className="n" data-label="Price now">{h.price == null ? '—' : `৳${fmt(h.price)}`}</td><td className="n" data-label="Value">{h.value == null ? '—' : `৳${fmt(h.value)}`}</td><td className={`n ${tone(h.unrealised)}`} data-label="P/L">{signed(h.unrealised)}</td>
-              <td className={css.check}>{h.check ? (
-                <>
-                  <button type="button" className={css.checkToggle} aria-expanded={openReasons === h.code} aria-controls={`why-${h.code}`} onClick={() => setOpenReasons((c) => (c === h.code ? null : h.code))}>
-                    <CheckBadge check={h.check} /><span className="small muted">{openReasons === h.code ? 'Hide why' : 'Why?'}</span>
-                  </button>
-                  <span className={css.checkBadge}><CheckBadge check={h.check} /></span>
-                  <ul id={`why-${h.code}`} className={`${css.reasons} ${openReasons === h.code ? css.open : ''}`}>{h.check.reasons.map((r) => <li key={r}>{r}</li>)}</ul>
-                </>
-              ) : <span className="muted">—</span>}</td></tr>
-          ))}</tbody></table></div>
+          <thead><tr><th>{tr('Code')}</th><th className="n">{tr('Shares')}</th><th className="n">{tr('Avg cost')}</th><th className="n">{tr('Price now')}</th><th className="n">{tr('Value')}</th><th className="n">{tr('Profit / loss')}</th><th>{tr('Status')}</th></tr></thead>
+          <tbody>{data.holdings.map((h) => {
+            const open = openReasons === h.code;
+            return (
+              <Fragment key={h.code}>
+                <tr><td><Link href={`/c/${encodeURIComponent(h.code)}`}><b>{h.code}</b></Link></td><td className="n" data-label={tr('Shares')}>{h.shares}</td><td className="n" data-label={tr('Avg cost')}>৳{fmt(h.avgCost)}</td>
+                  <td className="n" data-label={tr('Price now')}>{h.price == null ? '—' : `৳${fmt(h.price)}`}</td><td className="n" data-label={tr('Value')}>{h.value == null ? '—' : `৳${fmt(h.value)}`}</td><td className={`n ${tone(h.unrealised)}`} data-label={tr('Profit / loss')}>{signed(h.unrealised)}</td>
+                  <td className={css.check}>{h.check || h.shares > 0 ? (
+                    <button type="button" className={css.checkToggle} aria-expanded={open} onClick={() => setOpenReasons((c) => (c === h.code ? null : h.code))}>
+                      {h.check ? <CheckBadge check={{ ...h.check, label: tr(h.check.label) }} /> : null}<span className="small">{tr(open ? 'Hide' : 'Details')}</span>
+                    </button>
+                  ) : <span className="muted">—</span>}</td></tr>
+                {open ? (
+                  <tr className={css.detail}><td colSpan={7}>
+                    {h.check ? <ul className={css.reasons}>{h.check.reasons.map((r) => <li key={r}>{r}</li>)}</ul> : null}
+                    {h.shares > 0 ? <SellFacts h={h} dividends={dividendsOf(h.code)} feePct={sellFeePct} weightPct={portfolioValue > 0 ? ((h.value ?? h.invested) / portfolioValue) * 100 : null} /> : null}
+                    {h.limits ? <p className="small muted">{tr('Your limits')}: {tr('stop-loss')} {h.limits.stopPct}%, {tr('target')} {h.limits.targetPct}%</p> : null}
+                  </td></tr>
+                ) : null}
+              </Fragment>
+            );
+          })}</tbody></table></div>
       ) : null}
-      {!paper && grouped.length ? (
-        <div className={`grid g2 ${css.topAlign}`}>
-          <div className={`panel ${css.section}`}><h2 className="h3">Allocation</h2><AllocationChart holdings={grouped} /></div>
-          <div className={`panel ${css.section}`}><IncomeSection lots={lots} dividends={dividends} totalCost={lots.reduce((a, l) => a + l.shares * l.buyPrice, 0)} /></div>
+      {paper ? null : (
+        <div className={`panel ${css.section}`}>
+          <div className={`tabs ${css.tabsTop}`} role="tablist" aria-label={tr('Allocation and dividend income')}
+            onKeyDown={(e) => { if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return; const next = tab === 'allocation' ? 'income' : 'allocation'; setTab(next); document.getElementById(`tab-${next}`)?.focus(); }}>
+            <button type="button" role="tab" id="tab-allocation" aria-controls="tab-pane" aria-selected={tab === 'allocation'} tabIndex={tab === 'allocation' ? 0 : -1} onClick={() => setTab('allocation')}>{tr('Allocation')}</button>
+            <button type="button" role="tab" id="tab-income" aria-controls="tab-pane" aria-selected={tab === 'income'} tabIndex={tab === 'income' ? 0 : -1} onClick={() => setTab('income')}>{tr('Dividend income')}</button>
+          </div>
+          <div id="tab-pane" role="tabpanel" aria-labelledby={`tab-${tab}`}>
+            {tab === 'allocation' ? (
+              grouped.length ? <><p className="small muted">{tr('How your money is spread, by value now.')}</p><AllocationChart holdings={grouped} /></> : <p className="muted">{tr('No holdings yet.')}</p>
+            ) : (
+              <>
+                <IncomeSection lots={lots} dividends={dividends} totalCost={lots.reduce((a, l) => a + l.shares * l.buyPrice, 0)} />
+                <div className={`panel ${css.section}`}><WhatIfCalc companies={companies} dividends={dividends} /></div>
+              </>
+            )}
+          </div>
         </div>
-      ) : null}
+      )}
       <details ref={addRef} className={`panel ${css.section}`} open={addOpen} onToggle={(e) => setAddOpen(e.currentTarget.open)}>
         <summary className="h3">{paper ? 'Add a practice trade' : 'Add or import trades'}</summary>
       {paper ? null : <div className={css.section}>
@@ -269,35 +331,37 @@ export default function PortfolioPage() {
               <tr key={t.id}><td>{fmtDate(t.date)}</td><td><span className={`${css.side} ${t.side === 'BUY' ? css.buy : css.sell}`}>{t.side}</span> {t.quantity} <b>{t.code}</b></td>
                 <td className="n">৳{fmt(t.price)}</td><td className="n">৳{fmt(tradeAmount(t))}</td><td className="muted">{t.note}</td>
                 <td className={css.actions}>
-                  <button className="link-btn" type="button" aria-label={`Edit ${t.side} ${t.quantity} ${t.code} on ${t.date}`} onClick={() => { setEditing(t.id); setForm({ date: t.date, code: t.code, side: t.side, quantity: String(t.quantity), price: String(t.price), commission: t.commission == null ? '' : String(t.commission), note: t.note }); setAddOpen(true); requestAnimationFrame(() => addRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }}>Edit</button>
+                  <button className="link-btn" type="button" aria-label={`Edit ${t.side} ${t.quantity} ${t.code} on ${t.date}`} onClick={() => { setEditing(t.id); setForm({ date: t.date, code: t.code, side: t.side, quantity: String(t.quantity), price: String(t.price), commission: t.commission == null ? '' : String(t.commission), note: t.note }); openAdd(); }}>Edit</button>
                   <button className="link-btn danger" type="button" aria-label={`Delete ${t.side} ${t.quantity} ${t.code} on ${t.date}`} onClick={() => void remove(t)}>Delete</button>
                 </td></tr>
             ))}</tbody></table>
         ) : null}
         {paper && data?.trades.length ? <div className={`${css.actions} ${css.section}`}><button className="link-btn danger" type="button" disabled={busy} onClick={() => void resetPractice()}>Reset practice account</button></div> : null}
       </div>
-      {!paper && data?.settings ? <LimitsPanel key={JSON.stringify(data.settings)} settings={data.settings} held={data.holdings.filter((h) => h.shares > 0).map((h) => h.code)}
-        onSave={async (s) => { await saveLimits(s); await load(account); }} /> : null}
-      {paper ? null : <div className={`panel ${css.section}`}><WhatIfCalc companies={companies} dividends={dividends} /></div>}
-      <div className={`panel ${css.section}`}>
-        <h2 className="h3">Phone alerts</h2>
-        {ownerMode ? (
-          <>
-            <p className="small muted">Get a Telegram message when a plan reaches its price, a holding hits your stop-loss or target, or a dividend&apos;s last buy day is near.</p>
-            <TelegramTestButton />
-          </>
-        ) : signedIn === '1' ? (
-          <TelegramConnect />
-        ) : (
-          <p className="small">Sign in with Google (in the panel below) to get Telegram alerts from your own Sheet. For price alerts in this browser, use the <Link href="/alerts">Alerts page</Link>.</p>
-        )}
       </div>
-      </div>
-      <div className={`panel ${css.section}`}>
-        <h2 className="h3">My data</h2>
-        <BackupPanel mode={mode} onChanged={() => void load(account)} />
-      </div>
-      <SyncPanel mode={mode} onChanged={() => void load(account)} />
+      <details className={`panel ${css.section}`} open={settingsOpen} onToggle={(e) => setSettingsOpen(e.currentTarget.open)}>
+        <summary className="h3">{tr('Settings')} <span className="small muted">{tr('Your stop-loss and target, phone alerts, backup and Google Sheet sync.')}</span></summary>
+        {!paper && data?.settings ? <LimitsPanel key={JSON.stringify(data.settings)} settings={data.settings} held={data.holdings.filter((h) => h.shares > 0).map((h) => h.code)}
+          onSave={async (s) => { await saveLimits(s); await load(account); }} /> : null}
+        <div className={`panel ${css.section}`}>
+          <h2 className="h3">{tr('Phone alerts')}</h2>
+          {ownerMode ? (
+            <>
+              <p className="small muted">Get a Telegram message when a plan reaches its price, a holding hits your stop-loss or target, or a dividend&apos;s last buy day is near.</p>
+              <TelegramTestButton />
+            </>
+          ) : signedIn === '1' ? (
+            <TelegramConnect />
+          ) : (
+            <p className="small">Sign in with Google (in the panel below) to get Telegram alerts from your own Sheet. For price alerts in this browser, use the <Link href="/alerts">Alerts page</Link>.</p>
+          )}
+        </div>
+        <div className={`panel ${css.section}`}>
+          <h2 className="h3">{tr('My data')}</h2>
+          <BackupPanel mode={mode} onChanged={() => void load(account)} />
+        </div>
+        <SyncPanel mode={mode} onChanged={() => void load(account)} />
+      </details>
     </>
   );
 }

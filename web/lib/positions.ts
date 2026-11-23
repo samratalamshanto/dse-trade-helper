@@ -1,4 +1,6 @@
 import { CODE_RE, tradingDaysBetween } from './dhaka.ts';
+import type { Trade } from './trades.ts';
+import type { Declaration } from './types.ts';
 
 export const DEFAULT_STOP_PCT = 10;
 export const DEFAULT_TARGET_PCT = 20;
@@ -113,4 +115,23 @@ export function parseSettings(input: unknown): LimitSettings | null {
     perCode[c] = v;
   }
   return { default: def, perCode };
+}
+
+// Cash dividends on record dates up to today, on the shares held before each record date (buys before sells on one day, as in holdingsFrom).
+export function dividendsReceived(trades: readonly Trade[], code: string, declarations: readonly Declaration[], faceValue: number, today: string): number {
+  const mine = trades.filter((t) => t.code === code).sort((a, b) => a.date.localeCompare(b.date) || (a.side === 'BUY' ? 0 : 1) - (b.side === 'BUY' ? 0 : 1));
+  let total = 0;
+  for (const d of declarations) {
+    const record = d.recordDate;
+    if (!record || record > today || !d.cashPct || d.noDividend) continue;
+    // Trades up to the last cum day count; with no last cum day, trades before the record date.
+    const shares = mine.filter((t) => (d.lastBuyDate ? t.date <= d.lastBuyDate : t.date < record)).reduce((n, t) => (t.side === 'BUY' ? n + t.quantity : Math.max(0, n - t.quantity)), 0);
+    total += shares * (d.cashPct / 100) * faceValue;
+  }
+  return Math.round(total * 100) / 100;
+}
+
+// Selling every share at this price gets back the average cost (which already holds the buy commission) after the sell commission.
+export function breakEvenPrice(avgCost: number, sellFeePct: number): number {
+  return Math.round((avgCost / (1 - sellFeePct / 100)) * 100) / 100;
 }

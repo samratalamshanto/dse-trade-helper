@@ -16,7 +16,8 @@ export interface DayMove { date: string; close: number; pct: number; volume: num
 export interface Streak { kind: 'up' | 'down'; from: string; to: string; days: number; pct: number }
 export interface ExDate { date: string; recordDate: string; cashPct: number | null; stockPct: number | null }
 export interface PriceHistory {
-  from: string; to: string; days: number; changePct: number | null;
+  // totalReturnPct adds the cash dividends whose record date falls inside the 1-year window (dividendCash, ৳ a share).
+  from: string; to: string; days: number; changePct: number | null; dividendCash: number; totalReturnPct: number | null;
   high: { date: string; price: number }; low: { date: string; price: number };
   // Highest daily high and lowest daily low (intraday), when DSE sends them; else the close.
   dayHigh: { date: string; price: number }; dayLow: { date: string; price: number };
@@ -43,6 +44,26 @@ export function yearAgoClose(series: readonly SeriesPoint[]): SeriesPoint | null
   const cut = daysBefore(last.date, WINDOW_DAYS);
   for (let i = series.length - 1; i >= 0; i--) if (series[i].date <= cut) return series[i];
   return null;
+}
+
+// The one 1-year change (lists, company page, notes): price now against the close a year back; none without trades in the window.
+export function oneYearChange(series: readonly SeriesPoint[], priceNow: number | null | undefined): { pct: number; yearAgo: SeriesPoint } | null {
+  const valid = series.filter((p) => Number.isFinite(p.price) && p.price > 0);
+  const yearAgo = yearAgoClose(valid);
+  if (!yearAgo || !priceNow || !(priceNow > 0) || !lastYearOf(valid).some(traded)) return null;
+  return { pct: pct(yearAgo.price, priceNow), yearAgo };
+}
+
+// Cash a share from dividends whose record date is after `from` and on or before `to`; one per record date.
+export function cashInWindow(declarations: readonly Declaration[], from: string, to: string, faceValue: number | null): number {
+  const face = faceValue || DEFAULT_FACE_VALUE, seen = new Set<string>();
+  let cash = 0;
+  for (const d of declarations) {
+    if (d.noDividend || !d.recordDate || !((d.cashPct ?? 0) > 0) || d.recordDate <= from || d.recordDate > to || seen.has(d.recordDate)) continue;
+    seen.add(d.recordDate);
+    cash += (d.cashPct! / 100) * face;
+  }
+  return Math.round(cash * 100) / 100;
 }
 
 // The points within 365 days of the last date: the one "52 weeks" window.
@@ -144,7 +165,8 @@ function adjust(s: SeriesPoint[], declarations: readonly Declaration[], face: nu
   return { adj: s.map((raw, i) => ({ date: raw.date, p: raw.price * factor[i], raw })), exDates: exDates.sort((a, b) => a.date.localeCompare(b.date)) };
 }
 
-export function priceHistory(series: readonly SeriesPoint[], declarations: readonly Declaration[] = [], faceValue: number | null = DEFAULT_FACE_VALUE): PriceHistory | null {
+// priceNow: the price the lists use (live when trading); the last close when not given.
+export function priceHistory(series: readonly SeriesPoint[], declarations: readonly Declaration[] = [], faceValue: number | null = DEFAULT_FACE_VALUE, priceNow: number | null = null): PriceHistory | null {
   const valid = series.filter((p) => Number.isFinite(p.price) && p.price > 0);
   if (valid.length < 2) return null;
   const windowStart = daysBefore(valid.at(-1)!.date, WINDOW_DAYS);
@@ -161,14 +183,15 @@ export function priceHistory(series: readonly SeriesPoint[], declarations: reado
   const byPct = [...moves].sort((a, b) => b.pct - a.pct);
   const hi = s.reduce((a, p) => (p.raw.price > a.raw.price ? p : a)).raw, lo = s.reduce((a, p) => (p.raw.price < a.raw.price ? p : a)).raw;
   const dh = s.reduce((a, p) => (top(p.raw) > top(a.raw) ? p : a)).raw, dl = s.reduce((a, p) => (bottom(p.raw) < bottom(a.raw) ? p : a)).raw;
-  const yearAgo = yearAgoClose(valid);
+  const now = priceNow && priceNow > 0 ? priceNow : valid.at(-1)!.price;
+  const year = oneYearChange(valid, now);
+  const dividendCash = year ? cashInWindow(declarations, year.yearAgo.date, valid.at(-1)!.date, faceValue) : 0;
   const jan = `${s.at(-1)!.date.slice(0, 4)}-01-01`;
   const prevYearEnd = [...adj].reverse().find((p) => p.date < jan);
   const flat = tradedInWindow.length < 2;
   return {
     from: s[0].date, to: s.at(-1)!.date, days: tradedInWindow.length,
-    // Same rule as metrics.change1y: no 1-year change without a close a year back, or with no trades in the window.
-    changePct: yearAgo && !illiquid ? pct(yearAgo.price, valid.at(-1)!.price) : null,
+    changePct: year?.pct ?? null, dividendCash, totalReturnPct: year ? pct(year.yearAgo.price, now + dividendCash) : null,
     high: { date: hi.date, price: hi.price }, low: { date: lo.date, price: lo.price },
     dayHigh: { date: dh.date, price: top(dh) }, dayLow: { date: dl.date, price: bottom(dl) },
     months: flat ? [] : monthRows(s), swings: flat ? [] : swings(s, SWING_MIN_PCT), swingsSmall: flat ? [] : swings(s, SWING_SMALL_PCT),

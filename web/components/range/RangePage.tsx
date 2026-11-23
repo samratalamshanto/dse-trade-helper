@@ -12,10 +12,13 @@ import { listTrades, useMode } from '@/components/portfolio-store';
 import { useWatchlist } from '@/components/Watchlist';
 import { MyRules } from '@/components/range/MyRules';
 import { QuickPickChips } from '@/components/QuickPickChips';
+import { PositionBar } from '@/components/PositionBar';
 import { pickTest, QUICK_PICK_KEYS, type QuickPickKey } from '@/lib/quick-picks';
 import { rangeStats, rangeLooksWrong, gainFromBuyPct, type RangeRow, type Owned } from '@/lib/range';
 import type { CompanyRow } from '@/lib/service';
 import type { MarketSession } from '@/lib/dse';
+import { CompanySearch } from '@/components/CompanySearch';
+import { Icon } from '@/components/ui';
 
 interface CompaniesResponse { rows: CompanyRow[]; medians?: Record<string, number | null>; session: MarketSession | null }
 
@@ -61,26 +64,6 @@ function sortKey(r: TableRow, k: string): number | string | null {
   return null;
 }
 
-function PositionBar({ position }: { position: number }) {
-  const pct = Math.round(position * 100);
-  const left = Math.round(position * 44);
-  return (
-    <span
-      role="img"
-      aria-label={`${pct}% from the low`}
-      style={{
-        display: 'inline-block', width: '56px', height: '8px',
-        background: 'var(--border)', borderRadius: '4px', position: 'relative', verticalAlign: 'middle',
-      }}
-    >
-      <span style={{
-        position: 'absolute', left: `${left}px`, top: '-2px',
-        width: '12px', height: '12px', borderRadius: '50%', background: 'var(--accent)',
-      }} />
-    </span>
-  );
-}
-
 export function RangePage() {
   const { t } = useLang();
   const { data: apiData, error } = useApi<CompaniesResponse>('/api/companies');
@@ -105,6 +88,9 @@ export function RangePage() {
   const pick = QUICK_PICK_KEYS.includes(pickParam as QuickPickKey) ? pickParam as QuickPickKey : null;
   const within = Number(params.get('within') || '');
   const withinActive = Number.isFinite(within) && within > 0;
+  const codeFilter = params.get('code') || '';
+  const [companyQ, setCompanyQ] = useState(codeFilter);
+  useEffect(() => { setCompanyQ(codeFilter); }, [codeFilter]);
 
   const defaultSort = view === 'risen' ? { key: 'aboveLow', dir: -1 } : { key: 'aboveLow', dir: 1 };
   const sortDirParam = params.get('dir');
@@ -148,6 +134,8 @@ export function RangePage() {
     });
   }, [data, who, holdingsByCode, watchlistCodes]);
 
+  const searchData = useMemo(() => (data?.rows ?? []).map((r) => ({ code: r.code, name: r.name })), [data]);
+
   const shown = useMemo(() => {
     let list = rows;
     if (pick) {
@@ -157,8 +145,9 @@ export function RangePage() {
       list = list.filter((r) => passes.has(r.code));
     }
     if (withinActive) list = list.filter((r) => r.aboveLowPct != null && r.aboveLowPct <= within);
+    if (codeFilter) list = list.filter((r) => r.code === codeFilter);
     return [...list].sort((a, b) => compareNullsLast(sortKey(a, sortKeyParam), sortKey(b, sortKeyParam), sortDirVal));
-  }, [rows, data, pick, sortKeyParam, sortDirVal, withinActive, within]);
+  }, [rows, data, pick, sortKeyParam, sortDirVal, withinActive, within, codeFilter]);
 
   // A tab keeps who, pick and within; the sort resets to the tab's own default.
   const tabHref = (v: 'low' | 'risen') => {
@@ -172,7 +161,7 @@ export function RangePage() {
   const setParams = (patch: Record<string, string | number>) => {
     const q = new URLSearchParams(params.toString());
     for (const [k, v] of Object.entries(patch)) {
-      if (v === '' || (k === 'view' && v === 'low') || (k === 'who' && v === '') || (k === 'within' && v === '') || (k === 'pick' && v === '')) q.delete(k);
+      if (v === '' || (k === 'view' && v === 'low') || (k === 'who' && v === '') || (k === 'within' && v === '') || (k === 'pick' && v === '') || (k === 'code' && v === '')) q.delete(k);
       else q.set(k, String(v));
     }
     router.replace(pathname + (q.toString() ? '?' + q : ''), { scroll: false });
@@ -242,8 +231,21 @@ export function RangePage() {
           <Tr text="% of the low" />
         </label>
         {withinActive && (
-          <button type="button" className="btn ghost" onClick={() => setParams({ within: '' })}>
+          <button type="button" className="btn ghost" onClick={() => { setCompanyQ(''); setParams({ within: '', code: '' }); }}>
             <Tr text="Clear filters" />
+          </button>
+        )}
+        <CompanySearch
+          companies={searchData}
+          value={companyQ}
+          onChange={(q) => { setCompanyQ(q); if (codeFilter) setParams({ code: '' }); }}
+          onPick={(code) => { setCompanyQ(code); setParams({ code }); }}
+          label={t('Pick a company')}
+          placeholder={t('Pick a company')}
+        />
+        {codeFilter && (
+          <button type="button" className="btn ghost" onClick={() => { setCompanyQ(''); setParams({ code: '' }); }}>
+            <Icon name="cross" />{t('Show all')}
           </button>
         )}
       </div>
