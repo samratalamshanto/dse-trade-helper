@@ -139,7 +139,7 @@ async function buildDividendCalendar() {
       cashPct: d?.cashPct ?? null, stockPct: d?.stockPct ?? null, interim: !!d?.interim, partial: !!d?.partial,
       // yearlyCashPerShare: every cash declaration of the last 12 months (interims + final), the same sum the yield uses.
       cashPerShare, yearlyCashPerShare: currentYield(c, null, now).cash, yieldPct: a.metrics.latestYield, yieldBasis: a.metrics.yieldBasis,
-      fraud: a.fraud.level,
+      fraud: a.fraud.level, flags: a.fraud.flags.map((f) => f.title),
       announced: d?.announced ?? null, recordDate: d?.recordDate ?? null, agmDate: d?.agmDate ?? null,
       lastBuyDate: d?.lastBuyDate ?? (d?.recordDate ? previousTradingDay(d.recordDate) : null),
       lastBuyEstimated: d?.lastBuyDate ? !!d.lastBuyEstimated : true, nextExpected: s.nextExpected, regular: s.regular,

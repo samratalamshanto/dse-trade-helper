@@ -16,7 +16,7 @@ import { useLang } from '@/components/i18n';
 import { WatchButton } from '@/components/Watchlist';
 import { fmt, fmtDateLang, sectorName } from '@/components/format';
 import { CATEGORY_TEXT } from '@/lib/glossary';
-import { FRAUD, Icon, Info, SIGNALS, SignalPill, type FraudLevel, type IconName, type Signal } from '@/components/ui';
+import { FRAUD, Icon, Info, SignalPill, type FraudLevel, type IconName, type Signal } from '@/components/ui';
 import type { CompanyDetail } from '@/lib/service';
 
 const TABS = [['overview', 'Overview'], ['history', 'Price history (52 weeks)'], ['valuation', 'Price vs own history'], ['financials', '5-year financials'], ['dividends', 'Dividends'], ['news', 'News'], ['safety', 'Safety checks'], ['owners', 'Owners'], ['details', 'Company details']] as const;
@@ -81,8 +81,9 @@ export function CompanyView({ code }: { code: string }) {
             <RangeBar52 c={c} compact /><HeaderStats d={d} /></div>
         </div>
         <div className="verdict">
-          <Link href="/learn#signals" className="signal-link" aria-label={`${t(a.notRated ? NOT_RATED : SIGNALS[signal].label)}: ${t('what the signals mean')}`}>
-            {a.notRated ? <span className="pill s-neutral big-pill"><Icon name="neutral" /> {t(NOT_RATED)}</span> : <SignalPill signal={signal} big />}</Link>{' '}
+          {a.notRated ? <Link href="/learn#signals" className="signal-link" aria-label={`${t(NOT_RATED)}: ${t('what the signals mean')}`}>
+            <span className="pill s-neutral big-pill"><Icon name="neutral" /> {t(NOT_RATED)}</span></Link>
+            : <SignalPill signal={signal} big href="/learn#signals" missed={a.checks.filter((x) => !x.ok).map((x) => x.label).slice(0, 3)} />}{' '}
 {a.notRated ? null : (
           <span className="mono small muted">{t('Score')} {a.score}/100 <Info text="Each signal has its own range. High risk 0–30, Caution 31–60, No strong signal 61–75, Passes the checks 76–100." /></span>)}
         </div>

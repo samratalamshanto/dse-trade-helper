@@ -38,8 +38,8 @@ export function MyStocks({ exclude = NONE }: { exclude?: string[] }) {
             <span><Link href={'/c/' + encodeURIComponent(code)} className="mono"><b>{code}</b></Link>{r ? <span className="mono small"> ৳{fmt(r.price)}</span> : null}</span>
             <span className="my-stock-facts">
               {r ? <span className="mono small"><ChangeText pct={r.changePct} /></span> : <span className="small muted">{data ? <Tr text="not in the DSE list" /> : '…'}</span>}
-              {r ? <SignalPill signal={r.signal as Signal} code={code} missed={r.missed} /> : null}
-              {r && r.fraud !== 'clean' ? <FraudPill level={r.fraud as FraudLevel} code={code} flags={r.flags} /> : null}
+              {r ? <SignalPill signal={r.signal as Signal} href={'/c/' + encodeURIComponent(code)} missed={r.missed} /> : null}
+              {r && r.fraud !== 'clean' ? <FraudPill level={r.fraud as FraudLevel} href={'/c/' + encodeURIComponent(code) + '#safety'} flags={r.flags} /> : null}
               {dv ? <span className="small"><Tr text="buy by" /> <LastBuy r={dv} /> · <Tr text="record date" /> {fmtDate(dv.recordDate)}</span> : null}
             </span>
           </li>

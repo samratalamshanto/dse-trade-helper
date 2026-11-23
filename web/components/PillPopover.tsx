@@ -7,8 +7,8 @@ import { useLang } from '@/components/i18n';
 const WIDTH = 280, GAP = 8, HOVER_CLOSE_MS = 150;
 
 // A pill that opens a short "why" box on tap, click, keyboard or mouse hover. Rows that navigate on click do not see these clicks.
-export function PillPopover({ className, style, pill, meaning, title, items, href }: {
-  className: string; style?: CSSProperties; pill: ReactNode; meaning: string; title: string; items: readonly string[]; href: string;
+export function PillPopover({ className, style, pill, meaning, title = '', items = [], href }: {
+  className: string; style?: CSSProperties; pill: ReactNode; meaning: string; title?: string; items?: readonly string[]; href?: string;
 }) {
   const { t } = useLang();
   const id = useId();
@@ -52,7 +52,7 @@ export function PillPopover({ className, style, pill, meaning, title, items, hre
         <span id={id} className="pop-box" style={{ ...pos, width: WIDTH }}>
           <span className="pop-meaning">{t(meaning)}</span>
           {items.length ? <><b className="pop-title">{t(title)}</b><ul>{items.map((x) => <li key={x}>{t(x)}</li>)}</ul></> : null}
-          <Link href={href}>{t('See details →')}</Link>
+          {href ? <Link href={href}>{t('See details →')}</Link> : null}
         </span>
       ) : null}
     </span>

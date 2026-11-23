@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { PillPopover } from '@/components/PillPopover';
 import { Tr } from '@/components/Tr';
-import { SIGNAL_TEXT } from '@/lib/glossary';
+import { flagCountText, SIGNAL_TEXT } from '@/lib/glossary';
 
 const SHIELD = 'M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z';
 
@@ -61,21 +61,23 @@ export const SIGNAL_ORDER: Record<Signal, number> = { avoid: 0, caution: 1, neut
 
 export const FRAUD_TEXT: Record<FraudLevel, string> = {
   clean: 'None of the 9 warning-sign patterns was found.',
-  suspicious: 'One warning-sign pattern was found. A flag is a pattern, not proof.',
-  high: 'Several warning-sign patterns, or category Z. A flag is a pattern, not proof.',
+  suspicious: 'A warning-sign pattern was found. A flag is a pattern, not proof.',
+  high: 'Warning signs of more than one kind, or category Z. A flag is a pattern, not proof.',
 };
 
-// With a company code, the pill becomes a button that explains itself (list rows); without one it is a plain label.
-export function SignalPill({ signal, big = false, code, missed = [] }: { signal: Signal; big?: boolean; code?: string; missed?: readonly string[] }) {
+// With an href, the pill becomes a button that explains itself and links to the details; without one it is a plain label.
+export function SignalPill({ signal, big = false, href, missed = [] }: { signal: Signal; big?: boolean; href?: string; missed?: readonly string[] }) {
   const cls = `pill s-${signal}`, style = big ? { fontSize: 16 } : undefined, pill = <><Icon name={signal} /> <Tr text={SIGNALS[signal].label} /></>;
-  if (!code) return <span className={cls} style={style}>{pill}</span>;
-  return <PillPopover className={cls} style={style} pill={pill} meaning={SIGNALS[signal].text} title="Checks it misses" items={missed} href={'/c/' + encodeURIComponent(code)} />;
+  if (!href) return <span className={cls} style={style}>{pill}</span>;
+  return <PillPopover className={cls} style={style} pill={pill} meaning={SIGNALS[signal].text} title="Checks it misses" items={missed} href={href} />;
 }
 
-export function FraudPill({ level, big = false, code, flags = [] }: { level: FraudLevel; big?: boolean; code?: string; flags?: readonly string[] }) {
-  const cls = `pill f-${level}`, style = big ? { fontSize: 16 } : undefined, pill = <><Icon name={level} /> <Tr text={FRAUD[level]} /></>;
-  if (!code) return <span className={cls} style={style}>{pill}</span>;
-  return <PillPopover className={cls} style={style} pill={pill} meaning={FRAUD_TEXT[level]} title="Patterns found" items={flags.slice(0, 3)} href={'/c/' + encodeURIComponent(code) + '#safety'} />;
+// Given the flags, the label counts them, so two flags never read "1 flag pattern"; the level still sets the colour.
+export function FraudPill({ level, big = false, href, flags }: { level: FraudLevel; big?: boolean; href?: string; flags?: readonly string[] }) {
+  const cls = `pill f-${level}`, style = big ? { fontSize: 16 } : undefined;
+  const pill = <><Icon name={level} /> <Tr text={flags ? flagCountText(flags.length) : FRAUD[level]} n={flags?.length} /></>;
+  if (!href) return <span className={cls} style={style}>{pill}</span>;
+  return <PillPopover className={cls} style={style} pill={pill} meaning={FRAUD_TEXT[level]} title="Patterns found" items={flags ?? []} href={href} />;
 }
 
 // Grey rows in the shape of the content, so a page never looks empty or jumps while its data loads.
