@@ -32,8 +32,11 @@ test.describe('/all company picker', () => {
     const picker = page.getByRole('combobox', { name: 'Pick a company' });
     await picker.fill('GP');
     await page.getByRole('listbox').getByRole('option', { name: /GP/ }).first().click();
+    // Wait for the code param to appear before clicking Show all
+    await expect(page).toHaveURL(/code=/);
     // Show all resets
     await page.getByRole('button', { name: /Show all/ }).click();
+    await expect(page).not.toHaveURL(/code=/);
     const shown = await page.locator('table.cards tbody tr').count();
     expect(shown).toBeGreaterThan(5);
     await expect(page.getByRole('button', { name: /Show all/ })).not.toBeVisible();
@@ -54,6 +57,28 @@ test.describe('/all company picker', () => {
     await expect(picker).toBeVisible();
     const box = await picker.boundingBox();
     expect(box!.height).toBeGreaterThanOrEqual(44);
+  });
+
+  test('keyboard: Escape then Enter does not pick', async ({ page }) => {
+    const picker = page.getByRole('combobox', { name: 'Pick a company' });
+    await picker.fill('BRACBANK');
+    await expect(page.getByRole('listbox')).toBeVisible();
+    await picker.press('Escape');
+    await expect(page.getByRole('listbox')).not.toBeVisible();
+    await picker.press('Enter');
+    // list must NOT have narrowed — no "Show all" button means no code filter was applied
+    await expect(page.getByRole('button', { name: /Show all/ })).not.toBeVisible();
+  });
+
+  test('picking a company sets ?code= in the URL', async ({ page }) => {
+    const picker = page.getByRole('combobox', { name: 'Pick a company' });
+    await picker.fill('BRACBANK');
+    await expect(page.getByRole('listbox')).toBeVisible();
+    await page.getByRole('listbox').getByRole('option').first().click();
+    await expect(page).toHaveURL(/code=BRACBANK/);
+    // Show all resets the param
+    await page.getByRole('button', { name: /Show all/ }).click();
+    await expect(page).not.toHaveURL(/code=/);
   });
 });
 
@@ -156,6 +181,36 @@ test.describe('/warning-signs company picker', () => {
       await showAllBtn.click();
       await expect(page.locator('table.cards tbody tr')).toHaveCount(all);
     }
+  });
+
+  test('picking a company sets ?code= in the URL', async ({ page }) => {
+    const firstCode = (await page.locator('table.cards tbody tr b.mono').first().textContent())?.trim() ?? '';
+    if (!firstCode) return;
+    const picker = page.getByRole('combobox', { name: 'Pick a company' });
+    await picker.fill(firstCode);
+    const matchOpt = page.getByRole('listbox').getByRole('option').filter({ hasText: firstCode }).first();
+    if (await matchOpt.count()) {
+      await matchOpt.click();
+      await expect(page).toHaveURL(new RegExp(`code=${firstCode}`));
+      await page.getByRole('button', { name: /Show all/ }).click();
+      await expect(page).not.toHaveURL(/code=/);
+    }
+  });
+
+  test('picker on Category Z tab only shows Z companies', async ({ page }) => {
+    await page.getByRole('link', { name: /Category Z/ }).click();
+    await expect(page).toHaveURL(/lane=z/);
+    await expect(page.locator('table.cards tbody tr').first()).toBeVisible({ timeout: 10_000 });
+    const all = await page.locator('table.cards tbody tr').count();
+    if (all === 0) return;
+    const picker = page.getByRole('combobox', { name: 'Pick a company' });
+    await picker.fill(await page.locator('table.cards tbody tr b.mono').first().textContent() ?? 'Z');
+    const listbox = page.getByRole('listbox');
+    await expect(listbox).toBeVisible();
+    await listbox.getByRole('option').first().click();
+    const shown = await page.locator('table.cards tbody tr').count();
+    // A pick from the Z-tab picker must never produce an empty table
+    expect(shown).toBeGreaterThanOrEqual(1);
   });
 });
 

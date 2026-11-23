@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Tr } from '@/components/Tr';
 import { CompanyTabs } from '@/components/CompanyTabs';
 import { useLang } from '@/components/i18n';
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useApi } from '@/components/AppProvider';
 import { SortHeader } from '@/components/SortHeader';
 import { WatchButton } from '@/components/Watchlist';
@@ -41,11 +41,12 @@ function AllCompanies() {
   const { t } = useLang();
   const { data, error } = useApi<CompaniesResponse>('/api/companies');
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [companyQ, setCompanyQ] = useState('');
-  const [codeFilter, setCodeFilter] = useState('');
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const codeFilter = params.get('code') || '';
+  const [companyQ, setCompanyQ] = useState(codeFilter);
+  useEffect(() => { setCompanyQ(codeFilter); }, [codeFilter]);
   // A stored page can lack the sector ("—"); the live DSE list still knows it.
   const rows = useMemo(() => {
     const live = Object.fromEntries((data?.codes ?? []).map((c) => [c.code, c.sector]));
@@ -102,13 +103,13 @@ function AllCompanies() {
           <CompanySearch
             companies={searchData}
             value={companyQ}
-            onChange={(q) => { setCompanyQ(q); setCodeFilter(''); }}
-            onPick={(code) => { setCodeFilter(code); setCompanyQ(code); }}
+            onChange={(q) => { setCompanyQ(q); if (codeFilter) setParams({ code: '' }); }}
+            onPick={(code) => { setCompanyQ(code); setParams({ code }); }}
             label={t('Pick a company')}
             placeholder={t('Pick a company')}
           />
           {codeFilter && (
-            <button type="button" className="btn ghost" onClick={() => { setCodeFilter(''); setCompanyQ(''); }}>
+            <button type="button" className="btn ghost" onClick={() => { setCompanyQ(''); setParams({ code: '' }); }}>
               <Icon name="cross" />{t('Show all')}
             </button>
           )}
@@ -129,7 +130,7 @@ function AllCompanies() {
         <span className="small muted" aria-live="polite">{data ? t('Showing {n} companies').replace('{n}', String(shown.length)) : t('Loading companies…')}</span>
         {/* Disabled, not removed, when nothing is set, so keyboard focus is not lost after a click. */}
         <button type="button" className="btn ghost" disabled={!filtered}
-          onClick={() => { setCodeFilter(''); setCompanyQ(''); setParams({ preset: '', sort: 'score', dir: -1, ...Object.fromEntries(FILTERS.map((k) => [k, ''])) }); }}>
+          onClick={() => { setCompanyQ(''); setParams({ preset: '', sort: 'score', dir: -1, code: '', ...Object.fromEntries(FILTERS.map((k) => [k, ''])) }); }}>
           <Icon name="cross" />{t('Clear filters')}</button>
         <button type="button" className="btn ghost" onClick={() => downloadCsv(shown)} disabled={!shown.length}>
           <Icon name="download" />{t('Download list')} <span className="small muted">CSV</span></button>

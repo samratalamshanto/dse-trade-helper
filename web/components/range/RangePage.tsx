@@ -109,6 +109,7 @@ export function RangePage() {
   const withinActive = Number.isFinite(within) && within > 0;
   const codeFilter = params.get('code') || '';
   const [companyQ, setCompanyQ] = useState(codeFilter);
+  useEffect(() => { setCompanyQ(codeFilter); }, [codeFilter]);
 
   const defaultSort = view === 'risen' ? { key: 'aboveLow', dir: -1 } : { key: 'aboveLow', dir: 1 };
   const sortDirParam = params.get('dir');
@@ -249,7 +250,7 @@ export function RangePage() {
           <Tr text="% of the low" />
         </label>
         {withinActive && (
-          <button type="button" className="btn ghost" onClick={() => setParams({ within: '' })}>
+          <button type="button" className="btn ghost" onClick={() => { setCompanyQ(''); setParams({ within: '', code: '' }); }}>
             <Tr text="Clear filters" />
           </button>
         )}

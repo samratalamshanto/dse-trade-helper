@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useMode } from '@/components/portfolio-store';
 import Link from 'next/link';
 import { Tr } from '@/components/Tr';
@@ -31,14 +31,18 @@ export default function WatchlistPage() {
 
   const [pickQ, setPickQ] = useState('');
   const [pickedCode, setPickedCode] = useState('');
+  const [announcement, setAnnouncement] = useState('');
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const searchData = useMemo(() => (data?.rows || []).map((r) => ({ code: r.code, name: r.name, signal: r.signal })), [data]);
   const watchedSet = useMemo(() => new Set(codes), [codes]);
 
   const addCompany = () => {
     if (!pickedCode || has(pickedCode)) return;
     toggle(pickedCode);
+    setAnnouncement(t('Added {code} to your watchlist').replace('{code}', pickedCode));
     setPickQ('');
     setPickedCode('');
+    inputRef.current?.focus();
   };
 
   const alreadyWatched = Boolean(pickedCode) && has(pickedCode);
@@ -48,6 +52,7 @@ export default function WatchlistPage() {
       <h1><Tr text="Watchlist" /></h1>
       <p className="muted">{tradesKey ? 'Companies you saved. They are kept in your Google Sheet, so every device shows the same list.' : 'Companies you saved. They are stored in this browser only, so they do not appear on your other devices.'}</p>
       {error && !data ? <div className="note bad">Could not load prices: {error}. Your saved list is safe; try Refresh.</div> : null}
+      <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{announcement}</span>
       <div className="picker-row">
         <CompanySearch
           companies={searchData}
@@ -57,6 +62,7 @@ export default function WatchlistPage() {
           label={t('Add a company')}
           placeholder={t('Company code or name')}
           watched={watchedSet}
+          inputRef={inputRef}
         />
         <button
           type="button"

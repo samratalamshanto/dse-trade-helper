@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { Tr } from '@/components/Tr';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useMemo, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useApi } from '@/components/AppProvider';
 import { fmt, sectorName, signed } from '@/components/format';
 import { FraudPill, Icon, Skeleton, type FraudLevel } from '@/components/ui';
@@ -15,12 +15,25 @@ import { CompanySearch } from '@/components/CompanySearch';
 function WarningSigns() {
   const { t } = useLang();
   const { data, error } = useApi<{ rows: CompanyRow[]; session: MarketSession | null }>('/api/companies');
-  const lane = useSearchParams().get('lane') === 'z' ? 'z' : 'warn';
+  const params = useSearchParams();
+  const lane = params.get('lane') === 'z' ? 'z' : 'warn';
   const router = useRouter();
-  const [companyQ, setCompanyQ] = useState('');
-  const [codeFilter, setCodeFilter] = useState('');
+  const pathname = usePathname();
+  const codeFilter = params.get('code') || '';
+  const [companyQ, setCompanyQ] = useState(codeFilter);
+  useEffect(() => { setCompanyQ(codeFilter); }, [codeFilter]);
   const rows = data?.rows ?? [];
-  const searchData = useMemo(() => (data?.rows ?? []).map((r) => ({ code: r.code, name: r.name })), [data]);
+  const searchData = useMemo(() => {
+    const r = data?.rows ?? [];
+    if (lane === 'z') return r.filter((row) => row.category === 'Z').map((row) => ({ code: row.code, name: row.name }));
+    return r.filter((row) => row.fraud !== 'clean' && row.category !== 'Z').map((row) => ({ code: row.code, name: row.name }));
+  }, [data, lane]);
+
+  const setParams = (patch: Record<string, string>) => {
+    const q = new URLSearchParams(params.toString());
+    for (const [k, v] of Object.entries(patch)) { if (v === '') q.delete(k); else q.set(k, v); }
+    router.replace(pathname + (q.toString() ? '?' + q : ''), { scroll: false });
+  };
 
   if (error && !data) return <div className="note bad">Could not load the list: {error}</div>;
   const warn = rows.filter((r) => r.fraud !== 'clean' && r.category !== 'Z').sort((a, b) => b.flags.length - a.flags.length || (b.change1y ?? 0) - (a.change1y ?? 0));
@@ -43,13 +56,13 @@ function WarningSigns() {
         <CompanySearch
           companies={searchData}
           value={companyQ}
-          onChange={(q) => { setCompanyQ(q); setCodeFilter(''); }}
-          onPick={(code) => { setCodeFilter(code); setCompanyQ(code); }}
+          onChange={(q) => { setCompanyQ(q); if (codeFilter) setParams({ code: '' }); }}
+          onPick={(code) => { setCompanyQ(code); setParams({ code }); }}
           label={t('Pick a company')}
           placeholder={t('Pick a company')}
         />
         {codeFilter && (
-          <button type="button" className="btn ghost" onClick={() => { setCodeFilter(''); setCompanyQ(''); }}>
+          <button type="button" className="btn ghost" onClick={() => { setCompanyQ(''); setParams({ code: '' }); }}>
             <Icon name="cross" />{t('Show all')}
           </button>
         )}

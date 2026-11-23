@@ -468,4 +468,5 @@ export const BN: Record<string, string> = {
   'Show all': 'সব দেখুন',
   'In watchlist': 'ওয়াচলিস্টে আছে',
   'Already in watchlist': 'ইতিমধ্যে ওয়াচলিস্টে',
+  'Added {code} to your watchlist': '{code} ওয়াচলিস্টে যোগ হয়েছে',
 };
