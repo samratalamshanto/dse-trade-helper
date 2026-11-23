@@ -13,7 +13,9 @@ export function LangProvider({ children }: { children: ReactNode }) {
   const [raw, set] = useStoredValue('lang', 'en');
   const lang: Lang = raw === 'bn' ? 'bn' : 'en';
   useEffect(() => { document.documentElement.lang = lang; }, [lang]);
-  const t = useCallback((s: string) => (lang === 'bn' && Object.hasOwn(BN, s) ? BN[s] : s), [lang]);
+  const t = useCallback((s: string) => (lang !== 'bn' ? s : Object.hasOwn(BN, s) ? BN[s]
+    // A line built from fixed sentences (or "Label:" heads) translates piece by piece.
+    : s.split(/(?<=[.:]) /).map((p) => (Object.hasOwn(BN, p) ? BN[p] : p)).join(' ')), [lang]);
   return <LangContext.Provider value={{ lang, setLang: (l) => set(l), t }}>{children}</LangContext.Provider>;
 }
 
