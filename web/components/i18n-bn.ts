@@ -508,4 +508,11 @@ export const BN: Record<string, string> = {
   'Break-even after the {f}% sell commission': '{f}% বিক্রয় কমিশনের পর সমান-সমান দাম', '{m} from the price now': 'এখনকার দাম থেকে {m}',
   '{w}% of your portfolio': 'আপনার পোর্টফোলিওর {w}%',
   '{w}% of your portfolio — above the {max}% line the planner uses': 'আপনার পোর্টফোলিওর {w}% — প্ল্যানার যে {max}% সীমা ধরে তার উপরে',
+
+  // Company picker (CompanySearch component, /all, /watchlist, /warning-signs, /range)
+  'Pick a company': 'কোম্পানি বাছুন',
+  'Show all': 'সব দেখুন',
+  'In watchlist': 'ওয়াচলিস্টে আছে',
+  'Already in watchlist': 'ইতিমধ্যে ওয়াচলিস্টে',
+  'Added {code} to your watchlist': '{code} ওয়াচলিস্টে যোগ হয়েছে',
 };
