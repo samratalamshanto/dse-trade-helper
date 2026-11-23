@@ -28,14 +28,14 @@ env:
     selected: true
 # Signal count card -> Companies filtered
 - scrollUntilVisible:
-    element: ".*Worth researching, Passes every quality check.*"
+    element: ".*Passes the checks, Passes every quality check.*"
     direction: DOWN
-- tapOn: ".*Worth researching, Passes every quality check.*"
+- tapOn: ".*Passes the checks, Passes every quality check.*"
 - extendedWaitUntil:
     visible: ".*compan(y|ies) · Passes every quality check and has no fraud flag\\."
     timeout: 30000
 - assertVisible:
-    text: "Worth researching"
+    text: "Passes the checks"
     selected: true
 - takeScreenshot: home-03-companies-filtered
 # Bottom tabs

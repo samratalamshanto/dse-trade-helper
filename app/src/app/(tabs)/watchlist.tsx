@@ -23,7 +23,12 @@ export default function Watchlist() {
         renderItem={({ item }) => <CompanyLine row={item} />}
         refreshing={loading}
         onRefresh={reload}
-        ListHeaderComponent={rows.length ? <Text style={[s.muted, { padding: 16, paddingBottom: 4 }]}>{rows.length} saved · open a company and tap ★ at the top to remove it</Text> : undefined}
+        ListHeaderComponent={rows.length ? (
+          <View style={{ padding: 16, paddingBottom: 4, gap: 4 }}>
+            <Text style={s.muted}>{rows.length} saved · open a company and tap ★ at the top to remove it</Text>
+            <Text style={[s.muted, { fontSize: 12 }]}>Automatic rule results, not advice.</Text>
+          </View>
+        ) : undefined}
         ListEmptyComponent={
           <View style={[s.center, { paddingTop: 80 }]}>
             <Ionicons name="star-outline" size={56} color={colors.warn} />

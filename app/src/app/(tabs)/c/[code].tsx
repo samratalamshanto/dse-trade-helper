@@ -369,6 +369,7 @@ export default function Company() {
                 </View>
                 <ScoreBar score={data.analysis.score} color={colors[SIGNAL[data.analysis.signal].tone]} />
                 <Text style={[s.text, { fontWeight: '600' }]}>{data.analysis.suggestion}</Text>
+                <Text style={[s.muted, { fontSize: 12 }]}>Automatic rule results, not advice.</Text>
                 <Button variant="primary" label={saved ? '★ In your watchlist' : '☆ Add to watchlist'} onPress={() => toggle(code)} />
               </View>
 
@@ -414,8 +415,9 @@ export default function Company() {
 
               {data.analysis.fraud.flags.length > 0 && (
                 <View style={[s.card, { borderColor: colors.down }]}>
-                  <Text style={[s.title, { color: colors.down }]}>⚠ Fraud warning signs</Text>
+                  <Text style={[s.title, { color: colors.down }]}>⚠ Warning signs</Text>
                   {data.analysis.fraud.flags.map((f) => <Text key={f.title} style={s.text}>• <Text style={{ fontWeight: '700' }}>{f.title}:</Text> {f.detail}</Text>)}
+                  <Text style={[s.muted, { fontSize: 12 }]}>A flag is a pattern in public data, not an accusation.</Text>
                 </View>
               )}
               {error && <Text style={[s.muted, { color: colors.warn }]}>Showing older data: {error}</Text>}

@@ -6,8 +6,14 @@ export type Tone = 'up' | 'down' | 'warn' | 'muted' | 'link';
 
 const SIGNAL_TONE: Record<Signal, Tone> = { research: 'up', neutral: 'muted', caution: 'warn', avoid: 'down' };
 export const SIGNAL_ORDER: Signal[] = ['research', 'neutral', 'caution', 'avoid'];
+const SIGNAL_LABEL_APP: Record<Signal, string> = {
+  research: 'Passes the checks',
+  neutral: 'No strong signal',
+  caution: 'Caution',
+  avoid: 'High risk',
+};
 export const SIGNAL: Record<Signal, { label: string; text: string; tone: Tone }> = Object.fromEntries(
-  SIGNAL_ORDER.map((k) => [k, { ...SIGNAL_TEXT[k], tone: SIGNAL_TONE[k] }]),
+  SIGNAL_ORDER.map((k) => [k, { ...SIGNAL_TEXT[k], label: SIGNAL_LABEL_APP[k], tone: SIGNAL_TONE[k] }]),
 ) as Record<Signal, { label: string; text: string; tone: Tone }>;
 
 const ANSWER_TONE: Record<string, Tone> = { yes: 'up', partly: 'warn', no: 'down', unknown: 'muted' };

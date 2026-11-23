@@ -10,9 +10,9 @@ env:
     timeout: 90000
 - assertVisible: "\\d+ compan(y|ies)"
 # Filter chips
-- tapOn: "Worth researching"
+- tapOn: "Passes the checks"
 - assertVisible:
-    text: "Worth researching"
+    text: "Passes the checks"
     selected: true
 - assertVisible: ".*· Passes every quality check and has no fraud flag\\."
 - tapOn: "No strong signal"
