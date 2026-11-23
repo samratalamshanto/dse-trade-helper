@@ -106,6 +106,17 @@ export function parseRangeRules(raw: unknown): RangeRule[] {
   return out;
 }
 
+// Plain words for a rule, e.g. "within 5% of the 52-week low (your holdings)".
+export function describeRule(r: RangeRule): string {
+  const where = r.scope === 'holdings' ? 'your holdings' : r.scope === 'watchlist' ? 'your watchlist' : 'all companies';
+  switch (r.kind) {
+    case 'nearLow': return `within ${r.pct}% of the 52-week low (${where})`;
+    case 'nearHigh': return `within ${r.pct}% of the 52-week high (${where})`;
+    case 'upFromBuy': return `up ${r.pct}% or more from your buy (${where})`;
+    default: return `down ${r.pct}% or more from your buy (${where})`;
+  }
+}
+
 // Plain words for a match; the same text is used on the page and in Telegram.
 export function describeMatch(m: RangeMatch): string {
   const v = Math.abs(m.valuePct);

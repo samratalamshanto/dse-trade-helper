@@ -139,7 +139,9 @@ export async function readPrefs(): Promise<Prefs> {
 }
 
 export const savePrefs = (input: unknown) => serial(async () => {
-  const prefs = parsePrefs(input);
+  const parsed = parsePrefs(input);
+  // An older page sends no rangeRules: keep the saved ones instead of erasing them.
+  const prefs = parsed && !parsed.rangeRules ? { ...parsed, rangeRules: (await readPrefs()).rangeRules ?? [] } : parsed;
   if (!prefs) throw new TradeInputError(`The watchlist and alert rules must be lists and the broker rate a percentage from 0 to ${MAX_COMMISSION_PCT}.`);
   await writeSettingsRows(prefsToRows(prefs), PREFS_TAB);
   return prefs;

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { describeMatch, gainFromBuyPct, parseRangeRules, rangeFeed, rangeStats, type RangeRow } from '../lib/range.ts';
+import { describeMatch, describeRule, gainFromBuyPct, parseRangeRules, rangeFeed, rangeStats, type RangeRow } from '../lib/range.ts';
 
 const row = (code: string, price: number | null, low: number | null, high: number | null): RangeRow => ({ code, price, weekLow52: low, weekHigh52: high });
 
@@ -103,4 +103,9 @@ test('rules from storage: odd ids and number formats are refused; the first of d
   assert.deepEqual(parsed.map((r) => [r.id, r.pct]), [['first', 3], ['spaced', 7.5]]);
   assert.deepEqual(parseRangeRules({ id: 'a' }), []);
   assert.deepEqual(parseRangeRules(undefined), []);
+});
+
+test('rule wording names the threshold and the scope', () => {
+  assert.equal(describeRule({ id: 'a', kind: 'nearHigh', pct: 5, scope: 'watchlist' }), 'within 5% of the 52-week high (your watchlist)');
+  assert.equal(describeRule({ id: 'a', kind: 'downFromBuy', pct: 8, scope: 'holdings' }), 'down 8% or more from your buy (your holdings)');
 });

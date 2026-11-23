@@ -3,9 +3,12 @@ import path from 'node:path';
 import { DHAKA_OFFSET_MS } from './dhaka.ts';
 import { livePrices } from './dse.ts';
 import { listPlans, picksFor } from './planner-service.ts';
-import { companyDetail } from './service.ts';
+import { rangeFeed, describeMatch, describeRule, type Owned, type RangeRow, type RangeRule } from './range.ts';
+
+export const RANGE_DIGEST_MAX = 10;
+import { listCompanies, companyDetail } from './service.ts';
 import { escapeHtml, OFF_TEXT, sendMessage, telegramEnabled, type SendResult } from './telegram.ts';
-import { listTrades } from './trades-service.ts';
+import { listTrades, readPrefs } from './trades-service.ts';
 
 const TICK_MS = 5 * 60_000;
 const OPEN = 9 * 60 + 30, SUMMARY_AT = 9 * 60 + 45, CLOSE = 15 * 60;
@@ -44,6 +47,10 @@ export interface NotifyInput {
   clock: Clock;
   plans: PlanRow[];
   holdings: HoldingRow[];
+  owned: readonly Owned[];
+  rangeRules: readonly RangeRule[];
+  rangeRows: readonly RangeRow[];
+  watchlist: readonly string[];
   lastBuyDates: Record<string, string | null>;
   dayPl: number | null;
   picks: Pick3[];
@@ -93,6 +100,17 @@ export function alertsFor(input: NotifyInput, prevActions: Record<string, string
     const lastBuy = input.lastBuyDates[h.code];
     if (lastBuy === clock.date || lastBuy === clock.tomorrow) {
       out.push({ key: `div:${h.code}:${lastBuy}`, text: `<b>${code}</b>: ${lastBuy === clock.date ? 'today' : 'the next trading day'} (${lastBuy}) is the last day to buy for the dividend. If the board's dividend is approved, you must still hold the shares on the record date to get it — check that date with your broker.` });
+    }
+  }
+  if (input.rangeRules.length > 0) {
+    const matches = rangeFeed(input.rangeRules, { rows: input.rangeRows, watchlist: input.watchlist, holdings: input.owned });
+    // One message per rule per day, listing the closest RANGE_DIGEST_MAX: a wide rule cannot flood the chat or the saved state.
+    for (const rule of input.rangeRules) {
+      const mine = matches.filter((m) => m.rule.id === rule.id);
+      if (!mine.length) continue;
+      const lines = mine.slice(0, RANGE_DIGEST_MAX).map((m) => `• <b>${escapeHtml(m.code)}</b>: ${describeMatch(m)}`);
+      if (mine.length > RANGE_DIGEST_MAX) lines.push(`…and ${mine.length - RANGE_DIGEST_MAX} more on the 52-week range page`);
+      out.push({ key: `range:${rule.id}:${clock.date}`, text: [`<b>Your rule:</b> ${escapeHtml(describeRule(rule))}`, ...lines].join('\n') });
     }
   }
   return out;
@@ -145,10 +163,12 @@ export function writeState(state: NotifyState, file = STATE_FILE()): void {
 }
 
 async function gather(clock: Clock, budget: number | null | undefined): Promise<NotifyInput> {
-  const [trades, plans, live] = await Promise.all([
+  const [trades, plans, live, companyResult, prefs] = await Promise.all([
     listTrades(),
     listPlans(),
     livePrices().catch((e: unknown) => { console.warn('notify: live prices unavailable', e); return {} as Record<string, { ltp: number; ycp: number }>; }),
+    listCompanies().catch((e: unknown) => { console.warn('notify: company list unavailable for range rules', e); return null; }),
+    readPrefs().catch((e: unknown) => { console.warn('notify: prefs unavailable for range rules', e); return null; }),
   ]);
   const held = trades.holdings.filter((h) => h.shares > 0);
   const moves = held.map((h) => (live[h.code]?.ltp && live[h.code]?.ycp ? h.shares * (live[h.code].ltp - live[h.code].ycp) : null));
@@ -162,6 +182,10 @@ async function gather(clock: Clock, budget: number | null | undefined): Promise<
   return {
     clock, plans: plans.plans, picks, lastBuyDates,
     holdings: held.map((h) => ({ code: h.code, shares: h.shares, value: h.value, check: h.check })),
+    owned: held.map((h) => ({ code: h.code, shares: h.shares, avgCost: h.avgCost })),
+    rangeRules: prefs?.rangeRules ?? [],
+    rangeRows: companyResult?.rows ?? [],
+    watchlist: prefs?.watchlist ?? [],
     dayPl: moves.length && moves.every((m) => m != null) ? moves.reduce((a: number, m) => a + (m as number), 0) : null,
   };
 }
