@@ -134,8 +134,8 @@ function AllCompanies() {
               <td><div className="co-cell"><WatchButton code={r.code} /><div><a className="mono" href={'/c/' + encodeURIComponent(r.code)} onClick={(e) => e.stopPropagation()}><b>{r.code}</b></a>
                 <div className="small muted">{r.name}{r.sector ? ' · ' + sectorName(r.sector) : ''} · {t('Category')} {r.category}</div>
                 {r.stale ? <span className="pill s-neutral" title={t('Saved before the latest rule update; it refreshes in the background.')}>{t('old data')}</span> : null}</div></div></td>
-              <td data-label="Signal"><SignalPill signal={r.signal as Signal} /></td>
-              <td data-label="Warning-sign check"><FraudPill level={r.fraud as FraudLevel} />{r.flags.length ? <div className="small muted">{r.flags.join(', ')}</div> : null}</td>
+              <td data-label="Signal"><SignalPill signal={r.signal as Signal} href={'/c/' + encodeURIComponent(r.code)} missed={r.missed} /></td>
+              <td data-label="Warning-sign check"><FraudPill level={r.fraud as FraudLevel} href={'/c/' + encodeURIComponent(r.code) + '#safety'} flags={r.flags} />{r.flags.length ? <div className="small muted">{r.flags.join(', ')}</div> : null}</td>
               <td className="n mono" data-label="Score">{r.score}</td><td className="n mono" data-label="Price">৳{fmt(r.price)}</td>
               <td className="n mono" data-label="P/E">{fmt(r.pe, 1)}</td><td className="n mono" data-label="Yield">{r.dividendYield != null ? fmt(r.dividendYield, 1) + '%' : '—'}</td>
               <td className="n mono" data-label="Traded / day">{moneyPerDay(r.dailyValue)}</td>

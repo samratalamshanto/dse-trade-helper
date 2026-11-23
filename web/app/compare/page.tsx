@@ -11,6 +11,7 @@ import { ChartBox, useChartColors, type Colors } from '@/components/charts';
 import { fmt, fmtDate, moneyPerDay, pctNum, sectorName, signed } from '@/components/format';
 import { FraudPill, Icon, SignalPill, Skeleton, type FraudLevel, type Signal } from '@/components/ui';
 import { useLang } from '@/components/i18n';
+import { PillPopover } from '@/components/PillPopover';
 import type { CompanyDetail, CompanyRow } from '@/lib/service';
 import { CODE_RE } from '@/lib/dhaka';
 
@@ -45,12 +46,14 @@ function useCompanies(codes: string[]): { data: Record<string, CompanyDetail>; e
 type Better = 'low' | 'high' | null;
 interface RowDef { label: string; value: (d: CompanyDetail) => number | null; show: (d: CompanyDetail) => ReactNode; better: Better }
 
+const TONE_PILL: Record<string, string> = { good: 's-research', warn: 's-caution', bad: 's-avoid', neutral: 's-neutral' };
+
 const ROWS: RowDef[] = [
   { label: 'Price', value: () => null, show: (d) => '৳' + fmt(d.company.price), better: null },
   { label: 'Today', value: () => null, show: (d) => <ChangeText pct={d.company.changePct} />, better: null },
-  { label: 'Signal', value: (d) => (d.analysis.notRated ? null : d.analysis.score), show: (d) => (d.analysis.notRated ? <span className="pill s-neutral"><Tr text="Not rated — no EPS published" /></span> : <><SignalPill signal={d.analysis.signal as Signal} /> <span className="mono small">{d.analysis.score}</span></>), better: 'high' },
-  { label: 'Fraud check', value: () => null, show: (d) => <FraudPill level={d.analysis.fraud.level as FraudLevel} />, better: null },
-  { label: 'Cheap or expensive', value: () => null, show: (d) => d.position?.verdict?.label ?? '—', better: null },
+  { label: 'Signal', value: (d) => (d.analysis.notRated ? null : d.analysis.score), show: (d) => (d.analysis.notRated ? <span className="pill s-neutral"><Tr text="Not rated — no EPS published" /></span> : <><SignalPill signal={d.analysis.signal as Signal} href={'/c/' + encodeURIComponent(d.company.code)} missed={d.analysis.checks.filter((x) => !x.ok).map((x) => x.label).slice(0, 3)} /> <span className="mono small">{d.analysis.score}</span></>), better: 'high' },
+  { label: 'Warning-sign check', value: () => null, show: (d) => <FraudPill level={d.analysis.fraud.level as FraudLevel} href={'/c/' + encodeURIComponent(d.company.code) + '#safety'} flags={d.analysis.fraud.flags.map((f) => f.title)} />, better: null },
+  { label: 'Cheap or expensive', value: () => null, show: (d) => { const v = d.position?.verdict; return v ? <PillPopover className={`pill ${TONE_PILL[v.tone]}`} pill={<Tr text={v.label} />} meaning={v.text} href={'/c/' + encodeURIComponent(d.company.code)} /> : '—'; }, better: null },
   { label: 'P/E', value: (d) => d.analysis.metrics.pe ?? null, show: (d) => fmt(d.analysis.metrics.pe, 1), better: 'low' },
   { label: 'Sector P/E', value: () => null, show: (d) => fmt(d.sectorPe, 1), better: null },
   { label: 'P/B', value: (d) => d.analysis.metrics.pb ?? null, show: (d) => fmt(d.analysis.metrics.pb, 2), better: 'low' },

@@ -73,6 +73,12 @@ h1 { font-size: 24px; margin: 0 0 4px; } h2 { font-size: 18px; margin: 28px 0 10
 /* Fraud pills are outlined and signal pills filled, so a green "Clean" never looks like a green signal. */
 .f-clean, .f-suspicious, .f-high { background: transparent; box-shadow: inset 0 0 0 1px currentColor; }
 .f-clean { color: var(--up); } .f-suspicious { color: var(--warn); } .f-high { color: var(--down); }
+/* A list pill is a button that opens a short "why" box (PillPopover). */
+.pill-pop { display: inline-block; }
+button.pill { border: 0; font-family: inherit; line-height: inherit; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+button.pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pop-box { position: fixed; z-index: 30; display: grid; gap: 6px; background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.18); font-family: var(--font-sans), system-ui, sans-serif; font-size: 13px; font-weight: 400; line-height: 1.45; white-space: normal; text-align: left; cursor: auto; }
+.pop-box ul { margin: 0; padding-left: 18px; } .pop-title { font-size: 12px; color: var(--muted); }
 .card { text-decoration: none; color: inherit; display: block; transition: transform .15s; }
 .card:hover { transform: translateY(-2px); border-color: var(--accent); }
 .card .top { display: flex; justify-content: space-between; gap: 8px; }

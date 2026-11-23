@@ -36,7 +36,7 @@ function WarningSigns() {
         <tbody>{!data ? <tr><td colSpan={5} className="empty">Loading…</td></tr> : list.length ? list.map((r) => (
           <tr key={r.code} onClick={() => router.push('/c/' + encodeURIComponent(r.code))}>
             <td><b className="mono">{r.code}</b><div className="small muted">{r.name} · {sectorName(r.sector)}</div></td>
-            <td data-label="Warning-sign check"><FraudPill level={r.fraud as FraudLevel} /></td>
+            <td data-label="Warning-sign check"><FraudPill level={r.fraud as FraudLevel} href={'/c/' + encodeURIComponent(r.code) + '#safety'} flags={r.flags} /></td>
             <td className="small" data-label="Flags">{r.flags.join(' · ') || '—'}</td>
             <td className="n mono" data-label="Price">৳{fmt(r.price)}</td><td className="n mono muted" data-label="1 year">{signed(r.change1y)}</td>
           </tr>

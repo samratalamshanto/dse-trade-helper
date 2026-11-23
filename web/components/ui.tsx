@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
+import { PillPopover } from '@/components/PillPopover';
 import { Tr } from '@/components/Tr';
-import { SIGNAL_TEXT } from '@/lib/glossary';
+import { flagCountText, SIGNAL_TEXT } from '@/lib/glossary';
 
 const SHIELD = 'M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z';
 
@@ -58,12 +59,25 @@ export type FraudLevel = keyof typeof FRAUD;
 
 export const SIGNAL_ORDER: Record<Signal, number> = { avoid: 0, caution: 1, neutral: 2, research: 3 };
 
-export function SignalPill({ signal, big = false }: { signal: Signal; big?: boolean }) {
-  return <span className={`pill s-${signal}`} style={big ? { fontSize: 16 } : undefined}><Icon name={signal} /> <Tr text={SIGNALS[signal].label} /></span>;
+export const FRAUD_TEXT: Record<FraudLevel, string> = {
+  clean: 'None of the 9 warning-sign patterns was found.',
+  suspicious: 'A warning-sign pattern was found. A flag is a pattern, not proof.',
+  high: 'Warning signs of more than one kind, or category Z. A flag is a pattern, not proof.',
+};
+
+// With an href, the pill becomes a button that explains itself and links to the details; without one it is a plain label.
+export function SignalPill({ signal, big = false, href, missed = [] }: { signal: Signal; big?: boolean; href?: string; missed?: readonly string[] }) {
+  const cls = `pill s-${signal}`, style = big ? { fontSize: 16 } : undefined, pill = <><Icon name={signal} /> <Tr text={SIGNALS[signal].label} /></>;
+  if (!href) return <span className={cls} style={style}>{pill}</span>;
+  return <PillPopover className={cls} style={style} pill={pill} meaning={SIGNALS[signal].text} title="Checks it misses" items={missed} href={href} />;
 }
 
-export function FraudPill({ level, big = false }: { level: FraudLevel; big?: boolean }) {
-  return <span className={`pill f-${level}`} style={big ? { fontSize: 16 } : undefined}><Icon name={level} /> <Tr text={FRAUD[level]} /></span>;
+// Given the flags, the label counts them, so two flags never read "1 flag pattern"; the level still sets the colour.
+export function FraudPill({ level, big = false, href, flags }: { level: FraudLevel; big?: boolean; href?: string; flags?: readonly string[] }) {
+  const cls = `pill f-${level}`, style = big ? { fontSize: 16 } : undefined;
+  const pill = <><Icon name={level} /> <Tr text={flags ? flagCountText(flags.length) : FRAUD[level]} n={flags?.length} /></>;
+  if (!href) return <span className={cls} style={style}>{pill}</span>;
+  return <PillPopover className={cls} style={style} pill={pill} meaning={FRAUD_TEXT[level]} title="Patterns found" items={flags ?? []} href={href} />;
 }
 
 // Grey rows in the shape of the content, so a page never looks empty or jumps while its data loads.

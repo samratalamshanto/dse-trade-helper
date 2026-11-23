@@ -6,6 +6,9 @@ export const SIGNAL_TEXT = {
   avoid: { label: 'High risk', text: 'Loss-making, category Z, or several warning-sign patterns. If you hold it, re-read its disclosures.' },
 } as const;
 
+// Pill label from the real number of flags. The level (colour) is separate: one Category Z flag is still high risk.
+export const flagCountText = (n: number): string => (n === 0 ? 'No flags' : n === 1 ? '1 flag pattern' : '{n} flag patterns');
+
 export const FLAGS: [string, string][] = [
   ['Fast price rise', 'Price up more than 30% in 1 month, 50% in 3 months or 100% in 1 year, while yearly earnings grew less than 10%.'],
   ['Volume spike', 'Volume 5× or more above the 3-month average, together with a price move of 5%+ in a day or 15%+ in a month.'],

@@ -114,6 +114,7 @@ async function buildCompanyList() {
     return {
       code: c.code, name: c.name, sector: c.sector, category: c.category, price: c.price, changePct: c.changePct,
       signal: a.signal, score: a.score, quality: a.quality, fraud: a.fraud.level, flags: a.fraud.flags.map((f) => f.title),
+      missed: a.checks.filter((x) => !x.ok).map((x) => x.label).slice(0, 3),
       pe: a.metrics.pe, dividendYield: a.metrics.latestYield, epsCagr: a.metrics.epsCagr, change1y: a.metrics.change1y,
       dailyValue: a.metrics.avgDailyValue, weekHigh52: c.weekHigh52 ?? null, weekLow52: c.weekLow52 ?? null, stale: c.version !== DATA_VERSION,
     };
@@ -138,7 +139,7 @@ async function buildDividendCalendar() {
       cashPct: d?.cashPct ?? null, stockPct: d?.stockPct ?? null, interim: !!d?.interim, partial: !!d?.partial,
       // yearlyCashPerShare: every cash declaration of the last 12 months (interims + final), the same sum the yield uses.
       cashPerShare, yearlyCashPerShare: currentYield(c, null, now).cash, yieldPct: a.metrics.latestYield, yieldBasis: a.metrics.yieldBasis,
-      fraud: a.fraud.level,
+      fraud: a.fraud.level, flags: a.fraud.flags.map((f) => f.title),
       announced: d?.announced ?? null, recordDate: d?.recordDate ?? null, agmDate: d?.agmDate ?? null,
       lastBuyDate: d?.lastBuyDate ?? (d?.recordDate ? previousTradingDay(d.recordDate) : null),
       lastBuyEstimated: d?.lastBuyDate ? !!d.lastBuyEstimated : true, nextExpected: s.nextExpected, regular: s.regular,
