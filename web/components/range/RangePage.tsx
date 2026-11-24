@@ -10,11 +10,10 @@ import { SortHeader } from '@/components/SortHeader';
 import { compareNullsLast, fmt, signed, tone } from '@/components/format';
 import { listTrades, useMode } from '@/components/portfolio-store';
 import { useWatchlist } from '@/components/Watchlist';
-import { MyRules } from '@/components/range/MyRules';
 import { QuickPickChips } from '@/components/QuickPickChips';
 import { PositionBar } from '@/components/PositionBar';
 import { parsePickList, picksTest } from '@/lib/quick-picks';
-import { rangeStats, rangeLooksWrong, gainFromBuyPct, type RangeRow, type Owned } from '@/lib/range';
+import { rangeStats, rangeLooksWrong, gainFromBuyPct, type Owned } from '@/lib/range';
 import type { CompanyRow } from '@/lib/service';
 import type { MarketSession } from '@/lib/dse';
 import { CompanySearch } from '@/components/CompanySearch';
@@ -120,10 +119,6 @@ export function RangePage() {
     return () => { active = false; };
   }, [ready, mode]);
 
-  const rangeRows = useMemo<RangeRow[]>(() => (data?.rows ?? []).map((r) => ({
-    code: r.code, price: r.price, weekLow52: r.weekLow52, weekHigh52: r.weekHigh52,
-  })), [data]);
-
   const holdingsByCode = useMemo(() => new Map(holdings.map((h) => [h.code, h])), [holdings]);
 
   const rows = useMemo<TableRow[]>(() => {
@@ -194,7 +189,6 @@ export function RangePage() {
       <h1><Tr text="52-week range" /></h1>
       <p className="small muted"><Tr text="A price near its low can fall further. Automatic figures and your own rules, not advice." /></p>
 
-      <MyRules rows={rangeRows} companies={data?.rows ?? []} medians={data?.medians} watchlist={watchlistCodes} holdings={holdings} />
 
       <nav className="tabs" aria-label={t('Range views')}>
         <Link
@@ -211,6 +205,7 @@ export function RangePage() {
 
       <div className="panel filter-panel">
         <p className="small muted"><Tr text="Tap more than one to combine them: a company must pass all of them." /></p>
+        <p className="small muted"><Tr text="Want a message when a company comes near its low?" /> <Link href="/alerts#range-rules"><Tr text="Set a range rule on Alerts" /></Link></p>
         <QuickPickChips active={picks} onPick={(p, wasOn) => setParams({ pick: (wasOn ? picks.filter((k) => k !== p.key) : [...picks, p.key]).join(',') })} />
       </div>
 

@@ -5,9 +5,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type FormE
 import { fmt, fmtDate, fmtDateLang } from '@/components/format';
 import { dhakaToday } from '@/lib/dhaka';
 import { Icon, SignalPill, Skeleton, type Signal } from '@/components/ui';
-import TelegramTestButton from '@/components/TelegramTestButton';
-import { TelegramConnect } from '@/components/TelegramConnect';
-import { CheckBadge, KEY_STORE, SIGNED_IN_STORE, type TradesList as List } from '@/components/trades-client';
+import { CheckBadge, type TradesList as List } from '@/components/trades-client';
 import { deleteTrade, dropRefusedKey, importFile, listTrades, saveLimits, saveTrade, useBrowserData, useKeyStopped, useMode, type ImportResult } from '@/components/portfolio-store';
 import { useLang } from '@/components/i18n';
 import { commissionFor, MAX_COMMISSION_PCT, tradesCsv, type Account, type Trade, type TradeInput } from '@/lib/trades';
@@ -48,9 +46,6 @@ export default function PortfolioPage() {
   const { mode, ready } = useMode();
   const sheet = mode === 'sheet';
   // Telegram still sends to the one owner chat (lib/trades-http.ts ownerOnly): only the owner key may test it.
-  const [ownerKey] = useStoredValue(KEY_STORE, '');
-  const [signedIn] = useStoredValue(SIGNED_IN_STORE, '');
-  const ownerMode = !!ownerKey && signedIn !== '1';
   const browserData = useBrowserData();
   const browserTrades = browserData.trades.good;
   const { t: tr, lang } = useLang();
@@ -344,22 +339,10 @@ export default function PortfolioPage() {
       </div>
       </div>
       <details className={`panel ${css.section}`} open={settingsOpen} onToggle={(e) => setSettingsOpen(e.currentTarget.open)}>
-        <summary className="h3">{tr('Settings')} <span className="small muted">{tr('Your stop-loss and target, phone alerts, backup and Google Sheet sync.')}</span></summary>
+        <summary className="h3">{tr('Settings')} <span className="small muted">{tr('Your stop-loss and target, backup and Google Sheet sync.')}</span></summary>
         {!paper && data?.settings ? <LimitsPanel key={JSON.stringify(data.settings)} settings={data.settings} held={data.holdings.filter((h) => h.shares > 0).map((h) => h.code)}
           onSave={async (s) => { await saveLimits(s); await load(account); }} /> : null}
-        <div className={`panel ${css.section}`}>
-          <h2 className="h3">{tr('Phone alerts')}</h2>
-          {ownerMode ? (
-            <>
-              <p className="small muted">{tr('Get a Telegram message when a plan reaches its price, a holding hits your stop-loss or target, or a dividend\'s last buy day is near.')}</p>
-              <TelegramTestButton />
-            </>
-          ) : signedIn === '1' ? (
-            <TelegramConnect />
-          ) : (
-            <p className="small">{tr('Sign in with Google (in the panel below) to get Telegram alerts from your own Sheet.')} {tr('For price alerts in this browser, use the')} <Link href="/alerts">{tr('Alerts page')}</Link>{tr('.')}</p>
-          )}
-        </div>
+        <p className={`small ${css.section}`}>{tr('Phone alerts (Telegram) are set up on the')} <Link href="/alerts#phone-alerts">{tr('Alerts page')}</Link>{tr('.')}</p>
         <div className={`panel ${css.section}`}>
           <h2 className="h3">{tr('My data')}</h2>
           <BackupPanel mode={mode} onChanged={() => void load(account)} />

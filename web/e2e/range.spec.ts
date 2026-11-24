@@ -126,16 +126,6 @@ test.describe('/range', () => {
     await expect.poll(() => codes(page)).toEqual(['SQURPHARMA', 'GP']);
   });
 
-  test('a rule with a quick pick only matches companies that pass it', async ({ page }) => {
-    await page.getByLabel('Kind', { exact: true }).selectOption('nearLow');
-    await page.getByLabel('Within %', { exact: true }).fill('30');
-    await page.getByLabel('Quick pick', { exact: true }).selectOption('good');
-    await page.getByRole('button', { name: 'Add rule' }).click();
-    // BRAC is nearer its low (16.7%) but does not pass the checks; SQURPHARMA (22.2%) does.
-    await expect(page.locator('.range-matches li')).toHaveCount(1);
-    await expect(page.locator('.range-matches li').first()).toContainText('SQURPHARMA');
-    await expect(page.locator('.range-rule-head')).toContainText('Passes the checks');
-  });
 
   test('no holdings shows the empty state with a Portfolio link', async ({ page }) => {
     await page.getByRole('button', { name: 'My holdings' }).click();
@@ -151,26 +141,7 @@ test.describe('/range', () => {
     expect(visible).toEqual(['BRAC']);
   });
 
-  test('adding a rule, seeing it matched, and deleting it', async ({ page }) => {
-    await page.getByLabel('Kind', { exact: true }).selectOption('nearLow');
-    await page.getByLabel('Within %', { exact: true }).fill('30');
-    await page.getByRole('button', { name: 'Add rule' }).click();
-    await expect(page.getByText(/Near its low 30%/)).toBeVisible();
-    await expect(page.locator('.range-matches li').first()).toContainText('BRAC');
-    await page.getByRole('button', { name: /Delete rule/ }).first().click();
-    await expect(page.getByText(/Near its low 30%/)).toHaveCount(0);
-    await expect(page.getByText('No rules yet')).toBeVisible();
-  });
 
-  test('rules survive a page reload', async ({ page }) => {
-    await page.getByLabel('Kind', { exact: true }).selectOption('nearLow');
-    await page.getByLabel('Within %', { exact: true }).fill('20');
-    await page.getByRole('button', { name: 'Add rule' }).click();
-    await expect(page.getByText(/Near its low 20%/)).toBeVisible();
-    await page.reload();
-    await expect(page.getByRole('heading', { name: '52-week range' })).toBeVisible();
-    await expect(page.getByText(/Near its low 20%/)).toBeVisible();
-  });
 
   test('a row whose price is far outside its 52-week range is marked and sorted last', async ({ page }) => {
     const sibl = { ...COMPANIES_RESP.rows[0], code: 'SIBL', name: 'Social Islami Bank', price: 3, weekLow52: 122, weekHigh52: 590 };
@@ -183,5 +154,57 @@ test.describe('/range', () => {
 
   test('no console errors on page load', async ({ page }) => {
     await page.waitForLoadState('networkidle');
+  });
+});
+
+// The range rules moved from /range to /alerts; same data mocks.
+test.describe('/alerts range rules', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route('**/api/companies', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(COMPANIES_RESP) }));
+    await page.route('**/api/portfolio/value', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(HOLDINGS_RESP) }));
+    await page.goto('/alerts');
+  });
+  const panel = (page: import('@playwright/test').Page) => page.locator('#range-rules');
+
+  test('the range page links to the rules on Alerts', async ({ page }) => {
+    await page.goto('/range');
+    await expect(page.getByText('Saved rules')).toHaveCount(0);
+    await page.getByRole('link', { name: 'Set a range rule on Alerts' }).click();
+    await expect(page).toHaveURL(/\/alerts#range-rules/);
+    await expect(page.getByRole('heading', { name: '52-week range rules' })).toBeVisible();
+  });
+
+  test('a rule with a quick pick only matches companies that pass it', async ({ page }) => {
+    const p = panel(page);
+    await p.getByLabel('Kind', { exact: true }).selectOption('nearLow');
+    await p.getByLabel('Within %', { exact: true }).fill('30');
+    await p.getByLabel('Quick pick', { exact: true }).selectOption('good');
+    await p.getByRole('button', { name: 'Add range rule' }).click();
+    // BRAC is nearer its low (16.7%) but does not pass the checks; SQURPHARMA (22.2%) does.
+    await expect(p.locator('.range-matches li')).toHaveCount(1);
+    await expect(p.locator('.range-matches li').first()).toContainText('SQURPHARMA');
+    await expect(p.locator('.range-rule-head')).toContainText('Passes the checks');
+  });
+
+  test('adding a rule, seeing it matched, and deleting it', async ({ page }) => {
+    const p = panel(page);
+    await p.getByLabel('Kind', { exact: true }).selectOption('nearLow');
+    await p.getByLabel('Within %', { exact: true }).fill('30');
+    await p.getByRole('button', { name: 'Add range rule' }).click();
+    await expect(p.getByText(/Near its low 30%/)).toBeVisible();
+    await expect(p.locator('.range-matches li').first()).toContainText('BRAC');
+    await p.getByRole('button', { name: /Delete rule/ }).first().click();
+    await expect(p.getByText(/Near its low 30%/)).toHaveCount(0);
+    await expect(p.getByText('No rules yet')).toBeVisible();
+  });
+
+  test('rules survive a page reload', async ({ page }) => {
+    const p = panel(page);
+    await p.getByLabel('Kind', { exact: true }).selectOption('nearLow');
+    await p.getByLabel('Within %', { exact: true }).fill('20');
+    await p.getByRole('button', { name: 'Add range rule' }).click();
+    await expect(p.getByText(/Near its low 20%/)).toBeVisible();
+    await page.reload();
+    await expect(panel(page).getByText(/Near its low 20%/)).toBeVisible();
   });
 });

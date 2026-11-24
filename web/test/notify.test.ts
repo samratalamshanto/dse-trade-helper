@@ -447,3 +447,18 @@ test('nextState drops price keys from earlier days, keeps today and other keys',
   const next = nextState(state, base(), [], [], '2026-11-19T04:05:00.000Z');
   assert.deepEqual(Object.keys(next.sent).sort(), ['price:pb:2026-11-19', 'range:r1:2026-11-18']);
 });
+
+test('price rule "once": one key for good; kept across days while the rule exists or the Sheet is unreadable', () => {
+  const once = { type: 'price_below' as const, id: 'o1', enabled: true, code: 'GP', target: 96, stop: 'once' as const };
+  const a = alertsFor(base({ priceRules: [once], livePriceRows: [{ code: 'GP', price: 95 }], sessionDate: '2026-11-19' }), {});
+  assert.deepEqual(a.filter((x) => x.key.startsWith('price')).map((x) => x.key), ['price-once:o1']);
+  const old = { ...emptyState(), sent: { 'price-once:o1': '2026-09-01T04:00:00.000Z', 'price-once:gone': '2026-11-01T04:00:00.000Z' } };
+  assert.deepEqual(Object.keys(nextState(old, base({ priceRules: [once] }), [], [], '2026-11-19T04:05:00.000Z').sent), ['price-once:o1'], 'old age kept, deleted rule dropped');
+  assert.deepEqual(Object.keys(nextState(old, base(), [], [], '2026-11-19T04:05:00.000Z').sent).sort(), ['price-once:gone', 'price-once:o1'], 'unreadable Sheet keeps all');
+});
+
+test('price rule "once": turned off, its key goes, so turning it on again re-arms Telegram', () => {
+  const off = { type: 'price_below' as const, id: 'o1', enabled: false, code: 'GP', target: 96, stop: 'once' as const };
+  const state = { ...emptyState(), sent: { 'price-once:o1': '2026-11-18T04:00:00.000Z' } };
+  assert.deepEqual(Object.keys(nextState(state, base({ priceRules: [off] }), [], [], '2026-11-19T04:05:00.000Z').sent), []);
+});

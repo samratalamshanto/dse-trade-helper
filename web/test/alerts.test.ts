@@ -278,3 +278,35 @@ test('cleanNote does not cut an emoji in half', () => {
   assert.strictEqual(Array.from(note).length, NOTE_MAX);
   assert.ok(note.endsWith('🎯'));
 });
+
+// --- when a price rule stops ---
+
+test('stop: parsed; a bad stop or date falls back to every day (old rules unchanged)', () => {
+  const raw = JSON.stringify({ rules: [
+    { type: 'price_below', id: 's1', enabled: true, code: 'GP', target: 96, stop: 'once' },
+    { type: 'price_below', id: 's2', enabled: true, code: 'GP', target: 96, stop: 'until', until: '2026-11-30' },
+    { type: 'price_below', id: 's3', enabled: true, code: 'GP', target: 96, stop: 'until', until: 'soon' },
+    { type: 'price_below', id: 's4', enabled: true, code: 'GP', target: 96, stop: 'bogus' },
+  ] });
+  const [a, b, c, d] = parseAlertStore(raw).rules;
+  assert.strictEqual((a as { stop?: string }).stop, 'once');
+  assert.deepStrictEqual([(b as { stop?: string }).stop, (b as { until?: string }).until], ['until', '2026-11-30']);
+  assert.ok(!('stop' in c) && !('stop' in d));
+});
+
+test('stop until: fires up to and including the date, not after', () => {
+  const rule: AlertRule = { type: 'price_below', id: 'u', enabled: true, code: 'GP', target: 96, stop: 'until', until: '2026-11-19' };
+  const co: CompanySnap = { code: 'GP', price: 95, changePct: 0, flags: [] };
+  assert.strictEqual(evaluateRules([rule], [co], [], '2026-11-19', {}).events.length, 1);
+  assert.strictEqual(evaluateRules([rule], [co], [], '2026-11-20', {}).events.length, 0);
+});
+
+test('stop once: the rule turns itself off after it fires; daily rules stay on', () => {
+  const once: AlertRule = { type: 'price_below', id: 'o', enabled: true, code: 'GP', target: 96, stop: 'once' };
+  const daily: AlertRule = { type: 'price_above', id: 'd', enabled: true, code: 'GP', target: 90 };
+  const store: AlertStore = { rules: [once, daily], fired: {}, history: [] };
+  const result = evaluateRules(store.rules, [{ code: 'GP', price: 95, changePct: 0, flags: [] }], [], TODAY, {});
+  const next = applyFiredResult(store, result, TODAY);
+  assert.strictEqual(next.rules.find((r) => r.id === 'o')?.enabled, false);
+  assert.strictEqual(next.rules.find((r) => r.id === 'd')?.enabled, true);
+});

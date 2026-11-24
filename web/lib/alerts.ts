@@ -5,13 +5,26 @@ const FIRED_MAX = 500;
 const HISTORY_MAX = 100;
 
 export type AlertRule =
-  | { type: 'price_above'; id: string; enabled: boolean; code: string; target: number; note?: string }
-  | { type: 'price_below'; id: string; enabled: boolean; code: string; target: number; note?: string }
+  | { type: 'price_above'; id: string; enabled: boolean; code: string; target: number; note?: string } & PriceStop
+  | { type: 'price_below'; id: string; enabled: boolean; code: string; target: number; note?: string } & PriceStop
   | { type: 'dividend'; id: string; enabled: boolean; code: string; daysBefore: number }
   | { type: 'fraud_flag'; id: string; enabled: boolean; code: string; seenFlags: string[] }
   | { type: 'big_move'; id: string; enabled: boolean; code: string; threshold: number };
 
 export type RuleType = AlertRule['type'];
+
+// When a price rule stops: 'once' = turns itself off after it fires; 'until' = every trading day up to
+// and including `until`; 'daily' (or missing, as on rules saved before this option) = every trading day.
+export type StopKind = 'once' | 'daily' | 'until';
+export interface PriceStop { stop?: StopKind; until?: string }
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const parseStop = (r: Record<string, unknown>): PriceStop => {
+  if (r.stop === 'once' || r.stop === 'daily') return { stop: r.stop };
+  if (r.stop === 'until' && typeof r.until === 'string' && DATE_RE.test(r.until)) return { stop: 'until', until: r.until };
+  return {};
+};
+// A price rule whose end date has passed does nothing.
+export const pastUntil = (rule: PriceStop, today: string): boolean => rule.stop === 'until' && !!rule.until && today > rule.until;
 
 export interface TriggeredEvent {
   ruleId: string;
@@ -56,7 +69,7 @@ function parseRule(raw: unknown): AlertRule | null {
       const t = r.target;
       if (typeof t !== 'number' || !Number.isFinite(t) || t <= 0) return null;
       const note = cleanNote(r.note);
-      return { type: r.type, id, enabled, code, target: t, ...(note ? { note } : {}) };
+      return { type: r.type, id, enabled, code, target: t, ...(note ? { note } : {}), ...parseStop(r) };
     }
     case 'dividend': {
       const db = r.daysBefore;
@@ -151,6 +164,7 @@ export function evaluateRules(
 
     switch (rule.type) {
       case 'price_above': {
+        if (pastUntil(rule, today)) break;
         const co = byCode[rule.code];
         if (co?.price == null || co.price <= 0 || !Number.isFinite(co.price)) break;
         if (co.price >= rule.target) {
@@ -160,6 +174,7 @@ export function evaluateRules(
         break;
       }
       case 'price_below': {
+        if (pastUntil(rule, today)) break;
         const co = byCode[rule.code];
         if (co?.price == null || co.price <= 0 || !Number.isFinite(co.price)) break;
         if (co.price <= rule.target) {
@@ -221,7 +236,10 @@ export function applyFiredResult(store: AlertStore, result: EvalResult, today: s
   }
 
   const updateMap = new Map(result.seenFlagsUpdates.map((u) => [u.ruleId, u.seenFlags]));
+  const firedIds = new Set(result.events.map((e) => e.ruleId));
   const rules = store.rules.map((rule): AlertRule => {
+    // A "once" price rule turns itself off after it fires.
+    if ((rule.type === 'price_above' || rule.type === 'price_below') && rule.stop === 'once' && firedIds.has(rule.id)) return { ...rule, enabled: false };
     if (rule.type !== 'fraud_flag') return rule;
     const sf = updateMap.get(rule.id);
     return sf ? { ...rule, seenFlags: sf } : rule;

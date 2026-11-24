@@ -1,11 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Tr } from '@/components/Tr';
 import { useLang } from '@/components/i18n';
 import { Icon } from '@/components/ui';
 import { useStoredValue } from '@/components/useStored';
+import { listTrades, useMode } from '@/components/portfolio-store';
 import {
   parseRangeRules, rangeFeed,
   RANGE_RULES_STORE, RANGE_RULES_MAX, RANGE_PCT_MIN, RANGE_PCT_MAX,
@@ -20,7 +21,6 @@ interface Props {
   companies: readonly CompanyRow[];
   medians?: Record<string, number | null>;
   watchlist: readonly string[];
-  holdings: readonly Owned[];
 }
 
 const KIND_LABELS: { kind: RangeRuleKind; label: string }[] = [
@@ -48,8 +48,19 @@ function rawList(raw: string): unknown[] {
   try { const v: unknown = JSON.parse(raw); return Array.isArray(v) ? v : []; } catch { return []; }
 }
 
-export function MyRules({ rows, companies, medians, watchlist, holdings }: Props) {
+export function MyRules({ rows, companies, medians, watchlist }: Props) {
   const { t } = useLang();
+  // Your holdings, for the "Up/Down from my buy" rules. Same load as the range table.
+  const { mode, ready } = useMode();
+  const [holdings, setHoldings] = useState<Owned[]>([]);
+  useEffect(() => {
+    if (!ready) return;
+    let active = true;
+    listTrades('real').then((l) => {
+      if (active) setHoldings(l.holdings.filter((h) => h.shares > 0).map((h) => ({ code: h.code, shares: h.shares, avgCost: h.avgCost })));
+    }, (e: unknown) => { if (active) { console.warn('alerts: could not load your holdings for range rules', e); setHoldings([]); } });
+    return () => { active = false; };
+  }, [ready, mode]);
   const [rawRules, setRawRules] = useStoredValue(RANGE_RULES_STORE, '[]');
   const rules = useMemo<RangeRule[]>(() => parseRangeRules(rawList(rawRules)), [rawRules]);
 
@@ -108,7 +119,7 @@ export function MyRules({ rows, companies, medians, watchlist, holdings }: Props
 
   return (
     <div className="panel">
-      <h2 className="h3" id="my-rules-heading"><Tr text="Saved rules" /></h2>
+      <h2 className="h3" id="my-rules-heading"><Tr text="52-week range rules" /></h2>
       <p className="small muted"><Tr text="Matches show here. With Telegram connected, each rule sends one message per trading day." /></p>
       {rules.length === 0 ? <p className="small muted"><Tr text="No rules yet: add one below." /></p> : null}
       {rules.map((r) => {
@@ -172,7 +183,7 @@ export function MyRules({ rows, companies, medians, watchlist, holdings }: Props
             </select>
           </label>
           <button type="submit" className="btn">
-            <Icon name="check" /><Tr text="Add rule" />
+            <Icon name="check" /><Tr text="Add range rule" />
           </button>
           {addError ? <p className="small range-rule-error" role="alert">{addError}</p> : null}
         </form>

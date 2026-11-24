@@ -128,8 +128,10 @@ export function alertsFor(input: NotifyInput, prevActions: Record<string, string
   if (!isStale && priceRules.length > 0) {
     // Same check and wording as the browser alert; the sent-key log keeps it to one message per rule per day.
     const snaps = (input.livePriceRows ?? []).map((r) => ({ code: r.code, price: r.price, changePct: null, flags: [] }));
+    const onceIds = new Set(priceRules.filter((r) => 'stop' in r && r.stop === 'once').map((r) => r.id));
     for (const e of evaluateRules(priceRules, snaps, [], clock.date, {}).events) {
-      out.push({ key: `price:${e.key}`, text: `${escapeHtml(e.message)} — ${SITE}/c/${encodeURIComponent(e.code)}` });
+      // A "once" rule keeps one key for good, so Telegram sends it one time even if no browser turns it off.
+      out.push({ key: onceIds.has(e.ruleId) ? `price-once:${e.ruleId}` : `price:${e.key}`, text: `${escapeHtml(e.message)} — ${SITE}/c/${encodeURIComponent(e.code)}` });
     }
   }
   if (!isStale && input.rangeRules.length > 0) {
@@ -180,7 +182,11 @@ export function nextState(state: NotifyState, input: NotifyInput, sentKeys: stri
   const cutoff = Date.parse(nowIso) - KEEP_KEYS_MS;
   // A price key only matters on its own day; dropping older ones keeps the saved state small (one Sheet cell).
   const oldPriceKey = (k: string) => k.startsWith('price:') && !k.endsWith(`:${input.clock.date}`);
-  const sent = Object.fromEntries(Object.entries(state.sent).filter(([k, at]) => Date.parse(at) >= cutoff && !oldPriceKey(k)));
+  // "Once" keys never age out while their rule exists, and go when the rule is deleted (at most 100).
+  // Unreadable Sheet (undefined) keeps all "once" keys; a disabled rule loses its key, so re-enabling re-arms it.
+  const ruleIds = input.priceRules ? new Set(input.priceRules.filter((r) => r.enabled).map((r) => r.id)) : null;
+  const keep = ([k, at]: [string, string]) => k.startsWith('price-once:') ? !ruleIds || ruleIds.has(k.slice('price-once:'.length)) : Date.parse(at) >= cutoff && !oldPriceKey(k);
+  const sent = Object.fromEntries(Object.entries(state.sent).filter(keep));
   for (const k of sentKeys) sent[k] = nowIso;
   const blocked = new Set(unsent.map((a) => a.code).filter(Boolean));
   const isStale = input.sessionDate === null ? input.clock.tradingDay : input.sessionDate != null && input.sessionDate !== input.clock.date;
@@ -254,7 +260,7 @@ async function gather(clock: Clock, budget: number | null | undefined): Promise<
     return [h.code, d?.dividend.upcoming?.lastBuyDate ?? null] as const;
   })));
   const rangeRules = prefs?.rangeRules ?? [];
-  const priceRules = (prefs?.alertRules ?? []).filter((r) => PRICE_RULE_TYPES.has(r.type));
+  const priceRules = prefs ? (prefs.alertRules ?? []).filter((r) => PRICE_RULE_TYPES.has(r.type)) : undefined;
   // Price rules read live prices (livePriceError), not the company list.
   const dataError = livePriceError || sessionError || (companyError && rangeRules.length > 0);
   const picks = summaryDue(clock)

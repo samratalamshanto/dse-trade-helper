@@ -6,17 +6,19 @@ import { useApi } from '@/components/AppProvider';
 import { useStoredValue } from '@/components/useStored';
 import { useWatchlist } from '@/components/Watchlist';
 import {
-  parseAlertStore, encodeAlertStore, newRuleId, cleanNote, NOTE_MAX,
+  parseAlertStore, encodeAlertStore, newRuleId, cleanNote, NOTE_MAX, dhakaDate, type StopKind,
   type AlertRule, type RuleType,
 } from '@/lib/alerts';
 import type { CompanyRow, CalendarRow } from '@/lib/service';
 import type { MarketSession } from '@/lib/dse';
 import styles from './alerts.module.css';
+import { MyRules } from '@/components/range/MyRules';
+import { PhoneAlerts } from '@/components/PhoneAlerts';
 import { CODE_RE } from '@/lib/dhaka';
 import { Tr } from '@/components/Tr';
 import { useLang } from '@/components/i18n';
 
-interface Companies { rows: CompanyRow[]; session: MarketSession | null }
+interface Companies { rows: CompanyRow[]; medians?: Record<string, number | null>; session: MarketSession | null }
 interface Calendar { upcoming: CalendarRow[]; session: MarketSession | null }
 
 const RULE_LABELS: Record<RuleType, string> = {
@@ -68,6 +70,9 @@ export default function AlertsPage() {
   const [formTarget, setFormTarget] = useState('');
   const [formDays, setFormDays] = useState('3');
   const [formNote, setFormNote] = useState('');
+  // New price rules stop after one alert unless the user picks otherwise.
+  const [formStop, setFormStop] = useState<StopKind>('once');
+  const [formUntil, setFormUntil] = useState('');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [showSuggests, setShowSuggests] = useState(false);
   const [hiIdx, setHiIdx] = useState(-1);
@@ -166,6 +171,10 @@ export default function AlertsPage() {
       if (!formTarget || isNaN(n) || n <= 0) { errs.target = 'Enter a positive number.'; }
     }
 
+    if (needsTarget && formStop === 'until' && (!formUntil || formUntil < dhakaDate())) {
+      errs.until = 'Pick a date from today on.';
+    }
+
     if (formType === 'dividend') {
       const db = parseInt(formDays, 10);
       if (!formDays || isNaN(db) || db < 0 || db > 30) {
@@ -182,7 +191,8 @@ export default function AlertsPage() {
     let newRule: AlertRule;
     if (formType === 'price_above' || formType === 'price_below') {
       const note = cleanNote(formNote);
-      newRule = { type: formType, id, enabled: true, code: baseCode, target: parseFloat(formTarget), ...(note ? { note } : {}) };
+      const stop = formStop === 'until' ? { stop: formStop, until: formUntil } : { stop: formStop };
+      newRule = { type: formType, id, enabled: true, code: baseCode, target: parseFloat(formTarget), ...(note ? { note } : {}), ...stop };
     } else if (formType === 'big_move') {
       newRule = { type: 'big_move', id, enabled: true, code: baseCode, threshold: parseFloat(formTarget) };
     } else if (formType === 'dividend') {
@@ -212,6 +222,8 @@ export default function AlertsPage() {
     setFormTarget('');
     setFormDays('3');
     setFormNote('');
+    setFormStop('once');
+    setFormUntil('');
     setFormErrors({});
     setHiIdx(-1);
     setShowSuggests(false);
@@ -227,6 +239,12 @@ export default function AlertsPage() {
         {t('Price and move rules use the current trading session only.')}{' '}
         {t('Price rules also go to your Telegram when you are signed in with Google and Telegram is connected.')}{' '}
         {t(tradesKey ? 'Your rules are kept in your Google Sheet, so every device has them; what already fired stays per browser.' : 'All settings are saved in this browser only.')}</p>
+
+      {/* Telegram: where price and range rules reach the phone */}
+      <section id="phone-alerts">
+        <h2><Tr text="Phone alerts (Telegram)" /></h2>
+        <PhoneAlerts />
+      </section>
 
       {/* Browser notifications */}
       <section>
@@ -281,6 +299,10 @@ export default function AlertsPage() {
                   <div><b>{t(ruleDesc(rule))}</b></div>
                   <div className="small muted">{t(RULE_LABELS[rule.type])}{data && priceNow(rule, priceByCode[rule.code]) ? ` · ${t(priceNow(rule, priceByCode[rule.code])!)}` : ''}</div>
                   {(rule.type === 'price_above' || rule.type === 'price_below') && rule.note ? <div className="small">{t('Your plan')}: {rule.note}</div> : null}
+                  {rule.type === 'price_above' || rule.type === 'price_below' ? <div className="small muted">{
+                    rule.stop === 'once' ? t('Stops after the first alert')
+                    : rule.stop === 'until' ? t(`Every trading day until ${rule.until}`)
+                    : t('Every trading day until you turn it off')}</div> : null}
                   {!calByCode[rule.code] && (rule.type === 'dividend') && (
                     <div className="small muted">{t(`No upcoming dividend announced for ${rule.code}.`)}</div>
                   )}
@@ -439,6 +461,27 @@ export default function AlertsPage() {
                 </div>
               )}
 
+              {/* When the price rule stops */}
+              {(formType === 'price_above' || formType === 'price_below') && (
+                <div className={styles.fieldWrap}>
+                  <label htmlFor="alert-stop">{t('Stop')}</label>
+                  <select id="alert-stop" value={formStop} onChange={(e) => { setFormStop(e.target.value as StopKind); setFormErrors({}); }}>
+                    <option value="once">{t('After the first alert')}</option>
+                    <option value="until">{t('On a date')}</option>
+                    <option value="daily">{t('Never (every trading day)')}</option>
+                  </select>
+                </div>
+              )}
+              {(formType === 'price_above' || formType === 'price_below') && formStop === 'until' && (
+                <div className={styles.fieldWrap}>
+                  <label htmlFor="alert-until">{t('Last day')}</label>
+                  <input id="alert-until" type="date" value={formUntil} min={dhakaDate()}
+                    onChange={(e) => { setFormUntil(e.target.value); setFormErrors({}); }}
+                    aria-describedby={formErrors.until ? 'err-until' : undefined} />
+                  {formErrors.until && <span id="err-until" className={styles.fieldErr} role="alert">{t(formErrors.until)}</span>}
+                </div>
+              )}
+
               {/* Days before (dividend only) */}
               {formType === 'dividend' && (
                 <div className={styles.fieldWrap}>
@@ -496,6 +539,11 @@ export default function AlertsPage() {
             return <div className={styles.priceInfo}>{t(`${upperCode} now ${priceStr}`)}{t(rangeStr)}</div>;
           })()}
         </div>
+      </section>
+
+      {/* Near-low / risen / from-my-buy rules; checked by the Telegram job too */}
+      <section id="range-rules" style={{ marginTop: 24 }}>
+        <MyRules rows={companies} companies={companies} medians={data?.medians} watchlist={watchlistCodes} />
       </section>
 
       {/* Recent alerts history */}
