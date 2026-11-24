@@ -1,6 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { monthYearShort } from '../components/format.ts';
+import { lastDataLabel, monthYearShort } from '../components/format.ts';
+
+test('lastDataLabel: today shows only the time; another day adds the weekday', () => {
+  assert.strictEqual(lastDataLabel('Nov 24, 2026 at 2:42 PM', null, '2026-11-24', 'en'), '2:42 PM');
+  assert.strictEqual(lastDataLabel('Nov 23, 2026 at 2:42 PM', null, '2026-11-24', 'en'), 'Mon 23 Nov, 2:42 PM');
+  assert.strictEqual(lastDataLabel(null, '2026-11-23', '2026-11-24', 'en'), 'Mon 23 Nov');
+  assert.strictEqual(lastDataLabel(null, null, '2026-11-24', 'en'), '');
+  assert.match(lastDataLabel('Nov 23, 2026 at 2:42 PM', null, '2026-11-24', 'bn'), /^সোম/);
+});
 
 test('monthYearShort: valid YYYY-MM returns short month and year', () => {
   assert.strictEqual(monthYearShort('2027-02'), 'Feb 2027');

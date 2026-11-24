@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApi, useApp } from '@/components/AppProvider';
-import { fmtDateLang, marketState } from '@/components/format';
+import { dhakaToday, fmtDateLang, lastDataLabel, marketState } from '@/components/format';
 import { useStoredValue } from '@/components/useStored';
 import { bnDigits, LangToggle, useLang } from '@/components/i18n';
 import { Icon, SignalPill, type Signal } from '@/components/ui';
@@ -83,7 +83,9 @@ export function Topbar() {
   const st = marketState(session);
   const stateText = st.key === 'open' ? t('Market open · updates every minute') : st.key === 'preopen' ? `${t('Pre-open')} · ${t('market opens')} ${lang === 'bn' ? bnDigits(session?.opening ?? '') : session?.opening} ${t('today')}`
     : `${t('Market closed')}${session?.next ? ` · ${t('next session')} ${fmtDateLang(session.next, lang)}` : ''}`;
-  const status = session ? `${t('DSE data')}: ${session.dataTime ? t(session.dataTime) : fmtDateLang(session.sessionDate, lang)} · ${stateText}` : '';
+  const lastData = session ? lastDataLabel(session.dataTime, session.sessionDate, dhakaToday(), lang) : '';
+  const lastDataText = `${t('last data')} ${lang === 'bn' ? bnDigits(lastData) : lastData}`;
+  const status = session ? `${stateText} · ${lastDataText}` : '';
 
   return (
     <header className="topbar">
@@ -92,7 +94,7 @@ export function Topbar() {
       <span className="mkt-status" title={status || undefined}>
         {session ? <span aria-hidden="true" className="mkt-visual">
           <span className={`mkt-pill m-${st.key}`}><i />{t(st.short.replace('● ', ''))}</span>
-          <span className="mkt-time">{session.dataTime ? t(session.dataTime) : fmtDateLang(session.sessionDate, lang)}</span>
+          <span className="mkt-time">· {lastDataText}</span>
         </span> : null}
         <span className="sr-only" aria-live="polite">{status}</span>
       </span>

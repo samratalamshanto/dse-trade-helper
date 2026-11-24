@@ -27,7 +27,7 @@ function CallList({ title, list }: { title: string; list: Grade[] }) {
           <Link className="mono" href={'/c/' + encodeURIComponent(g.code)}><b>{g.code}</b></Link>
           <span className={'pill s-' + g.signal}>{t(LABEL[g.signal])}</span>
           <span className="small muted">{fmtDateLang(g.date, lang)}, after {days(g.horizon)}:</span>
-          <span className={'mono ' + (g.right ? 'up' : 'down')}>{signed(g.excess)} vs DSEX</span>
+          <span className="mono">{signed(g.excess)} vs DSEX</span>
           <span className="small muted">{t(g.right ? '✓ right' : '✗ wrong')}</span>
         </li>))}</ul> : <p className="muted small"><Tr text="None yet." /></p>}
     </div>
@@ -80,11 +80,13 @@ export default function ScorecardPage() {
                 <thead><tr><th><Tr text="After" /></th>{!tooEarly ? <th className="n"><Tr text="Right" /></th> : null}<th className="n"><Tr text="Avg vs DSEX" /></th><th className="n"><Tr text="Calls" /></th></tr></thead>
                 <tbody>{HORIZONS.map((h) => {
                   const g = d.bySignal[s][h];
+                  // Same rule as the old colour: a call is right when its average beat (research) or lagged (caution, high risk) DSEX.
+                  const right = tone(g.avgExcess == null ? null : g.avgExcess * (s === 'research' ? 1 : -1));
                   return (
                     <tr key={h}>
                       <td>{days(h)}</td>
                       {!tooEarly ? <td className="n mono">{g.pctRight == null ? '—' : fmt(g.pctRight, 0) + '%'}</td> : null}
-                      <td className={'n mono ' + tone(g.avgExcess == null ? null : g.avgExcess * (s === 'research' ? 1 : -1))}>{signed(g.avgExcess)}</td>
+                      <td className="n mono">{signed(g.avgExcess)}{right ? <> <span className="small muted">{t(right === 'up' ? '✓ right' : '✗ wrong')}</span></> : null}</td>
                       <td className="n mono">{g.n}</td>
                     </tr>
                   );

@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import { useApi } from '@/components/AppProvider';
 import { ChartBox, dateTicks, useChartColors } from '@/components/charts';
 import { CompanyCard } from '@/components/CompanyCard';
-import { isTooLate, LastBuy } from '@/components/LastBuy';
+import { DaysLeft, isTooLate, LastBuy } from '@/components/LastBuy';
 import { HoldingsToday } from '@/components/HoldingsToday';
 import { MyStocks } from '@/components/MyStocks';
 import { PlansMini, TodaysPicks } from '@/components/planner/DashboardCards';
@@ -33,24 +33,6 @@ function TodayItem({ icon, title, count, href, children }: { icon: IconName; tit
 const Row = ({ code, children }: { code: string; children: ReactNode }) => (
   <li><Link href={'/c/' + encodeURIComponent(code)} className="mono">{code}</Link><span>{children}</span></li>
 );
-
-function StartGuide() {
-  const { t } = useLang();
-  const [hidden, setHidden] = useStoredValue('startHidden', '0');
-  if (hidden === '1') return null;
-  return (
-    <section className="panel start" aria-label={t('Start here')}>
-      <div><b><Tr text="New here? Start in 3 steps." /></b>
-        <ol>
-          <li><Link className="link-btn" href="/learn"><Tr text='Read "How it works"' /></Link> <Tr text="(2 minutes): what the signals and words mean." /></li>
-          <li><Link className="link-btn" href="/all?signal=research"><Tr text="See companies that pass the checks" /></Link>: <Tr text="all 8 rule checks passed." /></li>
-          <li><Tr text="Open one company and read its" /> <b><Tr text="four answers" /></b> <Tr text="at the top. Then check its Dividends tab." /></li>
-        </ol>
-        <p className="small muted"><Tr text="This site helps you choose what to research. It does not tell you what to buy." /></p></div>
-      <button className="btn primary" type="button" onClick={() => setHidden('1')}><Tr text="Got it" /></button>
-    </section>
-  );
-}
 
 function TrustCard() {
   const [hidden, setHidden] = useStoredValue('trustHidden', '0');
@@ -140,7 +122,6 @@ export default function DashboardPage() {
   return (
     <>
       <h1 className="sr-title">{t('DSE dashboard')}</h1>
-      <StartGuide />
       <TrustCard />
       <section className="panel market" aria-label={t('Market')}>
         {d.live ? null : <p className="small muted session-note">{t('Showing the last session')}, <b>{fmtDateLang(d.showingDate, lang)}</b>. {t("Today's figures appear when trading starts.")}</p>}
@@ -178,9 +159,9 @@ export default function DashboardPage() {
       </div>
 
       <h2>{t(liveNow ? "Today's important things" : 'Important things from the last session')}</h2>
-      <div className="grid g3">
+      <div className="grid g3 today-grid">
         <TodayItem icon="calendar" title="Dividends with a record date ahead" count={buyable.length} href="/dividends">
-          {buyable.slice(0, 5).map((r) => <Row key={r.code} code={r.code}>{r.cashPerShare != null ? t(`৳${fmt(r.cashPerShare, 2)}/share`) : r.stockPct ? t(`${pctNum(r.stockPct)}% bonus`) : '—'}{r.yieldPct != null ? ` · ${t(`${fmt(r.yieldPct, 2)}% yield`)}` : ''} · {t('last day to buy')} <LastBuy r={r} />{r.fraud !== 'clean' ? <> <FraudPill level={r.fraud as FraudLevel} flags={r.flags as string[]} /></> : null}</Row>)}
+          {buyable.slice(0, 5).map((r) => <Row key={r.code} code={r.code}>{r.cashPerShare != null ? t(`৳${fmt(r.cashPerShare, 2)}/share`) : r.stockPct ? t(`${pctNum(r.stockPct)}% bonus`) : '—'}{r.yieldPct != null ? ` · ${t(`${fmt(r.yieldPct, 2)}% yield`)}` : ''} · {r.lastBuyDate === today ? <DaysLeft r={r} /> : <>{t('last day to buy')} <LastBuy r={r} /></>}{r.fraud !== 'clean' ? <> <FraudPill level={r.fraud as FraudLevel} flags={r.flags as string[]} /></> : null}</Row>)}
         </TodayItem>
         <TodayItem icon="research" title="Dividends declared this week" count={d.declaredThisWeek.length} href="/dividends">
           {d.declaredThisWeek.slice(0, 5).map((r) => <Row key={r.code} code={r.code}>{t(`${pctNum(r.cashPct)}%`)}{r.stockPct ? ` + ${t(`${pctNum(r.stockPct)}% bonus`)}` : ''} · {fmtDateLang(r.announced, lang)}{r.fraud !== 'clean' ? <> <FraudPill level={r.fraud as FraudLevel} flags={r.flags} /></> : null}</Row>)}

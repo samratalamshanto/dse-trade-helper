@@ -24,8 +24,12 @@
   .check { grid-column: 1 / -1; white-space: normal; }
 }
 .switch { margin: 6px 0 4px; }
-.switch .on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); font-weight: 600; }
-.switch .onPractice { border-color: var(--warn); color: var(--warn); background: var(--warn-soft); }
+.switch .on { background: var(--panel); color: var(--text); font-weight: 600; box-shadow: inset 0 -3px 0 var(--accent); }
+.switch .onPractice { color: var(--warn); box-shadow: inset 0 -3px 0 var(--warn); }
+/* The add-trade form: four fields a row, so it makes two even rows with the button below. */
+.tradeForm { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.tradeForm > .actions { grid-column: 1 / -1; }
+@media (max-width: 640px) { .tradeForm { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .banner { font-size: 15px; }
 /* Practice panels get a dashed amber edge so they cannot be mistaken for the real account. */
 .practice :global(.panel) { border: 2px dashed var(--warn); }

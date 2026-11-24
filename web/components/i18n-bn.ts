@@ -1046,4 +1046,6 @@ export const BN: Record<string, string> = {
   'Amber': 'হলুদ',
   'a fast price rise or loss-making rise backed by a flag of another kind.': 'দ্রুত দাম বৃদ্ধি বা লোকসানে থেকেও দাম বৃদ্ধি, সঙ্গে অন্য ধরনের একটি সংকেত।',
   'patterns to check, not backed by a second kind of flag.': 'যাচাই করার মতো ধরন, দ্বিতীয় কোনো ধরনের সংকেত নেই।',
+  'last data': 'সর্বশেষ তথ্য',
+  'Add a company to your watchlist': 'আপনার ওয়াচলিস্টে একটি কোম্পানি যোগ করুন',
 };

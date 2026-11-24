@@ -1,4 +1,5 @@
 import type { MarketSession } from '@/lib/dse';
+import { toIso } from '../lib/announcements.ts';
 
 export const fmt = (n: number | null | undefined, d = 2): string =>
   n == null || !Number.isFinite(n) ? '—' : Number(n).toLocaleString('en-IN', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -30,6 +31,16 @@ export const monthYearShort = (ym: string | null | undefined): string => {
 };
 
 export { dhakaToday } from '../lib/dhaka.ts';
+
+// DSE's "Nov 23, 2026 at 2:42 PM" as "2:42 PM" on that day, else "Mon 23 Nov, 2:42 PM", so an old time never reads as today's.
+export function lastDataLabel(dataTime: string | null | undefined, sessionDate: string | null | undefined, today: string, lang: string): string {
+  const iso = toIso(dataTime) ?? sessionDate;
+  const time = /\d{1,2}:\d{2}\s*[AP]M/i.exec(dataTime ?? '')?.[0] ?? '';
+  if (!iso) return time;
+  if (iso === today && time) return time;
+  const day = new Date(iso + 'T00:00:00Z').toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+  return time ? `${day}, ${time}` : day;
+}
 
 // One unit everywhere: crore taka (৳1 cr = ৳100 lakh).
 export function moneyPerDay(v: number | null | undefined): string {
