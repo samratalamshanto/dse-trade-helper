@@ -32,7 +32,7 @@ export function Summary({ holdings, commissionPaid, dividends, children }: { hol
       <div><div className={css.label}>{t('Profit / loss now')}</div><div className={`${css.value} ${tone(pl)}`}>{signed(pl)}{invested ? ` (${fmt((pl / invested) * 100)}%)` : ''}</div></div>
       {dividends === undefined ? null : (
         <div><div className={css.label}>{t('Profit / loss with dividends')}</div><div className={`${css.value} ${tone(withDividends)}`}>{signed(withDividends)}</div>
-          {dividends != null ? <div className="small muted">{t('includes {d} cash dividends').replace('{d}', `৳${fmt(dividends)}`)}</div> : null}</div>
+          {dividends != null ? <div className="small muted">{t(`includes ৳${fmt(dividends)} cash dividends`)}</div> : null}</div>
       )}
       <div><div className={css.label}>{t('Profit / loss from sales')}</div><div className={`${css.value} ${tone(realised)}`}>{signed(realised)}</div></div>
       <div><div className={css.label}>{t('Broker fees paid')}</div><div className={css.value}>৳{fmt(commissionPaid)}</div></div>
@@ -51,10 +51,10 @@ export function SellFacts({ h, dividends, feePct, weightPct }: { h: Valued; divi
   return (
     <ul className={css.reasons}>
       <li>{t('Profit / loss with dividends')}: <b className={tone(withDividends)}>{signed(withDividends)}</b>
-        {withDividends != null ? ` (${t('{p} on price + {d} cash dividends').replace('{p}', signed(h.unrealised)).replace('{d}', `৳${fmt(dividends ?? 0)}`)})` : ''}</li>
-      <li>{t('Break-even after the {f}% sell commission').replace('{f}', String(feePct))}: <b>৳{fmt(breakEven)}</b>
-        {move != null ? ` (${t('{m} from the price now').replace('{m}', `${move > 0 ? '+' : ''}${move.toFixed(1)}%`)})` : ''}</li>
-      {w != null ? <li>{weightPct! > MAX_WEIGHT_PCT ? t('{w}% of your portfolio — above the {max}% line the planner uses').replace('{w}', w).replace('{max}', String(MAX_WEIGHT_PCT)) : t('{w}% of your portfolio').replace('{w}', w)}</li> : null}
+        {withDividends != null ? ` (${t(`${signed(h.unrealised)} on price + ৳${fmt(dividends ?? 0)} cash dividends`)})` : ''}</li>
+      <li>{t(`Break-even after the ${feePct}% sell commission`)}: <b>৳{fmt(breakEven)}</b>
+        {move != null ? ` (${t(`${move > 0 ? '+' : ''}${move.toFixed(1)}% from the price now`)})` : ''}</li>
+      {w != null ? <li>{weightPct! > MAX_WEIGHT_PCT ? t(`${w}% of your portfolio — above the ${MAX_WEIGHT_PCT}% line the planner uses`) : t(`${w}% of your portfolio`)}</li> : null}
     </ul>
   );
 }

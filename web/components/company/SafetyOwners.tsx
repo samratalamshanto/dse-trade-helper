@@ -2,6 +2,7 @@
 
 import { Doughnut, Line } from 'react-chartjs-2';
 import { Tr } from '@/components/Tr';
+import { useLang } from '@/components/i18n';
 import { ChartBox, useChartColors, type Colors } from '@/components/charts';
 import { fmt } from '@/components/format';
 import { FraudPill, Icon, Info, type FraudLevel } from '@/components/ui';
@@ -9,19 +10,20 @@ import type { CompanyDetail } from '@/lib/service';
 import type { SharePattern } from '@/lib/types';
 
 export function Safety({ a }: { a: CompanyDetail['analysis'] }) {
+  const { t } = useLang();
   const level = a.fraud.level as FraudLevel;
   return (
     <>
-      <div className="panel"><h3>Warning signs <FraudPill level={level} /></h3>
+      <div className="panel"><h3>{t('Warning signs')} <FraudPill level={level} /></h3>
         <p className="muted small"><Tr text="A flag is a pattern in public data, not an accusation against the company." /></p>
         {a.fraud.flags.length ? a.fraud.flags.map((f) => (
-          <div key={f.title} className={`note ${level === 'high' ? 'bad' : 'warn'}`}><b><Tr text={f.title} />:</b> {f.detail}<div className="why">Why it matters: {f.why}</div></div>
-        )) : <p className="muted">No warning pattern found: no price pump, no volume spike, no owner selling, no sudden profit jump, and results are up to date.</p>}
+          <div key={f.title} className={`note ${level === 'high' ? 'bad' : 'warn'}`}><b><Tr text={f.title} />:</b> {t(f.detail)}<div className="why">{t('Why it matters')}: {t(f.why)}</div></div>
+        )) : <p className="muted">{t('No warning pattern found: no price pump, no volume spike, no owner selling, no sudden profit jump, and results are up to date.')}</p>}
       </div>
       <div className="panel" style={{ marginTop: 14 }}><h3><Tr text="Quality checklist" /></h3>
         <ul className="reasons">{a.checks.map((x) => (
           <li key={x.label}>{x.ok ? <Icon name="check" className="t-good" /> : <Icon name="cross" className="t-bad" />}
-            <span><span className="sr-only">{x.ok ? 'Passed: ' : 'Failed: '}</span><b><Tr text={x.label} /></b> — {x.detail}<div className="why">{x.why}</div></span></li>
+            <span><span className="sr-only">{t(x.ok ? 'Passed:' : 'Failed:')} </span><b><Tr text={x.label} /></b> — {t(x.detail)}<div className="why">{t(x.why)}</div></span></li>
         ))}</ul></div>
     </>
   );

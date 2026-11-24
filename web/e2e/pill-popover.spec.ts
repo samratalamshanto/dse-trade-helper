@@ -34,14 +34,15 @@ test('Companies: the warning pill lists its patterns and opens the safety tab', 
 test('Watchlist: a second tap closes the box, and Bangla shows translated text', async ({ page }) => {
   await page.addInitScript(() => { localStorage.setItem('watchlist', '["GP"]'); localStorage.setItem('lang', 'bn'); });
   await page.goto('/watchlist');
-  const pill = page.locator('tbody td[data-label="Signal"] button.pill');
+  // In Bangla the phone card labels (data-label) are Bangla too.
+  const pill = page.locator('tbody td[data-label="সংকেত"] button.pill');
   await pill.click();
   await expect(pill).toHaveAttribute('aria-expanded', 'true');
   await expect(page.getByRole('link', { name: 'বিস্তারিত দেখুন →' })).toBeVisible();
   await expect(page).toHaveURL(/\/watchlist/);
   await pill.click();
   await expect(pill).toHaveAttribute('aria-expanded', 'false');
-  await page.locator('tbody td[data-label="Warning-sign check"] button.pill').press('Enter');
+  await page.locator('tbody td[data-label="সতর্ক-সংকেত পরীক্ষা"] button.pill').press('Enter');
   await expect(page.getByRole('link', { name: 'বিস্তারিত দেখুন →' })).toHaveAttribute('href', '/c/GP#safety');
 });
 

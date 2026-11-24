@@ -216,8 +216,8 @@ export default function AlertsPage() {
   return (
     <>
       <h1><Tr text="Alerts" /></h1>
-      <p className="muted">Rules are checked only while a page of this site is open in this browser, and each rule fires at most once a day.
-        Price and move rules use the current trading session only. {tradesKey ? 'Your rules are kept in your Google Sheet, so every device has them; what already fired stays per browser.' : 'All settings are saved in this browser only.'}</p>
+      <p className="muted">{t('Rules are checked only while a page of this site is open in this browser, and each rule fires at most once a day.')}{' '}
+        {t('Price and move rules use the current trading session only.')} {t(tradesKey ? 'Your rules are kept in your Google Sheet, so every device has them; what already fired stays per browser.' : 'All settings are saved in this browser only.')}</p>
 
       {/* Browser notifications */}
       <section>
@@ -243,8 +243,8 @@ export default function AlertsPage() {
             )}
           </div>
           <p className="small muted" style={{ marginTop: 8 }}>
-            System notifications appear even when this tab is in the background.
-            In-page toasts appear in the bottom-right corner regardless of permission.
+            {t('System notifications appear even when this tab is in the background.')}{' '}
+            {t('In-page toasts appear in the bottom-right corner regardless of permission.')}
           </p>
         </div>
       </section>
@@ -255,24 +255,24 @@ export default function AlertsPage() {
         {watchlistCodes.length > 0 && (
           <div style={{ marginBottom: 12 }}>
             <button className="btn" type="button" onClick={handleAddDefaults} disabled={!companies.length}>
-              Add default alerts for my watchlist ({watchlistCodes.length} companies)
+              {t(`Add default alerts for my watchlist (${watchlistCodes.length} companies)`)}
             </button>
             <span className="small muted" style={{ marginLeft: 8 }}>
-              Adds dividend + new warning sign rules for each watchlist company.
+              {t('Adds dividend + new warning sign rules for each watchlist company.')}
             </span>
           </div>
         )}
         <div className="panel">
           {!store.rules.length ? (
-            <p className="muted" style={{ padding: '8px 0' }}>No rules yet. Add one below.</p>
+            <p className="muted" style={{ padding: '8px 0' }}>{t('No rules yet. Add one below.')}</p>
           ) : (
             store.rules.map((rule) => (
               <div key={rule.id} className={styles.ruleRow}>
                 <div className={styles.ruleDesc}>
-                  <div><b>{ruleDesc(rule)}</b></div>
-                  <div className="small muted">{RULE_LABELS[rule.type]}{data && priceNow(rule, priceByCode[rule.code]) ? ` · ${priceNow(rule, priceByCode[rule.code])}` : ''}</div>
+                  <div><b>{t(ruleDesc(rule))}</b></div>
+                  <div className="small muted">{t(RULE_LABELS[rule.type])}{data && priceNow(rule, priceByCode[rule.code]) ? ` · ${t(priceNow(rule, priceByCode[rule.code])!)}` : ''}</div>
                   {!calByCode[rule.code] && (rule.type === 'dividend') && (
-                    <div className="small muted">No upcoming dividend announced for {rule.code}.</div>
+                    <div className="small muted">{t(`No upcoming dividend announced for ${rule.code}.`)}</div>
                   )}
                 </div>
                 <div className={styles.ruleActions}>
@@ -283,7 +283,7 @@ export default function AlertsPage() {
                     aria-label={`${rule.enabled ? 'Turn off' : 'Turn on'} rule ${ruleDesc(rule)}`}
                     onClick={() => handleToggle(rule.id)}
                   >
-                    {rule.enabled ? 'ON' : 'OFF'}
+                    {t(rule.enabled ? 'ON' : 'OFF')}
                   </button>
                   <button
                     className={styles.del}
@@ -316,13 +316,13 @@ export default function AlertsPage() {
                   aria-describedby={formErrors.type ? 'err-type' : undefined}
                   style={{ minWidth: 180 }}
                 >
-                  <option value="">Choose…</option>
-                  {(Object.keys(RULE_LABELS) as RuleType[]).map((t) => (
-                    <option key={t} value={t}>{RULE_LABELS[t]}</option>
+                  <option value="">{t('Choose…')}</option>
+                  {(Object.keys(RULE_LABELS) as RuleType[]).map((k) => (
+                    <option key={k} value={k}>{t(RULE_LABELS[k])}</option>
                   ))}
                 </select>
-                {formErrors.type && <span id="err-type" className={styles.fieldErr} role="alert">{formErrors.type}</span>}
-                {formType && <span className="small muted" style={{ marginTop: 2 }}>{RULE_DESCS[formType]}</span>}
+                {formErrors.type && <span id="err-type" className={styles.fieldErr} role="alert">{t(formErrors.type)}</span>}
+                {formType && <span className="small muted" style={{ marginTop: 2 }}>{t(RULE_DESCS[formType])}</span>}
               </div>
 
               {/* Code */}
@@ -337,7 +337,7 @@ export default function AlertsPage() {
                   aria-activedescendant={showSuggests && suggestions.length > 0 && hiIdx >= 0 ? `alert-opt-${hiIdx}` : undefined}
                   aria-autocomplete="list"
                   value={formCode}
-                  placeholder="e.g. GP"
+                  placeholder={t('e.g. GP')}
                   autoComplete="off"
                   style={{ width: 120 }}
                   onChange={(e) => { setFormCode(e.target.value.toUpperCase()); setFormErrors({}); setShowSuggests(true); setHiIdx(-1); }}
@@ -362,7 +362,7 @@ export default function AlertsPage() {
                   }}
                   aria-describedby={formErrors.code ? 'err-code' : undefined}
                 />
-                {formErrors.code && <span id="err-code" className={styles.fieldErr} role="alert">{formErrors.code}</span>}
+                {formErrors.code && <span id="err-code" className={styles.fieldErr} role="alert">{t(formErrors.code)}</span>}
                 {showSuggests && suggestions.length > 0 && (
                   <div
                     className={styles.suggests}
@@ -397,7 +397,7 @@ export default function AlertsPage() {
               {/* Target / threshold */}
               {needsTargetField && (
                 <div className={styles.fieldWrap}>
-                  <label htmlFor="alert-target">{targetLabel}</label>
+                  <label htmlFor="alert-target">{t(targetLabel)}</label>
                   <input
                     id="alert-target"
                     type="number"
@@ -409,14 +409,14 @@ export default function AlertsPage() {
                     onChange={(e) => { setFormTarget(e.target.value); setFormErrors({}); }}
                     aria-describedby={formErrors.target ? 'err-target' : undefined}
                   />
-                  {formErrors.target && <span id="err-target" className={styles.fieldErr} role="alert">{formErrors.target}</span>}
+                  {formErrors.target && <span id="err-target" className={styles.fieldErr} role="alert">{t(formErrors.target)}</span>}
                 </div>
               )}
 
               {/* Days before (dividend only) */}
               {formType === 'dividend' && (
                 <div className={styles.fieldWrap}>
-                  <label htmlFor="alert-days">Days before last buy</label>
+                  <label htmlFor="alert-days">{t('Days before last buy')}</label>
                   <input
                     id="alert-days"
                     type="number"
@@ -428,14 +428,14 @@ export default function AlertsPage() {
                     onChange={(e) => { setFormDays(e.target.value); setFormErrors({}); }}
                     aria-describedby={formErrors.days ? 'err-days' : undefined}
                   />
-                  {formErrors.days && <span id="err-days" className={styles.fieldErr} role="alert">{formErrors.days}</span>}
+                  {formErrors.days && <span id="err-days" className={styles.fieldErr} role="alert">{t(formErrors.days)}</span>}
                 </div>
               )}
 
               <div className={styles.fieldWrap} style={{ justifyContent: 'flex-end' }}>
                 <label style={{ visibility: 'hidden' }}>{'‎'}</label>
-                <button className="btn primary" type="submit" style={{ alignSelf: 'flex-start' }}>Add rule</button>
-                {formErrors.form && <span className={styles.fieldErr} role="alert">{formErrors.form}</span>}
+                <button className="btn primary" type="submit" style={{ alignSelf: 'flex-start' }}>{t('Add rule')}</button>
+                {formErrors.form && <span className={styles.fieldErr} role="alert">{t(formErrors.form)}</span>}
               </div>
             </div>
             {/* Quick-fill chips for ±% targets */}
@@ -463,11 +463,11 @@ export default function AlertsPage() {
             const co = companies.find((c) => c.code === upperCode);
             if (!co) return null;
             const price = priceByCode[upperCode];
-            const priceStr = price != null ? `৳${price.toFixed(2)}` : 'no price yet';
+            const priceStr = price != null ? `৳${price.toFixed(2)}` : t('no price yet');
             const rangeStr = co.weekLow52 != null && co.weekHigh52 != null
               ? ` · 52-week ৳${co.weekLow52.toFixed(2)} – ৳${co.weekHigh52.toFixed(2)}`
               : '';
-            return <div className={styles.priceInfo}>{upperCode} now {priceStr}{rangeStr}</div>;
+            return <div className={styles.priceInfo}>{t(`${upperCode} now ${priceStr}`)}{t(rangeStr)}</div>;
           })()}
         </div>
       </section>
@@ -477,7 +477,7 @@ export default function AlertsPage() {
         <h2><Tr text="Recent alerts" /></h2>
         <div className="panel">
           {!store.history.length ? (
-            <p className="muted" style={{ padding: '8px 0' }}>No alerts have fired yet.</p>
+            <p className="muted" style={{ padding: '8px 0' }}>{t('No alerts have fired yet.')}</p>
           ) : (
             store.history.map((e) => (
               <div key={e.key} className={styles.histItem}>

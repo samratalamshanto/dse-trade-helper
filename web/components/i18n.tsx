@@ -2,7 +2,9 @@
 
 import { createContext, useCallback, useContext, useEffect, type ReactNode } from 'react';
 import { useStoredValue } from '@/components/useStored';
-import { BN } from '@/components/i18n-bn';
+import { translateLine } from '@/components/i18n-match';
+
+export { bnDate, bnDigits } from '@/components/i18n-match';
 
 export type Lang = 'en' | 'bn';
 
@@ -13,9 +15,7 @@ export function LangProvider({ children }: { children: ReactNode }) {
   const [raw, set] = useStoredValue('lang', 'en');
   const lang: Lang = raw === 'bn' ? 'bn' : 'en';
   useEffect(() => { document.documentElement.lang = lang; }, [lang]);
-  const t = useCallback((s: string) => (lang !== 'bn' ? s : Object.hasOwn(BN, s) ? BN[s]
-    // A line built from fixed sentences (or "Label:" heads) translates piece by piece.
-    : s.replace(/([.:]) /g, '$1\u0000').split('\u0000').map((p) => (Object.hasOwn(BN, p) ? BN[p] : p)).join(' ')), [lang]);
+  const t = useCallback((s: string) => (lang === 'bn' ? translateLine(s) : s), [lang]);
   return <LangContext.Provider value={{ lang, setLang: (l) => set(l), t }}>{children}</LangContext.Provider>;
 }
 

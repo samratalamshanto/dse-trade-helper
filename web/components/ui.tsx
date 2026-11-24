@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { PillPopover } from '@/components/PillPopover';
-import { Tr } from '@/components/Tr';
+import { Tr, TrInfo } from '@/components/Tr';
 import { flagCountText, SIGNAL_TEXT } from '@/lib/glossary';
 
 const SHIELD = 'M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z';
@@ -92,7 +92,7 @@ export function Skeleton({ label = 'Loading…', rows = 6 }: { label?: string; r
 
 // Small "i" that shows a plain-language explanation on hover or keyboard focus.
 export function Info({ text }: { text: string }) {
-  return <span className="info" tabIndex={0} role="note" aria-label={text} data-tip={text}>i</span>;
+  return <TrInfo text={text} />;
 }
 
 export function Metric({ label, value, hint }: { label: string; value: ReactNode; hint: string }) {

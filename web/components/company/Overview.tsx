@@ -6,7 +6,7 @@ import { ChartBox, dateTicks, useChartColors } from '@/components/charts';
 import { ShareholdingDonut } from '@/components/company/SafetyOwners';
 import { BuyPlanner, SellEase } from '@/components/planner/BuyPlanner';
 import { Tr } from '@/components/Tr';
-import { useLang } from '@/components/i18n';
+import { bnDate, useLang } from '@/components/i18n';
 import { fmt, moneyPerDay, sectorName, signed, tone } from '@/components/format';
 import { Icon, Info, type IconName } from '@/components/ui';
 import { sellEase } from '@/lib/buy-planner';
@@ -71,13 +71,14 @@ export function Fact({ label, hint, children }: { label: string; hint?: string; 
 }
 
 function KeyFacts({ d }: { d: CompanyDetail }) {
+  const { t } = useLang();
   const c = d.company, m = d.analysis.metrics, pl = peLatest(c), href = websiteHref(c.website);
   const face = c.faceValue || 10, det = c.details ?? {};
   const shares = c.paidUpCapital != null ? c.paidUpCapital / face : null;
   return (
     <div className="panel"><h3><Tr text="Key facts" /></h3>
       <div className="facts">
-        <Fact label="Sector">{c.sector ? sectorName(c.sector) : '—'}</Fact>
+        <Fact label="Sector">{c.sector ? t(sectorName(c.sector)) : '—'}</Fact>
         <Fact label="Category">{c.category || '—'}</Fact>
         <Fact label="Listed">{c.listingYear ?? '—'}</Fact>
         <Fact label="NAV per share">{taka(c.nav)}</Fact>
@@ -86,14 +87,14 @@ function KeyFacts({ d }: { d: CompanyDetail }) {
         <Fact label="DSE P/E (audited)" hint={HINTS.peAudited}>{fmt(pl?.audited, 1)}</Fact>
         <Fact label="DSE P/E (latest results)" hint={HINTS.peUnaudited}>{fmt(pl?.unaudited, 1)}</Fact>
         <Fact label="12-month cash yield" hint={"Cash dividends of the last 12 months ÷ today's price. " + (m.yieldBasis || 'No cash dividend in the last 12 months.') + (m.yieldNote ? ' ' + m.yieldNote + '.' : '')}>{m.latestYield != null ? fmt(m.latestYield, 2) + '%' : '—'}</Fact>
-        <Fact label="Shares outstanding">{shares != null ? fmt(shares / CRORE, 2) + ' cr' : '—'}</Fact>
+        <Fact label="Shares outstanding">{shares != null ? fmt(shares / CRORE, 2) + ' ' + t('cr') : '—'}</Fact>
         <Fact label="Paid-up capital">{crore(c.paidUpCapital)}</Fact>
         <Fact label="Market cap">{crore(c.marketCap)}</Fact>
         <Fact label="Free float" hint={HINTS.freeFloat}>{num(det.freeFloat) != null ? fmt(num(det.freeFloat), 2) + '%' : '—'}</Fact>
         <Fact label="Free-float market cap" hint={HINTS.freeFloatCap}>{crore(num(det.freeFloatMarketCap), 1)}</Fact>
         <Fact label="Sector P/E" hint="Median P/E of profitable companies in the same sector. Compare it with this company's P/E above.">{fmt(d.sectorPe, 1)}</Fact>
         <Fact label="Traded a day" hint="Average value traded per day, last 20 days. Higher = easier to sell.">{moneyPerDay(m.avgDailyValue)}</Fact>
-        <Fact label="How easy to sell"><SellEase what="৳1 lakh" ease={sellEase(LAKH, m.avgDailyValue)} /></Fact>
+        <Fact label="How easy to sell"><SellEase what={t('৳1 lakh')} ease={sellEase(LAKH, m.avgDailyValue)} /></Fact>
         <Fact label="Website">{href ? <a href={href} target="_blank" rel="noopener noreferrer">{c.website} ↗</a> : (c.website || '—')}</Fact>
       </div>
     </div>
@@ -132,9 +133,10 @@ function PriceChart({ c }: { c: Company }) {
 }
 
 function TodayPanel({ d }: { d: CompanyDetail }) {
+  const { lang } = useLang();
   const x = d.today as (CompanyDetail['today'] & { sessionDate?: string | null }) | null;
   if (!x) return null;
-  const day = x.sessionDate ? new Date(x.sessionDate + 'T00:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }) : null;
+  const day = x.sessionDate ? new Date(x.sessionDate + 'T00:00:00Z').toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }) : null;
   const change = x.close != null && x.prevClose != null ? x.close - x.prevClose : null;
   const pct = change != null && x.prevClose ? (change / x.prevClose) * 100 : null;
   return (
@@ -143,7 +145,7 @@ function TodayPanel({ d }: { d: CompanyDetail }) {
         <Fact label="Open">{taka(x.open)}</Fact>
         <Fact label="High">{taka(x.high)}</Fact>
         <Fact label="Low">{taka(x.low)}</Fact>
-        <Fact label={x.live ? 'Last price' : 'Close'}>{taka(x.close)}</Fact>
+        <Fact label={x.live ? 'Last price' : lang === 'bn' ? 'Close price' : 'Close'}>{taka(x.close)}</Fact>
         <Fact label="Previous close">{taka(x.prevClose)}</Fact>
         <Fact label="Change"><span className={tone(change)}>{change != null ? `${change >= 0 ? '+' : '−'}৳${fmt(Math.abs(change))} (${signed(pct, 2)})` : '—'}</span></Fact>
         <Fact label="Volume (shares)">{fmt(x.volume, 0)}</Fact>
@@ -155,6 +157,7 @@ function TodayPanel({ d }: { d: CompanyDetail }) {
 }
 
 export function Overview({ d }: { d: CompanyDetail }) {
+  const { t, lang } = useLang();
   const c = d.company, sp = c.sharePattern.at(-1);
   return (
     <>
@@ -163,12 +166,12 @@ export function Overview({ d }: { d: CompanyDetail }) {
       <div className="panel" style={{ marginTop: 14 }}><h3><Tr text="Price" /> <Info text="Tap or hover the line to see the price on each day." /></h3><PriceChart c={c} /></div>
       <div style={{ marginTop: 14 }}><BuyPlanner key={c.code} code={c.code} bar={<RangeBar52 c={c} />} /></div>
       <div className="panel" style={{ marginTop: 14 }}><h3><Tr text="Who owns the shares" /></h3><ShareholdingDonut sp={sp} height={200} />
-        <p className="why"><Tr text="As on" /> {sp?.date || '—'}.</p></div>
+        <p className="why">{t('As on')} {lang === 'bn' && sp?.date ? bnDate(sp.date) ?? sp.date : sp?.date || '—'}.</p></div>
       <div className="grid g2" style={{ marginTop: 14 }}>
         <div className="panel"><h3><Tr text="Why this signal" /></h3>
-          <ul className="reasons">{d.analysis.reasons.map((r, i) => { const [ic, cls] = TONE_ICON[r.tone] ?? TONE_ICON.neutral; return <li key={i}><Icon name={ic} className={cls} /><span>{r.text}</span></li>; })}</ul></div>
+          <ul className="reasons">{d.analysis.reasons.map((r, i) => { const [ic, cls] = TONE_ICON[r.tone] ?? TONE_ICON.neutral; return <li key={i}><Icon name={ic} className={cls} /><span>{t(r.text)}</span></li>; })}</ul></div>
         <div className="panel"><h3><Tr text="What past data says" /></h3>
-          <ul className="reasons">{d.analysis.history.length ? d.analysis.history.map((h, i) => <li key={i}><Icon name="trend" className="t-neutral" /><span>{h}</span></li>) : <li><Tr text="Not enough history." /></li>}</ul></div>
+          <ul className="reasons">{d.analysis.history.length ? d.analysis.history.map((h, i) => <li key={i}><Icon name="trend" className="t-neutral" /><span>{t(h)}</span></li>) : <li><Tr text="Not enough history." /></li>}</ul></div>
       </div>
     </>
   );

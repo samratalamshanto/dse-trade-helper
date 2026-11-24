@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { fmt, fmtDate } from '@/components/format';
+import { fmt, fmtDate, fmtDateLang } from '@/components/format';
 import { dhakaToday } from '@/lib/dhaka';
 import { Icon, Skeleton } from '@/components/ui';
 import TelegramTestButton from '@/components/TelegramTestButton';
@@ -52,7 +52,7 @@ export default function PortfolioPage() {
   const ownerMode = !!ownerKey && signedIn !== '1';
   const browserData = useBrowserData();
   const browserTrades = browserData.trades.good;
-  const { t: tr } = useLang();
+  const { t: tr, lang } = useLang();
   const keyStopped = useKeyStopped();
   // Settings opens by itself when the Sheet panel inside needs the user (same test as SyncPanel's "pending").
   const settingsNeeded = keyStopped || (sheet && (browserTrades.length + browserData.plans.good.length > 0 || browserData.hasLimits));
@@ -173,7 +173,7 @@ export default function PortfolioPage() {
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not read the file.'); setBusy(false); }
   };
 
-  if (!ready) return <><h1>Portfolio</h1><Skeleton label="Loading trades" rows={4} /></>;
+  if (!ready) return <><h1>{tr('Portfolio')}</h1><Skeleton label={tr('Loading trades')} rows={4} /></>;
 
   const set = (k: keyof ReturnType<typeof blank>) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
   // The commission follows quantity, price and rate until the user types an amount of their own.
@@ -208,29 +208,29 @@ export default function PortfolioPage() {
       <h1>{tr('Portfolio')}</h1>
       {sheet ? <p className="muted">{tr('Your shares, worked out from your buys and sells. Saved in your own Google Sheet, so every device shows the same numbers.')}</p> : (
         <p className="muted">{tr('Your shares, worked out from your buys and sells. Saved in this browser only. To see them on other devices, turn on Google Sheet sync in Settings at the bottom.')}
-          {browserTrades.length ? <> <a href={'data:text/csv;charset=utf-8,' + encodeURIComponent(tradesCsv(browserTrades))} download="my-trades.csv">Trades as a spreadsheet (CSV)</a></> : null}</p>
+          {browserTrades.length ? <> <a href={'data:text/csv;charset=utf-8,' + encodeURIComponent(tradesCsv(browserTrades))} download="my-trades.csv">{tr('Trades as a spreadsheet (CSV)')}</a></> : null}</p>
       )}
       <KeyStoppedNote />
       <UnreadableNote />
-      <div className={`${css.actions} ${css.switch}`} role="group" aria-label="Account">
-        <button type="button" className={`btn${paper ? '' : ` ${css.on}`}`} aria-pressed={!paper} disabled={busy} onClick={() => switchTo('real')}>Real</button>
-        <button type="button" className={`btn${paper ? ` ${css.on} ${css.onPractice}` : ''}`} aria-pressed={paper} disabled={busy} onClick={() => switchTo('paper')}>Practice</button>
+      <div className={`${css.actions} ${css.switch}`} role="group" aria-label={tr('Account')}>
+        <button type="button" className={`btn${paper ? '' : ` ${css.on}`}`} aria-pressed={!paper} disabled={busy} onClick={() => switchTo('real')}>{tr('Real')}</button>
+        <button type="button" className={`btn${paper ? ` ${css.on} ${css.onPractice}` : ''}`} aria-pressed={paper} disabled={busy} onClick={() => switchTo('paper')}>{tr('Practice')}</button>
       </div>
       {paper ? (
         <div className={`note warn ${css.banner}`} role="status">
-          <b>PRACTICE — not real money.</b> Try buys, sells and plans here to learn; these trades are kept apart from your real ones and never count in your real holdings.
+          <b>{tr('PRACTICE — not real money.')}</b> {tr('Try buys, sells and plans here to learn; these trades are kept apart from your real ones and never count in your real holdings.')}
         </div>
       ) : null}
       <div className={paper ? css.practice : undefined}>
       {error ? <div className="note bad" role="alert">{error}</div> : null}
-      {data?.warnings.map((w) => <div key={w} className="note warn">{w}</div>)}
-      {data?.badRows.length ? <div className="note warn">Rows {data.badRows.join(', ')} in your Google Sheet could not be read; fix them in the Sheet.</div> : null}
+      {data?.warnings.map((w) => <div key={w} className="note warn">{tr(w)}</div>)}
+      {data?.badRows.length ? <div className="note warn">{tr(`Rows ${data.badRows.join(', ')} in your Google Sheet could not be read; fix them in the Sheet.`)}</div> : null}
       {paper ? null : <OldLots busy={busy} postLot={postOldLot} onDone={oldLotsDone} />}
       {data ? (
         <Summary holdings={data.holdings} commissionPaid={commissionPaid} dividends={held.length ? allDividends : undefined}>
           <button type="button" className="btn primary" onClick={openAdd}>{tr(paper ? 'Add a practice trade' : 'Add a trade')}</button>
         </Summary>
-      ) : busy ? <Skeleton label="Loading trades" rows={4} /> : null}
+      ) : busy ? <Skeleton label={tr('Loading trades')} rows={4} /> : null}
       {data?.holdings.length ? (
         <div className={`panel table-wrap ${css.section}`}><h2 className="h3">{tr('Holdings')}</h2>
         <p className="small muted">{tr('The status comes from fixed rules on your numbers and public DSE data. It is a learning aid, not advice. Tap a status to see why.')}</p>
@@ -249,9 +249,9 @@ export default function PortfolioPage() {
                   ) : <span className="muted">—</span>}</td></tr>
                 {open ? (
                   <tr className={css.detail}><td colSpan={7}>
-                    {h.check ? <ul className={css.reasons}>{h.check.reasons.map((r) => <li key={r}>{r}</li>)}</ul> : null}
+                    {h.check ? <ul className={css.reasons}>{h.check.reasons.map((r) => <li key={r}>{tr(r)}</li>)}</ul> : null}
                     {h.shares > 0 ? <SellFacts h={h} dividends={dividendsOf(h.code)} feePct={sellFeePct} weightPct={portfolioValue > 0 ? ((h.value ?? h.invested) / portfolioValue) * 100 : null} /> : null}
-                    {h.limits ? <p className="small muted">{tr('Your limits')}: {tr('stop-loss')} {h.limits.stopPct}%, {tr('target')} {h.limits.targetPct}%</p> : null}
+                    {h.limits ? <p className="small muted">{tr('Your limits')}: {tr(`stop-loss ${h.limits.stopPct}%, target ${h.limits.targetPct}%`)}</p> : null}
                   </td></tr>
                 ) : null}
               </Fragment>
@@ -278,65 +278,65 @@ export default function PortfolioPage() {
         </div>
       )}
       <details ref={addRef} className={`panel ${css.section}`} open={addOpen} onToggle={(e) => setAddOpen(e.currentTarget.open)}>
-        <summary className="h3">{paper ? 'Add a practice trade' : 'Add or import trades'}</summary>
+        <summary className="h3">{tr(paper ? 'Add a practice trade' : 'Add or import trades')}</summary>
       {paper ? null : <div className={css.section}>
-        <h3>Import from your broker (Excel order summary)</h3>
-        <p className="muted">Pick the day’s <b>order_summary_….xlsx</b>. You see what will be added first; trades you already have are skipped. The file has no commission, so {feePct.trim() ? <>each trade gets your broker rate ({feePct}%) — set it in the form below.</> : <>set your broker rate in the form below, or trades come in with no commission.</>}</p>
+        <h3>{tr('Import from your broker (Excel order summary)')}</h3>
+        <p className="muted">{tr('Pick the day’s')} <b>order_summary_….xlsx</b>{tr('. You see what will be added first; trades you already have are skipped.')} {tr('The file has no commission, so')} {feePct.trim() ? tr(`each trade gets your broker rate (${feePct}%) — set it in the form below.`) : tr('set your broker rate in the form below, or trades come in with no commission.')}</p>
         <div className={css.form}>
-          <label className="btn"><Icon name="upload" />Choose broker file (.xlsx)<input className="sr-only" type="file" accept=".xlsx" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f, false); e.target.value = ''; }} /></label>
-          <label>Trade date (only if the file name has none)<input type="date" value={importDate} max={dhakaToday()} onChange={(e) => setImportDate(e.target.value)} /></label>
+          <label className="btn"><Icon name="upload" />{tr('Choose broker file (.xlsx)')}<input className="sr-only" type="file" accept=".xlsx" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f, false); e.target.value = ''; }} /></label>
+          <label>{tr('Trade date (only if the file name has none)')}<input type="date" value={importDate} max={dhakaToday()} onChange={(e) => setImportDate(e.target.value)} /></label>
         </div>
         {preview ? (
           <div className={css.section}>
-            <p><b>{fmtDate(preview.result.date)}</b>: {preview.result.added.length} to add, {preview.result.skipped.length} already in your trades.</p>
-            <ul>{preview.result.added.map((t, i) => <li key={`${i}-${t.code}-${t.side}`}><span className={`${css.side} ${t.side === 'BUY' ? css.buy : css.sell}`}>{t.side}</span> {t.quantity} {t.code} @ ৳{fmt(t.price)}{t.commission != null ? <span className="muted"> + ৳{fmt(t.commission)} commission</span> : null}</li>)}</ul>
+            <p><b>{fmtDateLang(preview.result.date, lang)}</b>: {tr(`${preview.result.added.length} to add, ${preview.result.skipped.length} already in your trades.`)}</p>
+            <ul>{preview.result.added.map((t, i) => <li key={`${i}-${t.code}-${t.side}`}><span className={`${css.side} ${t.side === 'BUY' ? css.buy : css.sell}`}>{t.side}</span> {t.quantity} {t.code} @ ৳{fmt(t.price)}{t.commission != null ? <span className="muted"> + {tr(`৳${fmt(t.commission)} commission`)}</span> : null}</li>)}</ul>
             {preview.result.errors.map((e) => <p key={e} className={css.error}>{e}</p>)}
             {preview.result.added.length ? (
               <div className={css.actions}>
-                <button className="btn primary" type="button" disabled={busy} onClick={() => void upload(preview.file, true)}>Save {preview.result.added.length} {preview.result.added.length === 1 ? 'trade' : 'trades'}</button>
-                <button className="link-btn" type="button" onClick={() => setPreview(null)}>Cancel</button>
+                <button className="btn primary" type="button" disabled={busy} onClick={() => void upload(preview.file, true)}>{preview.result.added.length === 1 ? tr(`Save ${preview.result.added.length} trade`) : tr(`Save ${preview.result.added.length} trades`)}</button>
+                <button className="link-btn" type="button" onClick={() => setPreview(null)}>{tr('Cancel')}</button>
               </div>
             ) : (
-              <p className="muted">Nothing new to add — this file is already in your trades. <button className="link-btn" type="button" onClick={() => setPreview(null)}>Close</button></p>
+              <p className="muted">{tr('Nothing new to add — this file is already in your trades.')} <button className="link-btn" type="button" onClick={() => setPreview(null)}>{tr('Close')}</button></p>
             )}
           </div>
         ) : null}
       </div>}
       <form className={css.section} onSubmit={save}>
-        <h3>{editing ? 'Edit trade' : 'Add a trade'}{paper ? ' (practice)' : ''}</h3>
+        <h3>{tr(editing ? 'Edit trade' : 'Add a trade')}{paper ? ' ' + tr('(practice)') : ''}</h3>
         <div className={css.form}>
-          <label>Date<input type="date" value={form.date} max={dhakaToday()} onChange={set('date')} required /></label>
-          <label>Code<input list="trade-codes" value={form.code} onChange={(e) => setCode(e.target.value)} placeholder="GP" required /></label>
+          <label>{tr('Date')}<input type="date" value={form.date} max={dhakaToday()} onChange={set('date')} required /></label>
+          <label>{tr('Code')}<input list="trade-codes" value={form.code} onChange={(e) => setCode(e.target.value)} placeholder="GP" required /></label>
           <datalist id="trade-codes">{companies.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}</datalist>
-          <label>Side<select value={form.side} onChange={set('side')}><option>BUY</option><option>SELL</option></select></label>
-          <label>Quantity<input inputMode="numeric" value={form.quantity} onChange={setAmount('quantity')} required /></label>
-          <label>Price ৳<input inputMode="decimal" value={form.price} onChange={setAmount('price')} required /></label>
-          <label>Commission % (broker fee)<input type="number" min={0} max={MAX_COMMISSION_PCT} step={0.01} value={feePct} onChange={(e) => changePct(e.target.value)} aria-describedby="fee-hint" /></label>
-          <label>Commission ৳<input inputMode="decimal" value={form.commission} onChange={set('commission')} aria-describedby="fee-hint" /></label>
-          <label>Note<input value={form.note} onChange={set('note')} maxLength={200} /></label>
+          <label>{tr('Side')}<select value={form.side} onChange={set('side')}><option>BUY</option><option>SELL</option></select></label>
+          <label>{tr('Quantity')}<input inputMode="numeric" value={form.quantity} onChange={setAmount('quantity')} required /></label>
+          <label>{tr('Price ৳')}<input inputMode="decimal" value={form.price} onChange={setAmount('price')} required /></label>
+          <label>{tr('Commission % (broker fee)')}<input type="number" min={0} max={MAX_COMMISSION_PCT} step={0.01} value={feePct} onChange={(e) => changePct(e.target.value)} aria-describedby="fee-hint" /></label>
+          <label>{tr('Commission ৳')}<input inputMode="decimal" value={form.commission} onChange={set('commission')} aria-describedby="fee-hint" /></label>
+          <label>{tr('Note')}<input value={form.note} onChange={set('note')} maxLength={200} /></label>
           <div className={css.actions}>
-            <button className="btn primary" type="submit" disabled={busy}>{editing ? 'Save changes' : paper ? 'Add practice trade' : 'Add trade'}</button>
-            {editing ? <button className="link-btn" type="button" onClick={() => { setEditing(null); setForm(blank()); }}>Cancel</button> : null}
+            <button className="btn primary" type="submit" disabled={busy}>{tr(editing ? 'Save changes' : paper ? 'Add practice trade' : 'Add trade')}</button>
+            {editing ? <button className="link-btn" type="button" onClick={() => { setEditing(null); setForm(blank()); }}>{tr('Cancel')}</button> : null}
           </div>
         </div>
-        {badPct ? <p className="note warn" role="alert">Commission % must be from 0 to {MAX_COMMISSION_PCT}. Commission is not filled in until it is fixed.</p> : null}
-        <p id="fee-hint" className="small muted">Picking a code fills in today’s price; commission fills in at your commission % (saved in {sheet ? 'your Google Sheet' : 'this browser'}). Check both, and type the exact amounts from your broker slip to replace them.</p>
+        {badPct ? <p className="note warn" role="alert">{tr(`Commission % must be from 0 to ${MAX_COMMISSION_PCT}.`)} {tr('Commission is not filled in until it is fixed.')}</p> : null}
+        <p id="fee-hint" className="small muted">{tr(sheet ? 'Picking a code fills in today’s price; commission fills in at your commission % (saved in your Google Sheet).' : 'Picking a code fills in today’s price; commission fills in at your commission % (saved in this browser).')} {tr('Check both, and type the exact amounts from your broker slip to replace them.')}</p>
       </form>
       </details>
-      <div className={`panel table-wrap ${css.section}`}><h2 className="h3">All trades</h2>
-        {data && !data.trades.length ? <p className="muted">{paper ? 'No practice trades yet. Add one above to try it out.' : 'No trades yet. Import your broker file or add one above.'}</p> : null}
+      <div className={`panel table-wrap ${css.section}`}><h2 className="h3">{tr('All trades')}</h2>
+        {data && !data.trades.length ? <p className="muted">{tr(paper ? 'No practice trades yet. Add one above to try it out.' : 'No trades yet. Import your broker file or add one above.')}</p> : null}
         {data?.trades.length ? (
-          <table className="cards"><thead><tr><th>Date</th><th>Trade</th><th className="n">Price</th><th className="n">Amount</th><th>Note</th><th /></tr></thead>
+          <table className="cards"><thead><tr><th>{tr('Date')}</th><th>{tr('Trade')}</th><th className="n">{tr('Price')}</th><th className="n">{tr('Amount')}</th><th>{tr('Note')}</th><th /></tr></thead>
             <tbody>{data.trades.map((t) => (
-              <tr key={t.id}><td>{fmtDate(t.date)}</td><td><span className={`${css.side} ${t.side === 'BUY' ? css.buy : css.sell}`}>{t.side}</span> {t.quantity} <b>{t.code}</b></td>
+              <tr key={t.id}><td>{fmtDateLang(t.date, lang)}</td><td><span className={`${css.side} ${t.side === 'BUY' ? css.buy : css.sell}`}>{t.side}</span> {t.quantity} <b>{t.code}</b></td>
                 <td className="n">৳{fmt(t.price)}</td><td className="n">৳{fmt(tradeAmount(t))}</td><td className="muted">{t.note}</td>
                 <td className={css.actions}>
-                  <button className="link-btn" type="button" aria-label={`Edit ${t.side} ${t.quantity} ${t.code} on ${t.date}`} onClick={() => { setEditing(t.id); setForm({ date: t.date, code: t.code, side: t.side, quantity: String(t.quantity), price: String(t.price), commission: t.commission == null ? '' : String(t.commission), note: t.note }); openAdd(); }}>Edit</button>
-                  <button className="link-btn danger" type="button" aria-label={`Delete ${t.side} ${t.quantity} ${t.code} on ${t.date}`} onClick={() => void remove(t)}>Delete</button>
+                  <button className="link-btn" type="button" aria-label={`Edit ${t.side} ${t.quantity} ${t.code} on ${t.date}`} onClick={() => { setEditing(t.id); setForm({ date: t.date, code: t.code, side: t.side, quantity: String(t.quantity), price: String(t.price), commission: t.commission == null ? '' : String(t.commission), note: t.note }); openAdd(); }}>{tr('Edit')}</button>
+                  <button className="link-btn danger" type="button" aria-label={`Delete ${t.side} ${t.quantity} ${t.code} on ${t.date}`} onClick={() => void remove(t)}>{tr('Delete')}</button>
                 </td></tr>
             ))}</tbody></table>
         ) : null}
-        {paper && data?.trades.length ? <div className={`${css.actions} ${css.section}`}><button className="link-btn danger" type="button" disabled={busy} onClick={() => void resetPractice()}>Reset practice account</button></div> : null}
+        {paper && data?.trades.length ? <div className={`${css.actions} ${css.section}`}><button className="link-btn danger" type="button" disabled={busy} onClick={() => void resetPractice()}>{tr('Reset practice account')}</button></div> : null}
       </div>
       </div>
       <details className={`panel ${css.section}`} open={settingsOpen} onToggle={(e) => setSettingsOpen(e.currentTarget.open)}>
@@ -347,13 +347,13 @@ export default function PortfolioPage() {
           <h2 className="h3">{tr('Phone alerts')}</h2>
           {ownerMode ? (
             <>
-              <p className="small muted">Get a Telegram message when a plan reaches its price, a holding hits your stop-loss or target, or a dividend&apos;s last buy day is near.</p>
+              <p className="small muted">{tr('Get a Telegram message when a plan reaches its price, a holding hits your stop-loss or target, or a dividend\'s last buy day is near.')}</p>
               <TelegramTestButton />
             </>
           ) : signedIn === '1' ? (
             <TelegramConnect />
           ) : (
-            <p className="small">Sign in with Google (in the panel below) to get Telegram alerts from your own Sheet. For price alerts in this browser, use the <Link href="/alerts">Alerts page</Link>.</p>
+            <p className="small">{tr('Sign in with Google (in the panel below) to get Telegram alerts from your own Sheet.')} {tr('For price alerts in this browser, use the')} <Link href="/alerts">{tr('Alerts page')}</Link>{tr('.')}</p>
           )}
         </div>
         <div className={`panel ${css.section}`}>

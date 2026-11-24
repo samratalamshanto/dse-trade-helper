@@ -48,13 +48,14 @@ export default function ScorecardPage() {
     <>
       <h1><Tr text="Signal scorecard" /></h1>
       <div className="note">
-        <Tr text="Every trading day after the close we save what this app said about each company. Later we grade each call against the DSEX index at " />
-        <b>1, 5 and 20 trading days</b>. <b><Tr text="Passes the checks" /></b>
-        <Tr text=" is right when the share beat DSEX; " />
-        <b><Tr text="Caution" /></b> <Tr text="and" /> <b><Tr text="High risk" /></b>
-        <Tr text=" are right when it lagged DSEX. Neutral is not graded. The first grades appear after 1 trading day; the full picture needs 20. This is our track record, not a forecast. Learning aid, not investment advice." />
+        <Tr text="Every trading day after the close we save what this app said about each company." />{' '}
+        <Tr text="Later we grade each call against the DSEX index at 1, 5 and 20 trading days." /> <b><Tr text="Passes the checks" /></b>{' '}
+        <Tr text="is right when the share beat DSEX;" />{' '}
+        <b><Tr text="Caution" /></b> <Tr text="and" /> <b><Tr text="High risk" /></b>{' '}
+        <Tr text="are right when it lagged DSEX." />{' '}
+        <Tr text="Neutral is not graded. The first grades appear after 1 trading day; the full picture needs 20. This is our track record, not a forecast. Learning aid, not investment advice." />
       </div>
-      <p className="small muted">{d.days ? <>{t('Snapshots since')} {fmtDateLang(d.since, lang)}: {d.days} {t(d.days === 1 ? 'trading day' : 'trading days')}. </> : null}{t('Waiting to be graded:')} {d.pending} {t('call checks.')}</p>
+      <p className="small muted">{d.days ? <>{t('Snapshots since')} {fmtDateLang(d.since, lang)}: {d.days === 1 ? t(`${d.days} trading day.`) : t(`${d.days} trading days.`)} </> : null}{t('Waiting to be graded:')} {t(`${d.pending} call checks.`)}</p>
 
       {!graded ? (
         <div className="panel empty-state">

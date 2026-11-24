@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Tr } from '@/components/Tr';
+import { useLang } from '@/components/i18n';
 import { useApp } from '@/components/AppProvider';
 import { fmt, marketState, sectorName, signed, tone } from '@/components/format';
 import type { CompanyRow } from '@/lib/service';
@@ -14,15 +15,16 @@ export function ChangeText({ pct, suffix = '' }: { pct: number | null | undefine
 }
 
 export function CompanyCard({ r }: { r: CompanyRow }) {
+  const { t } = useLang();
   return (
     <Link className="panel card" href={'/c/' + encodeURIComponent(r.code)}>
       <div className="top">
         <div><b className="mono">{r.code}</b><div className="small muted">{r.name}</div></div>
-        <div style={{ textAlign: 'right' }}><div className="score mono">{r.score}</div><div className="small muted">score</div></div>
+        <div style={{ textAlign: 'right' }}><div className="score mono">{r.score}</div><div className="small muted">{t('score')}</div></div>
       </div>
       <div className="bar"><i style={{ width: `${r.score}%` }} /></div>
-      <div className="small">{sectorName(r.sector)} · ৳{fmt(r.price)} <ChangeText pct={r.changePct} /></div>
-      <div className="small muted">P/E {fmt(r.pe, 1)} · Dividend yield {fmt(r.dividendYield, 1)}% · EPS growth {signed(r.epsCagr)}/yr</div>
+      <div className="small">{t(sectorName(r.sector))} · ৳{fmt(r.price)} <ChangeText pct={r.changePct} /></div>
+      <div className="small muted">P/E {fmt(r.pe, 1)} · {t('Dividend yield')} {fmt(r.dividendYield, 1)}% · {t('EPS growth')} {signed(r.epsCagr)}/{t('yr')}</div>
     </Link>
   );
 }

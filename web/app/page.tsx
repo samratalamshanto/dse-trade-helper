@@ -14,7 +14,7 @@ import { HoldingsToday } from '@/components/HoldingsToday';
 import { MyStocks } from '@/components/MyStocks';
 import { PlansMini, TodaysPicks } from '@/components/planner/DashboardCards';
 import { Tr } from '@/components/Tr';
-import { fmt, fmtDate, marketState, pctNum, sectorName, signed, tone } from '@/components/format';
+import { fmt, fmtDate, fmtDateLang, marketState, pctNum, sectorName, signed, tone } from '@/components/format';
 import { FraudPill, Icon, Info, SIGNALS, Skeleton, type FraudLevel, type IconName, type Signal } from '@/components/ui';
 import type { Dashboard } from '@/lib/service';
 
@@ -35,18 +35,19 @@ const Row = ({ code, children }: { code: string; children: ReactNode }) => (
 );
 
 function StartGuide() {
+  const { t } = useLang();
   const [hidden, setHidden] = useStoredValue('startHidden', '0');
   if (hidden === '1') return null;
   return (
-    <section className="panel start" aria-label="Start here">
-      <div><b>New here? Start in 3 steps.</b>
+    <section className="panel start" aria-label={t('Start here')}>
+      <div><b><Tr text="New here? Start in 3 steps." /></b>
         <ol>
-          <li><Link className="link-btn" href="/learn">Read &quot;How it works&quot;</Link> (2 minutes): what the signals and words mean.</li>
-          <li><Link className="link-btn" href="/all?signal=research">See companies that pass the checks</Link>: all 8 rule checks passed.</li>
-          <li>Open one company and read its <b>four answers</b> at the top. Then check its Dividends tab.</li>
+          <li><Link className="link-btn" href="/learn"><Tr text='Read "How it works"' /></Link> <Tr text="(2 minutes): what the signals and words mean." /></li>
+          <li><Link className="link-btn" href="/all?signal=research"><Tr text="See companies that pass the checks" /></Link>: <Tr text="all 8 rule checks passed." /></li>
+          <li><Tr text="Open one company and read its" /> <b><Tr text="four answers" /></b> <Tr text="at the top. Then check its Dividends tab." /></li>
         </ol>
-        <p className="small muted">This site helps you choose what to research. It does not tell you what to buy.</p></div>
-      <button className="btn primary" type="button" onClick={() => setHidden('1')}>Got it</button>
+        <p className="small muted"><Tr text="This site helps you choose what to research. It does not tell you what to buy." /></p></div>
+      <button className="btn primary" type="button" onClick={() => setHidden('1')}><Tr text="Got it" /></button>
     </section>
   );
 }
@@ -71,25 +72,26 @@ function TrustCard() {
 function MarketCharts({ d, liveNow }: { d: Dashboard; liveNow: boolean }) {
   const colors = useChartColors();
   const router = useRouter();
+  const { t } = useLang();
   if (!colors) return null;
   return (
     <>
-      <h2>Market in pictures</h2>
+      <h2>{t('Market in pictures')}</h2>
       <div className="grid g3">
-        <div className="panel"><h3>{d.companyCount} companies by signal <Info text="Every DSE company, sorted by our rules. Click a slice to see that list." /></h3>
+        <div className="panel"><h3>{t(`${d.companyCount} companies by signal`)} <Info text="Every DSE company, sorted by our rules. Click a slice to see that list." /></h3>
           <ChartBox label={KEYS.map((k) => `${SIGNALS[k].label} ${d.counts[k]}`).join(', ')}>
-            <Doughnut data={{ labels: KEYS.map((k) => SIGNALS[k].label), datasets: [{ data: KEYS.map((k) => d.counts[k]), backgroundColor: KEYS.map((k) => colors[SIGNAL_COLORS[k]]), borderColor: colors['--panel'], borderWidth: 2 }] }}
+            <Doughnut data={{ labels: KEYS.map((k) => t(SIGNALS[k].label)), datasets: [{ data: KEYS.map((k) => d.counts[k]), backgroundColor: KEYS.map((k) => colors[SIGNAL_COLORS[k]]), borderColor: colors['--panel'], borderWidth: 2 }] }}
               options={{ maintainAspectRatio: false, cutout: '58%', interaction: { mode: 'nearest', intersect: true },
                 onClick: (_e, els) => { if (els[0]) router.push('/all?signal=' + KEYS[els[0].index]); },
                 plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.parsed} companies` } } } }} />
           </ChartBox></div>
-        <div className="panel"><h3>{liveNow ? 'Sectors today' : 'Sectors, last session'} <Info text="Average price change of the companies in each sector." /></h3>
+        <div className="panel"><h3>{t(liveNow ? 'Sectors today' : 'Sectors, last session')} <Info text="Average price change of the companies in each sector." /></h3>
           <ChartBox height={Math.max(240, d.sectors.length * 18)} label="Average price change by sector">
-            <Bar data={{ labels: d.sectors.map((s) => sectorName(s.sector)), datasets: [{ data: d.sectors.map((s) => s.avg), backgroundColor: d.sectors.map((s) => colors[s.avg >= 0 ? '--up' : '--down']), borderRadius: 3 }] }}
+            <Bar data={{ labels: d.sectors.map((s) => t(sectorName(s.sector))), datasets: [{ data: d.sectors.map((s) => s.avg), backgroundColor: d.sectors.map((s) => colors[s.avg >= 0 ? '--up' : '--down']), borderRadius: 3 }] }}
               options={{ indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { displayColors: false, callbacks: { label: (ctx) => `${signed(ctx.parsed.x, 2)} average · ${d.sectors[ctx.dataIndex].n} companies` } } },
                 scales: { x: { ticks: { callback: (v) => v + '%' } }, y: { ticks: { autoSkip: false, font: { size: 11 } } } } }} />
           </ChartBox></div>
-        <div className="panel"><h3>Turnover, last 10 days <Info text="Value of shares traded each day, in crore taka." /></h3>
+        <div className="panel"><h3>{t('Turnover, last 10 days')} <Info text="Value of shares traded each day, in crore taka." /></h3>
           <ChartBox label="Daily turnover for the last 10 sessions">
             <Bar data={{ labels: d.daily.map((x) => x.date), datasets: [{ data: d.daily.map((x) => x.turnover / 10), backgroundColor: colors['--accent'], borderRadius: 3 }] }}
               options={{ maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { displayColors: false, callbacks: {
@@ -104,8 +106,9 @@ function MarketCharts({ d, liveNow }: { d: Dashboard; liveNow: boolean }) {
 
 function DsexLine({ d }: { d: Dashboard }) {
   const colors = useChartColors();
+  const { t } = useLang();
   const dsex = d.index.find((x) => x.key === 'DSEX');
-  if (!d.intraday.length) return <div className="chart-empty">The DSEX line through the day appears after trading starts at 10:00.</div>;
+  if (!d.intraday.length) return <div className="chart-empty">{t('The DSEX line through the day appears after trading starts at 10:00.')}</div>;
   if (!colors) return null;
   return (
     <ChartBox height={160} label={`DSEX through the day, ${fmtDate(d.intradayDay)}`}>
@@ -116,12 +119,12 @@ function DsexLine({ d }: { d: Dashboard }) {
 }
 
 export default function DashboardPage() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { data: d, error } = useApi<Dashboard>('/api/dashboard');
   const [held, setHeld] = useState<string[]>([]);
   const onHeld = useCallback((codes: string[]) => setHeld(codes), []);
-  if (error && !d) return <div className="note bad">Could not load the dashboard: {error}. Try Refresh in a minute.</div>;
-  if (!d) return <><h1 className="sr-title">{t('DSE dashboard')}</h1><Skeleton label="Loading dashboard" rows={7} /></>;
+  if (error && !d) return <div className="note bad">{t('Could not load the dashboard')}: {error}. {t('Try Refresh in a minute.')}</div>;
+  if (!d) return <><h1 className="sr-title">{t('DSE dashboard')}</h1><Skeleton label={t('Loading dashboard')} rows={7} /></>;
 
   const dsex = d.index.find((x) => x.key === 'DSEX');
   const b = d.breadth, traded = (b.advanced || 0) + (b.declined || 0) + (b.unchanged || 0);
@@ -140,7 +143,7 @@ export default function DashboardPage() {
       <StartGuide />
       <TrustCard />
       <section className="panel market" aria-label={t('Market')}>
-        {d.live ? null : <p className="small muted session-note">{t('Showing the last session')}, <b>{fmtDate(d.showingDate)}</b>. {t("Today's figures appear when trading starts.")}</p>}
+        {d.live ? null : <p className="small muted session-note">{t('Showing the last session')}, <b>{fmtDateLang(d.showingDate, lang)}</b>. {t("Today's figures appear when trading starts.")}</p>}
         <div className="market-top">
           <div><div className="small muted">{t('DSEX index')} <Info text="The main index of the Dhaka Stock Exchange." /></div>
             <div className="big-num mono">{fmt(dsex?.value)}</div>
@@ -150,7 +153,7 @@ export default function DashboardPage() {
               <div className={`small ${tone(turnoverChange)}`}>{turnoverChange == null ? '' : signed(turnoverChange) + ' ' + t('vs day before')}</div></div>
             <div><div className="small muted">{t('Trades')}</div><div className="mono stat">{fmt(d.totals.trades, 0)}</div></div>
             <div><div className="small muted">{t('Market now')}</div><div className="stat"><span className={`pill ${state.key === 'open' ? 's-research' : 's-neutral'}`}>{t(state.short.replace('● ', ''))}</span></div>
-              <div className="small muted">{t('figures')}: {fmtDate(d.showingDate)}</div></div>
+              <div className="small muted">{t("figures")}: {fmtDateLang(d.showingDate, lang)}</div></div>
           </div>
         </div>
         <DsexLine d={d} />
@@ -177,13 +180,13 @@ export default function DashboardPage() {
       <h2>{t(liveNow ? "Today's important things" : 'Important things from the last session')}</h2>
       <div className="grid g3">
         <TodayItem icon="calendar" title="Dividends with a record date ahead" count={buyable.length} href="/dividends">
-          {buyable.slice(0, 5).map((r) => <Row key={r.code} code={r.code}>{r.cashPerShare != null ? `৳${fmt(r.cashPerShare, 2)}/share` : r.stockPct ? <>{pctNum(r.stockPct)}% <Tr text="bonus" /></> : '—'}{r.yieldPct != null ? ` · ${fmt(r.yieldPct, 2)}% yield` : ''} · {t('last day to buy')} <LastBuy r={r} />{r.fraud !== 'clean' ? <> <FraudPill level={r.fraud as FraudLevel} flags={r.flags as string[]} /></> : null}</Row>)}
+          {buyable.slice(0, 5).map((r) => <Row key={r.code} code={r.code}>{r.cashPerShare != null ? t(`৳${fmt(r.cashPerShare, 2)}/share`) : r.stockPct ? t(`${pctNum(r.stockPct)}% bonus`) : '—'}{r.yieldPct != null ? ` · ${t(`${fmt(r.yieldPct, 2)}% yield`)}` : ''} · {t('last day to buy')} <LastBuy r={r} />{r.fraud !== 'clean' ? <> <FraudPill level={r.fraud as FraudLevel} flags={r.flags as string[]} /></> : null}</Row>)}
         </TodayItem>
         <TodayItem icon="research" title="Dividends declared this week" count={d.declaredThisWeek.length} href="/dividends">
-          {d.declaredThisWeek.slice(0, 5).map((r) => <Row key={r.code} code={r.code}>{pctNum(r.cashPct)}%{r.stockPct ? ` + ${pctNum(r.stockPct)}% bonus` : ''} · {fmtDate(r.announced)}{r.fraud !== 'clean' ? <> <FraudPill level={r.fraud as FraudLevel} flags={r.flags} /></> : null}</Row>)}
+          {d.declaredThisWeek.slice(0, 5).map((r) => <Row key={r.code} code={r.code}>{t(`${pctNum(r.cashPct)}%`)}{r.stockPct ? ` + ${t(`${pctNum(r.stockPct)}% bonus`)}` : ''} · {fmtDateLang(r.announced, lang)}{r.fraud !== 'clean' ? <> <FraudPill level={r.fraud as FraudLevel} flags={r.flags} /></> : null}</Row>)}
         </TodayItem>
         <TodayItem icon="caution" title="Unusual trading volume" count={d.unusualCount} href="/warning-signs">
-          {d.unusual.map((u) => <Row key={u.code} code={u.code}>{fmt(u.x, 1)}× normal volume{u.fraud !== 'clean' ? <> <FraudPill level={u.fraud as FraudLevel} flags={u.flags as string[]} /></> : null}</Row>)}
+          {d.unusual.map((u) => <Row key={u.code} code={u.code}>{t(`${fmt(u.x, 1)}× normal volume`)}{u.fraud !== 'clean' ? <> <FraudPill level={u.fraud as FraudLevel} flags={u.flags as string[]} /></> : null}</Row>)}
         </TodayItem>
         <TodayItem icon="trend" title={liveNow ? 'Top gainers today' : "Last session's top gainers"} count={d.gainers.length} href="/all">
           {d.gainers.map((g) => <Row key={g.code} code={g.code}><span className="up mono">{signed(g.percent, 2)}</span> · ৳{fmt(g.price)}{g.fraud !== 'clean' ? <> <FraudPill level={g.fraud as FraudLevel} flags={g.flags as string[]} /></> : null}</Row>)}
@@ -192,7 +195,7 @@ export default function DashboardPage() {
           {d.losers.map((g) => <Row key={g.code} code={g.code}><span className="down mono">{signed(g.percent, 2)}</span> · ৳{fmt(g.price)}{g.fraud !== 'clean' ? <> <FraudPill level={g.fraud as FraudLevel} flags={g.flags as string[]} /></> : null}</Row>)}
         </TodayItem>
         <TodayItem icon="high" title="Warning signs (outside category Z)" count={d.fraudCount} href="/warning-signs">
-          {d.fraudTop.map((f) => <Row key={f.code} code={f.code}><span className="small">{f.flags.join(', ')}</span></Row>)}
+          {d.fraudTop.map((f) => <Row key={f.code} code={f.code}><span className="small">{f.flags.map(t).join(', ')}</span></Row>)}
         </TodayItem>
       </div>
 
@@ -201,7 +204,7 @@ export default function DashboardPage() {
 
       <h2>{t('Highest scores among companies that pass the checks')}</h2>
       <p className="muted small">{t('Companies that pass every research check, best score first. A place to start research, not a buy order.')}</p>
-      <div className="grid g3">{d.shortlist.length ? d.shortlist.map((r) => <CompanyCard key={r.code} r={r} />) : <div className="empty panel">No company has passed yet.</div>}</div>
+      <div className="grid g3">{d.shortlist.length ? d.shortlist.map((r) => <CompanyCard key={r.code} r={r} />) : <div className="empty panel">{t('No company has passed yet.')}</div>}</div>
       <p><Link href="/all?signal=research">{t('See all →')}</Link></p>
     </>
   );
