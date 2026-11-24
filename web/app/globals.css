@@ -477,3 +477,8 @@ table.cards td.nw { white-space: nowrap; }
 .signal-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
 .page-tabs button.tab-link { border: 0; }
 .page-tabs button.tab-link[aria-selected="true"] { background: var(--panel); color: var(--text); font-weight: 600; box-shadow: inset 0 -3px 0 var(--accent); }
+/* lane A: dividends section tabs reuse the page-tab look; headers may wrap so 8 columns fit at 1280 px; pills in one table row line up (cells align to the top, so a pill on the first line of a 2-line cell matches a pill in a 1-line cell). */
+.tab-link[aria-selected="true"] { background: var(--panel); color: var(--text); font-weight: 600; box-shadow: inset 0 -3px 0 var(--accent); }
+.tab-link .count { color: var(--muted); font-size: 12px; font-weight: 400; }
+table.div-value th, table.div-value .sort-btn { white-space: normal; }
+table.cards td { vertical-align: top; }

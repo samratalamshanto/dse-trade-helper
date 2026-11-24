@@ -60,30 +60,25 @@ export function daysUntil(today: string, date: string | null): number | null {
   return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
-const check = (key: DividendCheck['key'], state: CheckState, texts: Record<CheckState, string>): DividendCheck => ({ key, state, text: texts[state] });
+const check = (key: DividendCheck['key'], state: CheckState, text: string): DividendCheck => ({ key, state, text });
 
+// Each known check names the figure it was decided on and its rule, so the table needs no column for it.
 export function dividendChecks(r: DividendInput): DividendCheck[] {
   const pos = rangePos(r.price, r.weekLow52, r.weekHigh52);
   const payout = paidFromProfit(r.yearlyCashPerShare, r.eps);
   const loss = num(r.eps) && r.eps <= 0 && (r.yearlyCashPerShare ?? 0) > 0;
   return [
-    check('yield', !num(r.yieldPct) ? 'unknown' : r.yieldPct >= YIELD_MIN_PCT ? 'pass' : 'fail', {
-      pass: '12-month cash yield is 5% or more.', fail: '12-month cash yield is under 5%.', unknown: '12-month cash yield is not known.',
-    }),
-    check('profit', loss ? 'fail' : payout == null ? 'unknown' : payout <= 100 ? 'pass' : 'fail', {
-      pass: 'The cash dividend is within the yearly profit (EPS).',
-      fail: loss ? 'The company made a loss, so the dividend is not paid from profit.' : 'The cash dividend is more than the yearly profit (EPS).',
-      unknown: 'No cash dividend in 12 months, or profit (EPS) is not known.',
-    }),
-    check('years', r.paidYears == null ? 'unknown' : r.paidYears >= PAID_YEARS_MIN ? 'pass' : 'fail', {
-      pass: 'Paid a cash dividend in 4 or more of the last 5 years.', fail: 'Paid a cash dividend in fewer than 4 of the last 5 years.', unknown: 'Dividend history is not known.',
-    }),
-    check('warning', !r.fraud ? 'unknown' : r.fraud === 'clean' ? 'pass' : 'fail', {
-      pass: 'No warning sign found.', fail: 'Has a warning sign.', unknown: 'Warning signs are not known.',
-    }),
-    check('range', pos == null ? 'unknown' : pos < 0.5 ? 'pass' : 'fail', {
-      pass: 'Price is in the lower half of its 52-week range.', fail: 'Price is in the upper half of its 52-week range.', unknown: '52-week range is not known.',
-    }),
+    num(r.yieldPct) ? check('yield', r.yieldPct >= YIELD_MIN_PCT ? 'pass' : 'fail', `12-month cash yield: ${r.yieldPct.toFixed(2)}% (5% or more passes)`)
+      : check('yield', 'unknown', '12-month cash yield is not known.'),
+    loss ? check('profit', 'fail', 'The company made a loss, so the dividend is not paid from profit.')
+      : payout != null ? check('profit', payout <= 100 ? 'pass' : 'fail', `Paid from profit: ${payout}% of EPS (100% or less passes)`)
+        : check('profit', 'unknown', 'No cash dividend in 12 months, or profit (EPS) is not known.'),
+    r.paidYears != null ? check('years', r.paidYears >= PAID_YEARS_MIN ? 'pass' : 'fail', `Paid in ${r.paidYears} of last 5 years (4 or more passes)`)
+      : check('years', 'unknown', 'Dividend history is not known.'),
+    !r.fraud ? check('warning', 'unknown', 'Warning signs are not known.') : r.fraud === 'clean' ? check('warning', 'pass', 'No warning sign found.') : check('warning', 'fail', 'Has a warning sign.'),
+    // Floor, so a shown "50%" is never a pass (the rule is under half).
+    pos != null ? check('range', pos < 0.5 ? 'pass' : 'fail', `52-week position: ${Math.floor(pos * 100)}% of range (under 50% passes)`)
+      : check('range', 'unknown', '52-week range is not known.'),
   ];
 }
 
