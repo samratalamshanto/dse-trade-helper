@@ -410,3 +410,40 @@ test('every alert line carries a company link', () => {
     assert.match(a.text, /https:\/\/dse-trade-helper\.vercel\.app\/c\//, `alert ${a.key} has no company link`);
   }
 });
+
+// --- price rules from /alerts reach Telegram ---
+
+test('price rules: a reached target sends one Telegram alert with the plan note, escaped', () => {
+  const rules = [
+    { type: 'price_below' as const, id: 'pb', enabled: true, code: 'GP', target: 96, note: 'buy <5>' },
+    { type: 'price_above' as const, id: 'pa', enabled: true, code: 'ROBI', target: 104 },
+    { type: 'price_above' as const, id: 'off', enabled: false, code: 'ROBI', target: 1 },
+    { type: 'big_move' as const, id: 'bm', enabled: true, code: 'GP', threshold: 0.1 },
+  ];
+  const livePriceRows = [{ code: 'GP', price: 95 }, { code: 'ROBI', price: 103 }];
+  const a = alertsFor(base({ priceRules: rules, livePriceRows, sessionDate: '2026-11-19' }), {}).filter((x) => x.key.startsWith('price:'));
+  assert.deepEqual(a.map((x) => x.key), ['price:pb:2026-11-19'], 'only the reached, enabled price rule; ROBI 103 < 104; big_move stays browser-only');
+  assert.match(a[0].text, /GP price ৳95\.00 dropped to ৳96\.00 · your plan: buy &lt;5&gt;/);
+  assert.match(a[0].text, /\/c\/GP$/);
+});
+
+test('price rules: nothing is sent from an old session price', () => {
+  const rules = [{ type: 'price_below' as const, id: 'pb', enabled: true, code: 'GP', target: 96 }];
+  const a = alertsFor(base({ priceRules: rules, livePriceRows: [{ code: 'GP', price: 95 }], sessionDate: '2026-11-18' }), {});
+  assert.equal(a.some((x) => x.key.startsWith('price:')), false);
+});
+
+test('price rules: a stored close is not a live price, so it never fires', () => {
+  const rules = [{ type: 'price_below' as const, id: 'pb', enabled: true, code: 'GP', target: 96 }];
+  const rangeRows = [{ code: 'GP', price: 95, weekLow52: 80, weekHigh52: 300 }];
+  const a = alertsFor(base({ priceRules: rules, rangeRows, livePriceRows: [], sessionDate: '2026-11-19' }), {});
+  assert.equal(a.some((x) => x.key.startsWith('price:')), false, 'GP has not traded today');
+});
+
+test('nextState drops price keys from earlier days, keeps today and other keys', () => {
+  const state = { ...emptyState(), sent: {
+    'price:pb:2026-11-18': '2026-11-18T05:00:00.000Z', 'price:pb:2026-11-19': '2026-11-19T04:00:00.000Z', 'range:r1:2026-11-18': '2026-11-18T05:00:00.000Z',
+  } };
+  const next = nextState(state, base(), [], [], '2026-11-19T04:05:00.000Z');
+  assert.deepEqual(Object.keys(next.sent).sort(), ['price:pb:2026-11-19', 'range:r1:2026-11-18']);
+});

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { QUICK_PICKS, QUICK_PICK_KEYS, matchesPick, pickTest, type QuickPickKey } from '../lib/quick-picks.ts';
+import { QUICK_PICKS, QUICK_PICK_KEYS, matchesPick, parsePickList, pickTest, picksTest, type QuickPickKey } from '../lib/quick-picks.ts';
 import type { CompanyRow } from '../lib/service.ts';
 
 const row = (over: Partial<CompanyRow>): CompanyRow => ({
@@ -97,4 +97,19 @@ test('pickTest uses the medians it is given (the server\'s), so every page agree
   assert.equal(pickTest('cheap', [row], { Bank: 12 })(row), true, 'P/E 10 is at or below the given median 12');
   assert.equal(pickTest('cheap', [row], { Bank: 8 })(row), false, 'P/E 10 is above the given median 8');
   assert.equal(pickTest('cheap', [row], {})(row), false, 'no median for the sector: not cheap');
+});
+
+test('parsePickList keeps known keys in chip order and drops the rest', () => {
+  assert.deepEqual(parsePickList('dividend,good,bogus,good'), ['good', 'dividend']);
+  assert.deepEqual(parsePickList('good'), ['good']);
+  assert.deepEqual(parsePickList(''), []);
+  assert.deepEqual(parsePickList(null), []);
+});
+
+test('picksTest passes only companies that pass every chosen pick', () => {
+  const both = picksTest(['good', 'dividend'], rows);
+  assert.deepEqual(rows.filter(both).map((r) => r.code), ['A']);
+  const one = picksTest(['good'], rows);
+  assert.deepEqual(rows.filter(one).map((r) => r.code), ['A', 'B', 'C']);
+  assert.equal(rows.filter(picksTest([], rows)).length, rows.length);
 });

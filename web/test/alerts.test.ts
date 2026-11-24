@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert';
 import {
-  parseAlertStore, encodeAlertStore, dhakaDate, evaluateRules, applyFiredResult, newRuleId, rulesForSession,
+  parseAlertStore, encodeAlertStore, dhakaDate, evaluateRules, applyFiredResult, newRuleId, rulesForSession, cleanNote, NOTE_MAX,
   type AlertStore, type AlertRule, type CompanySnap, type DivSnap,
 } from '../lib/alerts.ts';
 
@@ -249,4 +249,32 @@ test('rulesForSession: price and move rules only run when the session is today',
   assert.deepStrictEqual(rulesForSession(rules, '2026-11-20', '2026-11-20').map((r) => r.id), ['a', 'b', 'c', 'd', 'e']);
   assert.deepStrictEqual(rulesForSession(rules, '2026-11-19', '2026-11-20').map((r) => r.id), ['d', 'e']);
   assert.deepStrictEqual(rulesForSession(rules, null, '2026-11-20').map((r) => r.id), ['d', 'e']);
+});
+
+// --- plan note on price rules ---
+
+test('price rule note: kept through parse, cleaned, and shown in the message', () => {
+  const raw = JSON.stringify({ rules: [
+    { type: 'price_below', id: 'n1', enabled: true, code: 'GP', target: 96, note: '  buy 5\n' },
+    { type: 'price_above', id: 'n2', enabled: true, code: 'ROBI', target: 104, note: 42 },
+  ] });
+  const [below, above] = parseAlertStore(raw).rules;
+  assert.deepStrictEqual(below, { type: 'price_below', id: 'n1', enabled: true, code: 'GP', target: 96, note: 'buy 5' });
+  assert.ok(!('note' in above), 'a note that is not text is dropped, the rule is kept');
+  const ev = evaluateRules([below], [{ code: 'GP', price: 95, changePct: 0, flags: [] }], [], TODAY, {}).events;
+  assert.strictEqual(ev[0].message, 'GP price ৳95.00 dropped to ৳96.00 · your plan: buy 5');
+  const noNote = evaluateRules([above], [{ code: 'ROBI', price: 105, changePct: 0, flags: [] }], [], TODAY, {}).events;
+  assert.ok(!noNote[0].message.includes('your plan'));
+});
+
+test('cleanNote cuts to NOTE_MAX and removes control characters', () => {
+  assert.strictEqual(cleanNote('x'.repeat(NOTE_MAX + 10)).length, NOTE_MAX);
+  assert.strictEqual(cleanNote('sell\tall'), 'sell all');
+  assert.strictEqual(cleanNote(undefined), '');
+});
+
+test('cleanNote does not cut an emoji in half', () => {
+  const note = cleanNote('x'.repeat(NOTE_MAX - 1) + '🎯🎯');
+  assert.strictEqual(Array.from(note).length, NOTE_MAX);
+  assert.ok(note.endsWith('🎯'));
 });

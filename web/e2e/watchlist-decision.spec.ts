@@ -37,13 +37,14 @@ test('watchlist: APEXSPINN shows declared dividend with record date passed', asy
   await expect(divCell).toContainText('record date passed');
 });
 
-// (3) Alert link → /alerts?code=CODE prefilled; Plan link → company page planner; neither triggers row navigation.
-test('watchlist: Alert link prefills code on alerts page', async ({ page }) => {
+// (3) "Alert if it falls" → /alerts with code and rule type prefilled; Plan link → company page planner; neither triggers row navigation.
+test('watchlist: Alert if it falls prefills code and rule type on alerts page', async ({ page }) => {
   await page.goto('/watchlist');
   const row = page.locator('table.cards tbody tr', { hasText: 'GP' });
   await expect(row).toBeVisible({ timeout: 20_000 });
-  const alertLink = row.getByRole('link', { name: 'Alert' });
-  await expect(alertLink).toHaveAttribute('href', '/alerts?code=GP');
+  await expect(row.getByRole('link', { name: 'Alert if it rises' })).toHaveAttribute('href', '/alerts?type=price_above&code=GP');
+  const alertLink = row.getByRole('link', { name: 'Alert if it falls' });
+  await expect(alertLink).toHaveAttribute('href', '/alerts?type=price_below&code=GP');
   // Click the Alert link — must land on /alerts, not on the company page.
   await alertLink.click();
   await expect(page).toHaveURL(/\/alerts/);
@@ -51,6 +52,8 @@ test('watchlist: Alert link prefills code on alerts page', async ({ page }) => {
   // The code box must be prefilled with GP.
   const codeInput = page.getByLabel('Company code');
   await expect(codeInput).toHaveValue('GP');
+  await expect(page.getByLabel('Rule type')).toHaveValue('price_below');
+  await expect(page.getByLabel('My plan (optional)')).toBeVisible();
 });
 
 test('watchlist: Plan link opens company page at planner section', async ({ page }) => {

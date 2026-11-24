@@ -14,7 +14,7 @@ import { compareNullsLast, fmt, moneyPerDay, sectorName, signed, tone } from '@/
 import { FRAUD, FraudPill, Icon, SIGNAL_ORDER, SIGNALS, SignalPill, Skeleton, type FraudLevel, type IconName, type Signal } from '@/components/ui';
 import type { CompanyRow } from '@/lib/service';
 import type { MarketSession } from '@/lib/dse';
-import { QUICK_PICKS } from '@/lib/quick-picks';
+import { QUICK_PICKS, parsePickList, picksTest } from '@/lib/quick-picks';
 import { QuickPickChips } from '@/components/QuickPickChips';
 import { CompanySearch } from '@/components/CompanySearch';
 
@@ -75,9 +75,11 @@ function AllCompanies() {
   const key = (r: CompanyRow): unknown => (sort.key === 'signalRank' ? SIGNAL_ORDER[r.signal as Signal] * 1000 + r.score
     : sort.key === 'fraud' ? FRAUD_RANK[r.fraud as FraudLevel] * 1000 + r.flags.length
     : sort.key === 'pos' ? rangePos(r.price, r.weekLow52, r.weekHigh52) : (r as unknown as Record<string, unknown>)[sort.key]);
-  const preset = QUICK_PICKS.find((p) => p.key === params.get('preset'));
+  // ?preset=good,dividend: a company must pass every chosen pick. The old one-value form reads the same way.
+  const presets = parsePickList(params.get('preset'));
+  const passesPicks = picksTest(presets, rows, data?.medians || {});
   const shown = rows
-    .filter((r) => !preset || preset.test(r, data?.medians || {}))
+    .filter(passesPicks)
     .filter((r) => (!state.signal || r.signal === state.signal) && (!state.sector || r.sector === state.sector) && (!state.fraud || r.fraud === state.fraud)
       && (!state.cat || r.category === state.cat) && (!state.yield || (r.dividendYield ?? 0) >= Number(state.yield))
       && (!state.liquid || (r.dailyValue ?? 0) >= Number(state.liquid) * 1e5))
@@ -88,7 +90,7 @@ function AllCompanies() {
   if (error && !data) return <div className="note bad">Could not load the companies: {error}</div>;
   const fresh = rows.filter((r) => !r.stale).length;
   const activeFilters = FILTERS.filter((k) => state[k]).length;
-  const filtered = Boolean(preset) || activeFilters > 0 || Boolean(codeFilter);
+  const filtered = presets.length > 0 || activeFilters > 0 || Boolean(codeFilter);
 
   const select = (k: Filter, label: string, icon: IconName, options: [string, string][]) => (
     <span className="select-ic"><Icon name={icon} />
@@ -105,7 +107,15 @@ function AllCompanies() {
       <CompanyTabs />
       <p className="muted">{data ? <>{rows.length} companies listed{fresh < rows.length ? `, ${fresh} with the newest data` : ''}. </> : null}Click a row for the full explanation.</p>
       <div className="panel filter-panel">
-        <QuickPickChips active={preset?.key ?? null} onPick={(p) => setParams(p ? { preset: p.key, sort: p.sort, dir: p.dir } : { preset: '', sort: 'score', dir: -1 })} />
+        <QuickPickChips active={presets} onPick={(p, wasOn) => {
+          const next = wasOn ? presets.filter((k) => k !== p.key) : [...presets, p.key];
+          // The first chip sets the sort; more chips only narrow the list; none left goes back to score.
+          const first = QUICK_PICKS.find((x) => x.key === next[0]);
+          let sortPatch = {};
+          if (next.length === 0) sortPatch = { sort: 'score', dir: -1 };
+          else if (presets.length === 0 && first) sortPatch = { sort: first.sort, dir: first.dir };
+          setParams({ preset: next.join(','), ...sortPatch });
+        }} />
         {/* On a phone the five selects fold behind this button; the search stays visible. */}
         <button type="button" className="btn filter-toggle" aria-expanded={filtersOpen} aria-controls="all-filters" onClick={() => setFiltersOpen(!filtersOpen)}>
           <Icon name="list" />{t('Filters')}{activeFilters ? ` (${activeFilters})` : ''}</button>
@@ -169,7 +179,7 @@ function AllCompanies() {
               <td className="n mono" data-label="Traded / day">{moneyPerDay(r.dailyValue)}</td>
               <td className={`n mono ${tone(r.change1y)}`} data-label="1 year">{signed(r.change1y)}</td>
             </tr>
-          )) : <tr><td colSpan={10} className="empty">{t('No company matches these filters.')}</td></tr>}</tbody>
+          )) : <tr><td colSpan={10} className="empty">{t(presets.length > 1 && !activeFilters && !codeFilter ? 'No company passes all the quick picks you chose. Turn one off to see more.' : 'No company matches these filters.')}</td></tr>}</tbody>
         </table>
       </div>
     </>

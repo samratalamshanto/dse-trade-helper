@@ -81,15 +81,32 @@ test.describe('/all', () => {
     await cheapChip.click();
     await expect(cheapChip).toHaveAttribute('aria-pressed', 'true');
     const cheap = await rows(page).count();
+    // Chips combine now, so turn "Low P/E" off first to compare the two lists on their own.
+    await cheapChip.click();
+    await expect(cheapChip).toHaveAttribute('aria-pressed', 'false');
     const goodChip = group.getByRole('button', { name: 'Passes the checks' });
     await goodChip.click();
     await expect(goodChip).toHaveAttribute('aria-pressed', 'true');
-    await expect(page).toHaveURL(/preset=good/);
+    await expect(page).toHaveURL(/preset=good$/);
     const good = await rows(page).count();
     expect(good).toBeGreaterThanOrEqual(cheap);
     expect(good).toBeGreaterThan(0);
     const signals = await rows(page).locator('td[data-label=Signal]').allInnerTexts();
     for (const s of signals) expect(s).toContain('Passes the checks');
+  });
+
+  test('two quick picks combine: both pressed, both in the address, list no longer than either', async ({ page }) => {
+    const group = page.getByRole('group', { name: 'Quick picks:' });
+    const good = group.getByRole('button', { name: 'Passes the checks' });
+    const dividend = group.getByRole('button', { name: 'High dividend' });
+    await good.click();
+    await expect(page).toHaveURL(/preset=good$/);
+    const goodCount = await rows(page).count();
+    await dividend.click();
+    await expect(page).toHaveURL(/preset=good(%2C|,)dividend/);
+    await expect(good).toHaveAttribute('aria-pressed', 'true');
+    await expect(dividend).toHaveAttribute('aria-pressed', 'true');
+    expect(await rows(page).count()).toBeLessThanOrEqual(goodCount);
   });
 
   test('CSV download has a header row', async ({ page }) => {

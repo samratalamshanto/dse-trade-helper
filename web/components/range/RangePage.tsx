@@ -13,7 +13,7 @@ import { useWatchlist } from '@/components/Watchlist';
 import { MyRules } from '@/components/range/MyRules';
 import { QuickPickChips } from '@/components/QuickPickChips';
 import { PositionBar } from '@/components/PositionBar';
-import { pickTest, QUICK_PICK_KEYS, type QuickPickKey } from '@/lib/quick-picks';
+import { parsePickList, picksTest } from '@/lib/quick-picks';
 import { rangeStats, rangeLooksWrong, gainFromBuyPct, type RangeRow, type Owned } from '@/lib/range';
 import type { CompanyRow } from '@/lib/service';
 import type { MarketSession } from '@/lib/dse';
@@ -82,8 +82,9 @@ export function RangePage() {
   const view = params.get('view') === 'risen' ? 'risen' : 'low';
   const whoParam = params.get('who');
   const who = whoParam === 'holdings' || whoParam === 'watchlist' ? whoParam : '';
+  // ?pick=good,dividend: every chosen pick must pass. The old one-value form (?pick=good) reads the same way.
   const pickParam = params.get('pick');
-  const pick = QUICK_PICK_KEYS.includes(pickParam as QuickPickKey) ? pickParam as QuickPickKey : null;
+  const picks = useMemo(() => parsePickList(pickParam), [pickParam]);
   const within = Number(params.get('within') || '');
   const withinActive = Number.isFinite(within) && within > 0;
   const codeFilter = params.get('code') || '';
@@ -140,16 +141,16 @@ export function RangePage() {
 
   const shown = useMemo(() => {
     let list = rows;
-    if (pick) {
+    if (picks.length) {
       const all = data?.rows ?? [];
-      const test = pickTest(pick, all, data?.medians);
+      const test = picksTest(picks, all, data?.medians);
       const passes = new Set(all.filter(test).map((c) => c.code));
       list = list.filter((r) => passes.has(r.code));
     }
     if (withinActive) list = list.filter((r) => r.aboveLowPct != null && r.aboveLowPct <= within);
     if (codeFilter) list = list.filter((r) => r.code === codeFilter);
     return [...list].sort((a, b) => compareNullsLast(sortKey(a, sortKeyParam), sortKey(b, sortKeyParam), sortDirVal));
-  }, [rows, data, pick, sortKeyParam, sortDirVal, withinActive, within, codeFilter]);
+  }, [rows, data, picks, sortKeyParam, sortDirVal, withinActive, within, codeFilter]);
 
   // A tab keeps who, pick and within; the sort resets to the tab's own default.
   const tabHref = (v: 'low' | 'risen') => {
@@ -200,7 +201,7 @@ export function RangePage() {
       </nav>
 
       <div className="panel filter-panel">
-        <QuickPickChips active={pick} onPick={(p) => setParams({ pick: p ? p.key : '' })} />
+        <QuickPickChips active={picks} onPick={(p, wasOn) => setParams({ pick: (wasOn ? picks.filter((k) => k !== p.key) : [...picks, p.key]).join(',') })} />
       </div>
 
       <div className="panel filter-panel" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
@@ -298,7 +299,7 @@ export function RangePage() {
                 </>}
               </tr>
             )) : (
-              <tr><td colSpan={showHoldings ? 7 : 4} className="empty"><Tr text="No company has figures in this filter." /></td></tr>
+              <tr><td colSpan={showHoldings ? 7 : 4} className="empty"><Tr text={picks.length > 1 ? 'No company passes all the quick picks you chose. Turn one off to see more.' : 'No company has figures in this filter.'} /></td></tr>
             )}
           </tbody>
         </table>

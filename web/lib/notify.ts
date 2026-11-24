@@ -5,12 +5,14 @@ import { livePrices, marketSession } from './dse.ts';
 import { listPlans, picksFor } from './planner-service.ts';
 import { rangeFeed, describeMatch, describeRule, type Owned, type RangeRow, type RangeRule } from './range.ts';
 import type { CompanyRow } from './service.ts';
+import { evaluateRules, type AlertRule } from './alerts.ts';
 
 export const RANGE_DIGEST_MAX = 10;
 import { listCompanies, companyDetail } from './service.ts';
 import { escapeHtml, OFF_TEXT, sendMessage, telegramEnabled, type SendResult } from './telegram.ts';
 import { listTrades, readPrefs } from './trades-service.ts';
 
+const PRICE_RULE_TYPES = new Set(['price_above', 'price_below']);
 export const SITE = process.env.SITE_URL ?? 'https://dse-trade-helper.vercel.app';
 const TICK_MS = 5 * 60_000;
 const OPEN = 9 * 60 + 30, SUMMARY_AT = 9 * 60 + 45, CLOSE = 15 * 60;
@@ -52,6 +54,10 @@ export interface NotifyInput {
   owned: readonly Owned[];
   rangeRules: readonly RangeRule[];
   rangeRows: readonly RangeRow[];
+  // The user's /alerts rules; only the price ones (at or above / at or below) go to Telegram.
+  priceRules?: readonly AlertRule[];
+  // Today's traded prices (ltp > 0) only, so an old close never fires a price rule.
+  livePriceRows?: readonly { code: string; price: number }[];
   companies?: readonly CompanyRow[];
   medians?: Record<string, number | null>;
   watchlist: readonly string[];
@@ -118,6 +124,14 @@ export function alertsFor(input: NotifyInput, prevActions: Record<string, string
       out.push({ key: `div:${h.code}:${lastBuy}`, text: `<b>${code}</b>: ${lastBuy === clock.date ? 'today' : 'the next trading day'} (${lastBuy}) is the last day to buy for the dividend. If the board's dividend is approved, you must still hold the shares on the record date to get it — check that date with your broker. ${SITE}/c/${encodeURIComponent(h.code)}` });
     }
   }
+  const priceRules = (input.priceRules ?? []).filter((r) => PRICE_RULE_TYPES.has(r.type));
+  if (!isStale && priceRules.length > 0) {
+    // Same check and wording as the browser alert; the sent-key log keeps it to one message per rule per day.
+    const snaps = (input.livePriceRows ?? []).map((r) => ({ code: r.code, price: r.price, changePct: null, flags: [] }));
+    for (const e of evaluateRules(priceRules, snaps, [], clock.date, {}).events) {
+      out.push({ key: `price:${e.key}`, text: `${escapeHtml(e.message)} — ${SITE}/c/${encodeURIComponent(e.code)}` });
+    }
+  }
   if (!isStale && input.rangeRules.length > 0) {
     const matches = rangeFeed(input.rangeRules, { rows: input.rangeRows, watchlist: input.watchlist, holdings: input.owned, companies: input.companies, medians: input.medians });
     const rowMap = new Map(input.rangeRows.map((r) => [r.code, r]));
@@ -164,7 +178,9 @@ export function decide(input: NotifyInput, state: NotifyState): { due: Alert[]; 
 // Sent keys are recorded; a holding's action is remembered unless its alert is still unsent, so a failed send retries.
 export function nextState(state: NotifyState, input: NotifyInput, sentKeys: string[], unsent: Alert[], nowIso: string): NotifyState {
   const cutoff = Date.parse(nowIso) - KEEP_KEYS_MS;
-  const sent = Object.fromEntries(Object.entries(state.sent).filter(([, at]) => Date.parse(at) >= cutoff));
+  // A price key only matters on its own day; dropping older ones keeps the saved state small (one Sheet cell).
+  const oldPriceKey = (k: string) => k.startsWith('price:') && !k.endsWith(`:${input.clock.date}`);
+  const sent = Object.fromEntries(Object.entries(state.sent).filter(([k, at]) => Date.parse(at) >= cutoff && !oldPriceKey(k)));
   for (const k of sentKeys) sent[k] = nowIso;
   const blocked = new Set(unsent.map((a) => a.code).filter(Boolean));
   const isStale = input.sessionDate === null ? input.clock.tradingDay : input.sessionDate != null && input.sessionDate !== input.clock.date;
@@ -238,6 +254,8 @@ async function gather(clock: Clock, budget: number | null | undefined): Promise<
     return [h.code, d?.dividend.upcoming?.lastBuyDate ?? null] as const;
   })));
   const rangeRules = prefs?.rangeRules ?? [];
+  const priceRules = (prefs?.alertRules ?? []).filter((r) => PRICE_RULE_TYPES.has(r.type));
+  // Price rules read live prices (livePriceError), not the company list.
   const dataError = livePriceError || sessionError || (companyError && rangeRules.length > 0);
   const picks = summaryDue(clock)
     ? await picksFor(new URLSearchParams(budget ? { budget: String(budget) } : {})).then((r) => r.picks.slice(0, 3).map((p) => ({ code: p.code, name: p.name, price: p.price, reason: pickReason(p) }))).catch((e: unknown) => { console.warn('notify: picks unavailable', e); return [] as Pick3[]; })
@@ -248,6 +266,8 @@ async function gather(clock: Clock, budget: number | null | undefined): Promise<
     holdings: held.map((h) => ({ code: h.code, shares: h.shares, value: h.value, check: h.check })),
     owned: held.map((h) => ({ code: h.code, shares: h.shares, avgCost: h.avgCost })),
     rangeRules,
+    priceRules,
+    livePriceRows: Object.entries(live).filter(([, v]) => v.ltp > 0).map(([code, v]) => ({ code, price: v.ltp })),
     rangeRows: companyResult?.rows ?? [],
     companies: companyResult?.rows ?? [],
     medians: companyResult?.medians,

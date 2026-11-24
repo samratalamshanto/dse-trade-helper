@@ -99,7 +99,9 @@ export default function WatchlistPage() {
                   <a className="mono" href={'/c/' + encodeURIComponent(code)} onClick={(e) => e.stopPropagation()}><b>{code}</b></a>
                   <div className="small muted">{r ? `${r.name} · ${t(sectorName(r.sector))} · ${t('Cat')}\u00a0${r.category}` : t(data ? 'Not in the latest DSE list' : 'Loading…')}</div>
                   <div className="small" onClick={(e) => e.stopPropagation()}>
-                    <a href={'/alerts?code=' + encodeURIComponent(code)} className="muted">{t('Alert')}</a>
+                    <a href={'/alerts?type=price_below&code=' + encodeURIComponent(code)} className="muted">{t('Alert if it falls')}</a>
+                    {' · '}
+                    <a href={'/alerts?type=price_above&code=' + encodeURIComponent(code)} className="muted">{t('Alert if it rises')}</a>
                     {' · '}
                     <a href={'/c/' + encodeURIComponent(code) + '#planner-title'} className="muted">{t('Plan')}</a>
                   </div>

@@ -77,6 +77,9 @@ export default function DividendsPage() {
   const [sorts, setSorts] = useState(DEFAULT_SORT);
   const [showPast, setShowPast] = useState(false);
   const [soon, setSoon] = useState(false);
+  // Narrow every tab to better companies. "Passes the checks" already needs no warning sign; the second box is for use on its own.
+  const [goodOnly, setGoodOnly] = useState(false);
+  const [cleanOnly, setCleanOnly] = useState(false);
   const [q, setQ] = useState('');
   // Title and tabs stay on screen while the data loads, so a tab change does not look like a page reload.
   const head = <><h1><Tr text="Dividends" /></h1><CompanyTabs /></>;
@@ -90,7 +93,7 @@ export default function DividendsPage() {
   // The default sort lists companies without a warning sign first; a column the user picks sorts by that column only.
   const order = (rows: CalendarRow[]) => (sort.key ? rows.sort((a, b) => (byDefault ? Number(a.fraud !== 'clean') - Number(b.fraud !== 'clean') : 0) || compareNullsLast(get(a, sort.key), get(b, sort.key), sort.dir)) : rows);
   const pastCount = d.upcoming.filter((r) => isTooLate(r, d.today)).length;
-  const hit = (r: CalendarRow) => matchesText(q, r.code, r.name);
+  const hit = (r: CalendarRow) => matchesText(q, r.code, r.name) && (!goodOnly || r.signal === 'research') && (!cleanOnly || r.fraud === 'clean');
   const lists: Record<Tab, CalendarRow[]> = {
     upcoming: d.upcoming.filter((r) => hit(r) && (showPast || !isTooLate(r, d.today)) && (!soon || (daysUntil(d.today, r.recordDate) ?? Infinity) <= SOON_DAYS)),
     declared: d.recent.filter(hit),
@@ -100,7 +103,7 @@ export default function DividendsPage() {
   const rows = order([...lists[tab]]).slice(0, tab === 'expected' ? EXPECTED_MAX : undefined);
   const cols = COLS[tab];
   const open = (code: string) => router.push('/c/' + encodeURIComponent(code));
-  const empty = (text: string) => <tr><td colSpan={cols.length} className="empty">{q ? <Tr text="No company matches the search." /> : t(text)}</td></tr>;
+  const empty = (text: string) => <tr><td colSpan={cols.length} className="empty">{q ? <Tr text="No company matches the search." /> : goodOnly || cleanOnly ? <Tr text="No company matches these filters." /> : t(text)}</td></tr>;
 
   return (
     <>
@@ -111,6 +114,10 @@ export default function DividendsPage() {
 
       <div className="page-toolbar">
         <FilterBox value={q} onChange={setQ} label={t('Find a company (code or name)')} />
+        <label className="check small"><input type="checkbox" checked={goodOnly} onChange={(e) => setGoodOnly(e.target.checked)} />
+          <span><Tr text="Passes the checks" /></span></label>
+        <label className="check small"><input type="checkbox" checked={cleanOnly} onChange={(e) => setCleanOnly(e.target.checked)} />
+          <span><Tr text="No warning sign" /></span></label>
       </div>
       <nav className="tabs" aria-label={t('Sections')}>
         {TABS.map(([k, l]) => (

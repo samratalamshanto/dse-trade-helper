@@ -6,7 +6,7 @@ import { useApi } from '@/components/AppProvider';
 import { useStoredValue } from '@/components/useStored';
 import { useWatchlist } from '@/components/Watchlist';
 import {
-  parseAlertStore, encodeAlertStore, newRuleId,
+  parseAlertStore, encodeAlertStore, newRuleId, cleanNote, NOTE_MAX,
   type AlertRule, type RuleType,
 } from '@/lib/alerts';
 import type { CompanyRow, CalendarRow } from '@/lib/service';
@@ -67,15 +67,20 @@ export default function AlertsPage() {
   const [formCode, setFormCode] = useState('');
   const [formTarget, setFormTarget] = useState('');
   const [formDays, setFormDays] = useState('3');
+  const [formNote, setFormNote] = useState('');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [showSuggests, setShowSuggests] = useState(false);
   const [hiIdx, setHiIdx] = useState(-1);
   useEffect(() => {
-    const p = new URLSearchParams(window.location.search).get('code');
+    const q = new URLSearchParams(window.location.search);
+    const p = q.get('code');
     if (!p) return;
     const clean = p.trim().toUpperCase().slice(0, 12);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (/^[A-Z0-9&._-]+$/.test(clean)) setFormCode(clean);
+    // The watchlist's "Alert if it falls/rises" links pick the rule type too.
+    const type = q.get('type');
+    if (type === 'price_below' || type === 'price_above') setFormType(type);
   }, []);
   const [notifOverride, setNotifOverride] = useState<NotificationPermission | null>(null);
   const baseNotifPerm = useSyncExternalStore(
@@ -176,7 +181,8 @@ export default function AlertsPage() {
     const id = newRuleId();
     let newRule: AlertRule;
     if (formType === 'price_above' || formType === 'price_below') {
-      newRule = { type: formType, id, enabled: true, code: baseCode, target: parseFloat(formTarget) };
+      const note = cleanNote(formNote);
+      newRule = { type: formType, id, enabled: true, code: baseCode, target: parseFloat(formTarget), ...(note ? { note } : {}) };
     } else if (formType === 'big_move') {
       newRule = { type: 'big_move', id, enabled: true, code: baseCode, threshold: parseFloat(formTarget) };
     } else if (formType === 'dividend') {
@@ -205,6 +211,7 @@ export default function AlertsPage() {
     setFormCode('');
     setFormTarget('');
     setFormDays('3');
+    setFormNote('');
     setFormErrors({});
     setHiIdx(-1);
     setShowSuggests(false);
@@ -216,8 +223,10 @@ export default function AlertsPage() {
   return (
     <>
       <h1><Tr text="Alerts" /></h1>
-      <p className="muted">{t('Rules are checked only while a page of this site is open in this browser, and each rule fires at most once a day.')}{' '}
-        {t('Price and move rules use the current trading session only.')} {t(tradesKey ? 'Your rules are kept in your Google Sheet, so every device has them; what already fired stays per browser.' : 'All settings are saved in this browser only.')}</p>
+      <p className="muted">{t('In this browser, rules are checked while a page of this site is open, and each rule fires at most once a day.')}{' '}
+        {t('Price and move rules use the current trading session only.')}{' '}
+        {t('Price rules also go to your Telegram when you are signed in with Google and Telegram is connected.')}{' '}
+        {t(tradesKey ? 'Your rules are kept in your Google Sheet, so every device has them; what already fired stays per browser.' : 'All settings are saved in this browser only.')}</p>
 
       {/* Browser notifications */}
       <section>
@@ -271,6 +280,7 @@ export default function AlertsPage() {
                 <div className={styles.ruleDesc}>
                   <div><b>{t(ruleDesc(rule))}</b></div>
                   <div className="small muted">{t(RULE_LABELS[rule.type])}{data && priceNow(rule, priceByCode[rule.code]) ? ` · ${t(priceNow(rule, priceByCode[rule.code])!)}` : ''}</div>
+                  {(rule.type === 'price_above' || rule.type === 'price_below') && rule.note ? <div className="small">{t('Your plan')}: {rule.note}</div> : null}
                   {!calByCode[rule.code] && (rule.type === 'dividend') && (
                     <div className="small muted">{t(`No upcoming dividend announced for ${rule.code}.`)}</div>
                   )}
@@ -410,6 +420,22 @@ export default function AlertsPage() {
                     aria-describedby={formErrors.target ? 'err-target' : undefined}
                   />
                   {formErrors.target && <span id="err-target" className={styles.fieldErr} role="alert">{t(formErrors.target)}</span>}
+                </div>
+              )}
+
+              {/* The user's own plan, repeated in the alert (price rules only) */}
+              {(formType === 'price_above' || formType === 'price_below') && (
+                <div className={styles.fieldWrap}>
+                  <label htmlFor="alert-note">{t('My plan (optional)')}</label>
+                  <input
+                    id="alert-note"
+                    type="text"
+                    maxLength={NOTE_MAX}
+                    value={formNote}
+                    placeholder={t(formType === 'price_below' ? 'e.g. buy 5' : 'e.g. sell all')}
+                    style={{ width: 140 }}
+                    onChange={(e) => setFormNote(e.target.value)}
+                  />
                 </div>
               )}
 

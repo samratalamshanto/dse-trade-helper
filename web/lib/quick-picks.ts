@@ -52,6 +52,18 @@ export function pickTest(key: QuickPickKey, rows: readonly CompanyRow[], medians
   return (row) => pick.test(row, m);
 }
 
+// "good,dividend" from the address → known keys, in chip order, no repeats; unknown parts are ignored.
+export function parsePickList(param: string | null | undefined): QuickPickKey[] {
+  const asked = new Set((param ?? '').split(','));
+  return QUICK_PICK_KEYS.filter((k) => asked.has(k));
+}
+
+// A company must pass every chosen pick (AND). No picks → every company passes.
+export function picksTest(keys: readonly QuickPickKey[], rows: readonly CompanyRow[], medians?: Medians): (row: CompanyRow) => boolean {
+  const tests = keys.map((k) => pickTest(k, rows, medians));
+  return (row) => tests.every((test) => test(row));
+}
+
 export function matchesPick(key: QuickPickKey, row: CompanyRow, rows: readonly CompanyRow[]): boolean {
   return pickTest(key, rows)(row);
 }

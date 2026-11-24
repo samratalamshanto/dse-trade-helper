@@ -5,8 +5,8 @@ const FIRED_MAX = 500;
 const HISTORY_MAX = 100;
 
 export type AlertRule =
-  | { type: 'price_above'; id: string; enabled: boolean; code: string; target: number }
-  | { type: 'price_below'; id: string; enabled: boolean; code: string; target: number }
+  | { type: 'price_above'; id: string; enabled: boolean; code: string; target: number; note?: string }
+  | { type: 'price_below'; id: string; enabled: boolean; code: string; target: number; note?: string }
   | { type: 'dividend'; id: string; enabled: boolean; code: string; daysBefore: number }
   | { type: 'fraud_flag'; id: string; enabled: boolean; code: string; seenFlags: string[] }
   | { type: 'big_move'; id: string; enabled: boolean; code: string; threshold: number };
@@ -28,6 +28,13 @@ export interface EvalResult {
 
 type FiredLog = Record<string, string>;
 
+export const NOTE_MAX = 40;
+// The user's own plan text ("buy 5"), shown in the alert. Plain text, one line, NOTE_MAX characters (an emoji is not cut in half).
+export function cleanNote(raw: unknown): string {
+  return typeof raw === 'string' ? Array.from(raw.replace(/[\u0000-\u001f\u007f]/g, ' ').trim()).slice(0, NOTE_MAX).join('') : '';
+}
+const withNote = (message: string, note: string | undefined): string => note ? `${message} · your plan: ${note}` : message;
+
 export interface AlertStore {
   rules: AlertRule[];
   fired: FiredLog;
@@ -48,7 +55,8 @@ function parseRule(raw: unknown): AlertRule | null {
     case 'price_below': {
       const t = r.target;
       if (typeof t !== 'number' || !Number.isFinite(t) || t <= 0) return null;
-      return { type: r.type, id, enabled, code, target: t };
+      const note = cleanNote(r.note);
+      return { type: r.type, id, enabled, code, target: t, ...(note ? { note } : {}) };
     }
     case 'dividend': {
       const db = r.daysBefore;
@@ -147,7 +155,7 @@ export function evaluateRules(
         if (co?.price == null || co.price <= 0 || !Number.isFinite(co.price)) break;
         if (co.price >= rule.target) {
           events.push({ ruleId: rule.id, code: rule.code, key, date: today,
-            message: `${rule.code} price ৳${co.price.toFixed(2)} reached your target of ৳${rule.target.toFixed(2)}` });
+            message: withNote(`${rule.code} price ৳${co.price.toFixed(2)} reached your target of ৳${rule.target.toFixed(2)}`, rule.note) });
         }
         break;
       }
@@ -156,7 +164,7 @@ export function evaluateRules(
         if (co?.price == null || co.price <= 0 || !Number.isFinite(co.price)) break;
         if (co.price <= rule.target) {
           events.push({ ruleId: rule.id, code: rule.code, key, date: today,
-            message: `${rule.code} price ৳${co.price.toFixed(2)} dropped to ৳${rule.target.toFixed(2)}` });
+            message: withNote(`${rule.code} price ৳${co.price.toFixed(2)} dropped to ৳${rule.target.toFixed(2)}`, rule.note) });
         }
         break;
       }
