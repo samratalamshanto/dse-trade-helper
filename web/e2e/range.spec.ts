@@ -77,7 +77,7 @@ test.describe('/range', () => {
     if (info.project.name === 'phone') {
       await page.getByRole('button', { name: 'Low to high' }).click();
     } else {
-      await page.getByRole('button', { name: 'Position', exact: true }).click();
+      await page.locator('th[data-sort="position"] .sort-btn').click();
     }
     await expect(page).toHaveURL(/dir=-1/);
     expect(await codes(page)).toEqual([...NEAR_LOW_ORDER].reverse());

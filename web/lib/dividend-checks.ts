@@ -77,7 +77,7 @@ export function dividendChecks(r: DividendInput): DividendCheck[] {
       : check('years', 'unknown', 'Dividend history is not known.'),
     !r.fraud ? check('warning', 'unknown', 'Warning signs are not known.') : r.fraud === 'clean' ? check('warning', 'pass', 'No warning sign found.') : check('warning', 'fail', 'Has a warning sign.'),
     // Floor, so a shown "50%" is never a pass (the rule is under half).
-    pos != null ? check('range', pos < 0.5 ? 'pass' : 'fail', `52-week position: ${Math.floor(pos * 100)}% of range (under 50% passes)`)
+    pos != null ? check('range', pos < 0.5 ? 'pass' : 'fail', `52-week position: ${Math.floor(pos * 100 + 1e-9)}% of range (under 50% passes)`)
       : check('range', 'unknown', '52-week range is not known.'),
   ];
 }

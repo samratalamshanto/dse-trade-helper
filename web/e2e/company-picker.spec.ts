@@ -154,6 +154,7 @@ test.describe('/watchlist company picker', () => {
 test.describe('/warning-signs company picker', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/warning-signs');
+    await expect(page.locator('table.cards tbody tr td.empty')).toHaveCount(0, { timeout: 20_000 });
     await expect(page.locator('table.cards tbody tr').first()).toBeVisible({ timeout: 20_000 });
   });
 
@@ -173,6 +174,7 @@ test.describe('/warning-signs company picker', () => {
     const matchOpt = page.getByRole('listbox').getByRole('option').filter({ hasText: firstCode }).first();
     if (await matchOpt.count()) await matchOpt.click();
     else await opts.first().click();
+    await expect(page).toHaveURL(/code=/);
     const shown = await page.locator('table.cards tbody tr').count();
     expect(shown).toBeLessThanOrEqual(all);
     // Show all resets
@@ -218,6 +220,7 @@ test.describe('/warning-signs company picker', () => {
 test.describe('/range company picker', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/range');
+    await expect(page.locator('table.cards tbody tr td.empty')).toHaveCount(0, { timeout: 20_000 });
     await expect(page.locator('table.cards tbody tr').first()).toBeVisible({ timeout: 20_000 });
   });
 

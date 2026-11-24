@@ -509,8 +509,8 @@ export const BN: Record<string, string> = {
   'loss year': 'লোকসানের বছর', 'more than earned': 'আয়ের চেয়ে বেশি', 'Paid in': 'প্রদানের বছর', 'Dividend checks': 'লভ্যাংশ পরীক্ষা',
   'Passes {n} of 5': '৫টির মধ্যে {n}টিতে উত্তীর্ণ', 'Record date within 30 days': '৩০ দিনের মধ্যে রেকর্ড ডেট', 'record date today': 'আজ রেকর্ড ডেট',
   'next dividend in {n} day': '{n} দিন পর পরের লভ্যাংশ', 'next dividend in {n} days': '{n} দিন পর পরের লভ্যাংশ',
-  "On DSE the price usually drops by about the dividend after the record date. ৳ per ৳10,000 is the cash a ৳10,000 holding at today's price would get.":
-    'DSE-তে রেকর্ড ডেটের পরে দাম সাধারণত লভ্যাংশের সমান পরিমাণ কমে। প্রতি ৳১০,০০০-এ ৳ মানে আজকের দামে ৳১০,০০০-এর শেয়ারে যত নগদ টাকা আসবে।',
+  'On DSE the price usually drops by about the dividend after the record date.':
+    'DSE-তে রেকর্ড ডেটের পরে দাম সাধারণত লভ্যাংশের সমান পরিমাণ কমে।',
   '12-month cash yield is 5% or more.': '১২ মাসের নগদ ফলন ৫% বা তার বেশি।', '12-month cash yield is under 5%.': '১২ মাসের নগদ ফলন ৫%-এর কম।',
   '12-month cash yield is not known.': '১২ মাসের নগদ ফলন জানা নেই।',
   'The cash dividend is within the yearly profit (EPS).': 'নগদ লভ্যাংশ বছরের মুনাফার (EPS) মধ্যে।',

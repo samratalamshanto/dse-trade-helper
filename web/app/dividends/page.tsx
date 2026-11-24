@@ -35,6 +35,7 @@ function DividendCell({ r }: { r: CalendarRow }) {
 }
 
 const SOON_DAYS = 30;
+const EXPECTED_MAX = 80;
 type Tab = 'upcoming' | 'declared' | 'expected';
 const TABS: readonly (readonly [Tab, string])[] = [['upcoming', 'Upcoming'], ['declared', 'Declared'], ['expected', 'Expected']];
 // [sort key, header, numeric]; every column of every table sorts.
@@ -93,9 +94,10 @@ export default function DividendsPage() {
   const lists: Record<Tab, CalendarRow[]> = {
     upcoming: d.upcoming.filter((r) => hit(r) && (showPast || !isTooLate(r, d.today)) && (!soon || (daysUntil(d.today, r.recordDate) ?? Infinity) <= SOON_DAYS)),
     declared: d.recent.filter(hit),
-    expected: d.expected.filter(hit).slice(0, 80),
+    expected: d.expected.filter(hit),
   };
-  const rows = order([...lists[tab]]);
+  // Sort the whole list first, then cap Expected, so a sort can bring any company into view.
+  const rows = order([...lists[tab]]).slice(0, tab === 'expected' ? EXPECTED_MAX : undefined);
   const cols = COLS[tab];
   const open = (code: string) => router.push('/c/' + encodeURIComponent(code));
   const empty = (text: string) => <tr><td colSpan={cols.length} className="empty">{q ? <Tr text="No company matches the search." /> : t(text)}</td></tr>;
@@ -110,14 +112,14 @@ export default function DividendsPage() {
       <div className="page-toolbar">
         <FilterBox value={q} onChange={setQ} label={t('Find a company (code or name)')} />
       </div>
-      <div className="tabs" role="tablist" aria-label={t('Sections')}>
+      <nav className="tabs" aria-label={t('Sections')}>
         {TABS.map(([k, l]) => (
-          <a key={k} id={'tab-' + k} href={'#' + k} className="tab-link" role="tab" aria-selected={tab === k} aria-controls="div-panel">
-            <Tr text={l} />&nbsp;<span className="count">{lists[k].length}</span></a>
+          <a key={k} href={'#' + k} className="tab-link" aria-current={tab === k ? 'location' : undefined}>
+            <Tr text={l} />&nbsp;<span className="count">{Math.min(lists[k].length, k === 'expected' ? EXPECTED_MAX : Infinity)}</span></a>
         ))}
-      </div>
+      </nav>
 
-      <section id="div-panel" role="tabpanel" aria-labelledby={'tab-' + tab}>
+      <section id="div-panel">
         {tab === 'upcoming' ? <><h2><Tr text="Upcoming record dates" /></h2>
           <div className="filters filters-center">
             <label className="check small"><input type="checkbox" checked={showPast} onChange={(e) => setShowPast(e.target.checked)} />
@@ -137,7 +139,7 @@ export default function DividendsPage() {
           </select>
           <button type="button" className="btn" disabled={!sort.key} onClick={() => setSort({ ...sort, dir: -sort.dir })}>{sort.dir > 0 ? t('Low to high') : t('High to low')}</button>
         </div>
-        {tab === 'upcoming' ? <p className="muted small"><Tr text="On DSE the price usually drops by about the dividend after the record date. ৳ per ৳10,000 is the cash a ৳10,000 holding at today's price would get." /></p> : null}
+        {tab === 'upcoming' ? <p className="muted small"><Tr text="On DSE the price usually drops by about the dividend after the record date." /></p> : null}
         <div className="panel table-wrap"><table className="cards div-value">
           <thead><tr>{cols.map(([k, l, n]) => <SortHeader key={k} k={k} label={l} sort={sort} onSort={onSort} numeric={n} />)}</tr></thead>
           <tbody>

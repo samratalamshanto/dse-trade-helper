@@ -27,23 +27,23 @@ test('dividends: the search box narrows every table to the typed company', async
   await page.getByRole('searchbox', { name: 'Find a company (code or name)' }).fill('zzzz-no-such');
   await expect(page.getByText('No company matches the search.')).toBeVisible();
   // The search stays when the tab changes.
-  await page.getByRole('tab', { name: /Expected/ }).click();
+  await page.getByRole('navigation', { name: 'Sections' }).getByRole('link', { name: /Expected/ }).click();
   await expect(page).toHaveURL(/#expected$/);
   await expect(page.getByText('No company matches the search.')).toBeVisible();
 });
 
 test('dividends: section tabs show one table, follow the URL hash and back/forward', async ({ page }) => {
   await page.goto('/dividends');
-  const tabs = page.getByRole('tablist', { name: 'Sections' });
-  await expect(tabs.getByRole('tab', { name: /Upcoming/ })).toHaveAttribute('aria-selected', 'true');
+  const tabs = page.getByRole('navigation', { name: 'Sections' });
+  await expect(tabs.getByRole('link', { name: /Upcoming/ })).toHaveAttribute('aria-current', 'location');
   await expect(page.locator('table.cards')).toHaveCount(1);
-  await tabs.getByRole('tab', { name: /Declared/ }).click();
+  await tabs.getByRole('link', { name: /Declared/ }).click();
   await expect(page).toHaveURL(/#declared$/);
-  await expect(tabs.getByRole('tab', { name: /Declared/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(tabs.getByRole('link', { name: /Declared/ })).toHaveAttribute('aria-current', 'location');
   await expect(page.getByRole('heading', { name: /Declared in the last 60 days/ })).toBeVisible();
   await expect(page.locator('table.cards')).toHaveCount(1);
   await page.goBack();
-  await expect(tabs.getByRole('tab', { name: /Upcoming/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(tabs.getByRole('link', { name: /Upcoming/ })).toHaveAttribute('aria-current', 'location');
   await page.goto('/dividends#expected');
   await expect(page.getByRole('heading', { name: 'Expected next announcements' })).toBeVisible();
 });
@@ -93,7 +93,7 @@ test('dividends: fewer columns, figures in the checks popover, the 30-day filter
   expect(counts).toEqual([...counts].sort((a, b) => b - a));
   await expect(page.getByText('Companies with no warning sign are listed first.')).toHaveCount(0);
   if (!isPhone(info.project.name)) {
-    await page.getByRole('button', { name: 'Score', exact: true }).click();
+    await page.locator('th[data-sort="score"] .sort-btn').click();
     await expect(page.locator('th[data-sort="score"]')).toHaveAttribute('aria-sort', 'descending');
     const scores = (await upcoming.locator('td[data-label="Score"] .mono').allInnerTexts()).map(Number);
     expect(scores).toEqual([...scores].sort((a, b) => b - a));

@@ -94,9 +94,11 @@ export function RangePage() {
   const defaultSort = view === 'risen' ? { key: 'position', dir: -1 } : { key: 'position', dir: 1 };
   const sortDirParam = params.get('dir');
   const rawSort = params.get('sort') || defaultSort.key;
-  const sortKeyParam = OLD_SORTS[rawSort] ?? rawSort;
+  const sortKeyParam = Object.hasOwn(OLD_SORTS, rawSort) ? OLD_SORTS[rawSort] : rawSort;
   // Only 1 and -1 are directions; anything else in the address falls back to the tab's default.
-  const sortDirVal = sortDirParam === '1' ? 1 : sortDirParam === '-1' ? -1 : defaultSort.dir;
+  const urlDir = sortDirParam === '1' ? 1 : sortDirParam === '-1' ? -1 : null;
+  // Old belowHigh ran the other way round from position (ascending = near the high).
+  const sortDirVal = urlDir == null ? defaultSort.dir : rawSort === 'belowHigh' ? -urlDir : urlDir;
   const sort = { key: sortKeyParam, dir: sortDirVal };
 
   useEffect(() => {

@@ -19,11 +19,10 @@ async function expectBanglaPage(page: import('@playwright/test').Page, projectNa
   }
 }
 
-test('dashboard in Bangla: start card and footer', async ({ page }, info) => {
+test('dashboard in Bangla: trust card and footer', async ({ page }, info) => {
   await page.goto('/');
-  await expect(page.getByText('নতুন? ৩ ধাপে শুরু করুন।')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'সব পরীক্ষায় উত্তীর্ণ কোম্পানি দেখুন' })).toBeVisible();
-  await expect(page.getByText('Open one company and read its')).toHaveCount(0);
+  await expect(page.getByText('এই সংখ্যাগুলো কি বিশ্বাসযোগ্য?')).toBeVisible();
+  await expect(page.getByText('Can I trust these numbers?')).toHaveCount(0);
   await expectBanglaPage(page, info.project.name);
 });
 

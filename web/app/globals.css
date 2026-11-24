@@ -128,7 +128,7 @@ select { padding: 8px 10px; border-radius: 8px; font: inherit; }
 .start .btn { white-space: nowrap; flex: none; } .start li { margin: 4px 0; }
 .tab-link { padding: 10px 14px; border-radius: 9px; text-decoration: none; color: var(--muted); white-space: nowrap; min-height: 44px; display: inline-flex; align-items: center; }
 .tab-link:hover { color: var(--text); }
-.tab-link[aria-current="page"] { background: var(--panel); color: var(--text); font-weight: 600; box-shadow: inset 0 -3px 0 var(--accent); }
+.tab-link[aria-current="page"], .tab-link[aria-current="location"] { background: var(--panel); color: var(--text); font-weight: 600; box-shadow: inset 0 -3px 0 var(--accent); }
 .today-list { list-style: none; margin: 0; padding: 0; }
 .today-list li { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-top: 1px solid var(--border); font-size: 14px; }
 .hero-top { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
@@ -199,10 +199,6 @@ th[aria-sort="ascending"], th[aria-sort="descending"] { color: var(--text); font
 .skel-line { height: 40px; } .skel-line:first-child { height: 22px; width: 40%; }
 .page-toolbar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; padding: 10px 0; margin: 4px 0 8px; background: var(--bg); }
 .page-toolbar .search { flex: 1 1 260px; max-width: 420px; }
-.jump-bar { display: flex; flex-wrap: wrap; gap: 6px; }
-.jump-bar a { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--panel); color: var(--text); text-decoration: none; font-size: 14px; }
-.jump-bar a:hover { border-color: var(--accent); }
-.jump-bar .count { color: var(--muted); font-size: 12px; }
 .page-toolbar ~ h2[id] { scroll-margin-top: 150px; }
 details.note > summary { cursor: pointer; font-weight: 600; min-height: 28px; }
 details.note[open] > summary { margin-bottom: 6px; }
@@ -476,9 +472,9 @@ table.cards td.nw { white-space: nowrap; }
 .verdict button.pill::after, .note .link-btn::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
 .signal-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
 .page-tabs button.tab-link { border: 0; }
-.page-tabs button.tab-link[aria-selected="true"] { background: var(--panel); color: var(--text); font-weight: 600; box-shadow: inset 0 -3px 0 var(--accent); }
 /* lane A: dividends section tabs reuse the page-tab look; headers may wrap so 8 columns fit at 1280 px; pills in one table row line up (cells align to the top, so a pill on the first line of a 2-line cell matches a pill in a 1-line cell). */
 .tab-link[aria-selected="true"] { background: var(--panel); color: var(--text); font-weight: 600; box-shadow: inset 0 -3px 0 var(--accent); }
 .tab-link .count { color: var(--muted); font-size: 12px; font-weight: 400; }
 table.div-value th, table.div-value .sort-btn { white-space: normal; }
+table.div-value th[data-sort="cashPerShare"] .sort-btn { white-space: nowrap; }
 table.cards td { vertical-align: top; }
