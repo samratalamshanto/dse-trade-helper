@@ -212,9 +212,9 @@ export default function PortfolioPage() {
       )}
       <KeyStoppedNote />
       <UnreadableNote />
-      <div className={`${css.actions} ${css.switch}`} role="group" aria-label={tr('Account')}>
-        <button type="button" className={`btn${paper ? '' : ` ${css.on}`}`} aria-pressed={!paper} disabled={busy} onClick={() => switchTo('real')}>{tr('Real')}</button>
-        <button type="button" className={`btn${paper ? ` ${css.on} ${css.onPractice}` : ''}`} aria-pressed={paper} disabled={busy} onClick={() => switchTo('paper')}>{tr('Practice')}</button>
+      <div className={`tabs page-tabs ${css.switch}`} role="group" aria-label={tr('Account')}>
+        <button type="button" className={`tab-link${paper ? '' : ` ${css.on}`}`} aria-pressed={!paper} disabled={busy} onClick={() => switchTo('real')}>{tr('Real')}</button>
+        <button type="button" className={`tab-link${paper ? ` ${css.on} ${css.onPractice}` : ''}`} aria-pressed={paper} disabled={busy} onClick={() => switchTo('paper')}>{tr('Practice')}</button>
       </div>
       {paper ? (
         <div className={`note warn ${css.banner}`} role="status">
@@ -228,7 +228,7 @@ export default function PortfolioPage() {
       {paper ? null : <OldLots busy={busy} postLot={postOldLot} onDone={oldLotsDone} />}
       {data ? (
         <Summary holdings={data.holdings} commissionPaid={commissionPaid} dividends={held.length ? allDividends : undefined}>
-          <button type="button" className="btn primary" onClick={openAdd}>{tr(paper ? 'Add a practice trade' : 'Add a trade')}</button>
+          <button type="button" className="btn" onClick={openAdd}>{tr(paper ? 'Add a practice trade' : 'Add a trade')}</button>
         </Summary>
       ) : busy ? <Skeleton label={tr('Loading trades')} rows={4} /> : null}
       {data?.holdings.length ? (
@@ -260,10 +260,10 @@ export default function PortfolioPage() {
       ) : null}
       {paper ? null : (
         <div className={`panel ${css.section}`}>
-          <div className={`tabs ${css.tabsTop}`} role="tablist" aria-label={tr('Allocation and dividend income')}
+          <div className={`tabs page-tabs ${css.tabsTop}`} role="tablist" aria-label={tr('Allocation and dividend income')}
             onKeyDown={(e) => { if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return; const next = tab === 'allocation' ? 'income' : 'allocation'; setTab(next); document.getElementById(`tab-${next}`)?.focus(); }}>
-            <button type="button" role="tab" id="tab-allocation" aria-controls="tab-pane" aria-selected={tab === 'allocation'} tabIndex={tab === 'allocation' ? 0 : -1} onClick={() => setTab('allocation')}>{tr('Allocation')}</button>
-            <button type="button" role="tab" id="tab-income" aria-controls="tab-pane" aria-selected={tab === 'income'} tabIndex={tab === 'income' ? 0 : -1} onClick={() => setTab('income')}>{tr('Dividend income')}</button>
+            <button type="button" className="tab-link" role="tab" id="tab-allocation" aria-controls="tab-pane" aria-selected={tab === 'allocation'} tabIndex={tab === 'allocation' ? 0 : -1} onClick={() => setTab('allocation')}>{tr('Allocation')}</button>
+            <button type="button" className="tab-link" role="tab" id="tab-income" aria-controls="tab-pane" aria-selected={tab === 'income'} tabIndex={tab === 'income' ? 0 : -1} onClick={() => setTab('income')}>{tr('Dividend income')}</button>
           </div>
           <div id="tab-pane" role="tabpanel" aria-labelledby={`tab-${tab}`}>
             {tab === 'allocation' ? (
@@ -284,7 +284,7 @@ export default function PortfolioPage() {
         <p className="muted">{tr('Pick the day’s')} <b>order_summary_….xlsx</b>{tr('. You see what will be added first; trades you already have are skipped.')} {tr('The file has no commission, so')} {feePct.trim() ? tr(`each trade gets your broker rate (${feePct}%) — set it in the form below.`) : tr('set your broker rate in the form below, or trades come in with no commission.')}</p>
         <div className={css.form}>
           <label className="btn"><Icon name="upload" />{tr('Choose broker file (.xlsx)')}<input className="sr-only" type="file" accept=".xlsx" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f, false); e.target.value = ''; }} /></label>
-          <label>{tr('Trade date (only if the file name has none)')}<input type="date" value={importDate} max={dhakaToday()} onChange={(e) => setImportDate(e.target.value)} /></label>
+          <label>{tr('Trade date (only if the file name has none)')}<input type="date" lang="en-GB" value={importDate} max={dhakaToday()} onChange={(e) => setImportDate(e.target.value)} /></label>
         </div>
         {preview ? (
           <div className={css.section}>
@@ -304,8 +304,8 @@ export default function PortfolioPage() {
       </div>}
       <form className={css.section} onSubmit={save}>
         <h3>{tr(editing ? 'Edit trade' : 'Add a trade')}{paper ? ' ' + tr('(practice)') : ''}</h3>
-        <div className={css.form}>
-          <label>{tr('Date')}<input type="date" value={form.date} max={dhakaToday()} onChange={set('date')} required /></label>
+        <div className={`${css.form} ${css.tradeForm}`}>
+          <label>{tr('Date')}<input type="date" lang="en-GB" value={form.date} max={dhakaToday()} onChange={set('date')} required /></label>
           <label>{tr('Code')}<input list="trade-codes" value={form.code} onChange={(e) => setCode(e.target.value)} placeholder="GP" required /></label>
           <datalist id="trade-codes">{companies.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}</datalist>
           <label>{tr('Side')}<select value={form.side} onChange={set('side')}><option>BUY</option><option>SELL</option></select></label>

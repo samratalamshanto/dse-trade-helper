@@ -61,9 +61,9 @@ export default function SectorsPage() {
           <div className="signal-split" role="img" aria-label={KEYS.map((k) => `${t(SIGNALS[k].label)} ${s.counts[k]}`).join(', ')}>
             {KEYS.map((k) => (s.counts[k] ? <i key={k} className={`seg-${k}`} style={{ flexGrow: s.counts[k] }} /> : null))}
           </div>
-          <div className="small muted">{KEYS.filter((k) => s.counts[k]).map((k) => `${s.counts[k]} ${t(SIGNALS[k].label).toLowerCase()}`).join(' · ')}</div>
+          <div className="small muted signal-legend">{KEYS.filter((k) => s.counts[k]).map((k, i) => <span key={k}>{i ? ' · ' : ''}<i className={`seg-${k}`} aria-hidden="true" />{s.counts[k]} {t(SIGNALS[k].label).toLowerCase()}</span>)}</div>
           {s.top.length ? <><div className="small muted" style={{ marginTop: 10 }}><Tr text="Highest scores" /></div>
-            <ol className="sector-top">{s.top.map((r) => <li key={r.code}><Link href={'/c/' + encodeURIComponent(r.code)} className="mono">{r.code}</Link><span className="mono small">{r.score}</span></li>)}</ol></> : null}
+            <ol className="sector-top">{s.top.map((r) => <li key={r.code}><Link href={'/c/' + encodeURIComponent(r.code)} className="mono">{r.code}</Link><span className="mono small muted">{r.score}</span></li>)}</ol></> : null}
           <Link className="small" href={'/all?sector=' + encodeURIComponent(s.sector)}>All {s.rows.length} companies →</Link>
         </section>
       ))}</div>

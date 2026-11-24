@@ -1040,4 +1040,6 @@ export const BN: Record<string, string> = {
   'Close price': 'সমাপনী দাম',
   '{n}% below': '{n}% নিচে',
   '{n}% above': '{n}% উপরে',
+  'last data': 'সর্বশেষ তথ্য',
+  'Add a company to your watchlist': 'আপনার ওয়াচলিস্টে একটি কোম্পানি যোগ করুন',
 };

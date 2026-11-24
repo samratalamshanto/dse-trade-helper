@@ -64,7 +64,7 @@ export default function WatchlistPage() {
           onChange={(q) => { setPickQ(q); setPickedCode(''); }}
           onPick={(code) => { setPickedCode(code); setPickQ(code); }}
           label={t('Add a company')}
-          placeholder={t('Company code or name')}
+          placeholder={t('Add a company to your watchlist')}
           watched={watchedSet}
           inputRef={inputRef}
         />
