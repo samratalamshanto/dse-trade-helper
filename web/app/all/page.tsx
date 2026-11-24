@@ -7,6 +7,8 @@ import { useLang } from '@/components/i18n';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useApi } from '@/components/AppProvider';
 import { SortHeader } from '@/components/SortHeader';
+import { RangeCell } from '@/components/PositionBar';
+import { rangePos } from '@/lib/dividend-checks';
 import { WatchButton } from '@/components/Watchlist';
 import { compareNullsLast, fmt, moneyPerDay, sectorName, signed, tone } from '@/components/format';
 import { FRAUD, FraudPill, Icon, SIGNAL_ORDER, SIGNALS, SignalPill, Skeleton, type FraudLevel, type IconName, type Signal } from '@/components/ui';
@@ -20,8 +22,8 @@ interface CompaniesResponse { rows: CompanyRow[]; codes: { code: string; sector:
 
 
 // Cheapest P/E and A–Z code are the natural first view; everything else starts with the biggest value.
-const ASCENDING_FIRST = new Set(['code', 'pe']);
-const SORTS: [string, string][] = [['score', 'Score'], ['signalRank', 'Signal'], ['code', 'Company'], ['price', 'Price'], ['pe', 'P/E'], ['dividendYield', 'Yield'], ['dailyValue', 'Traded / day'], ['change1y', '1 year'], ['fraud', 'Warning-sign check']];
+const ASCENDING_FIRST = new Set(['code', 'pe', 'pos']);
+const SORTS: [string, string][] = [['score', 'Score'], ['signalRank', 'Signal'], ['code', 'Company'], ['price', 'Price'], ['pos', '52-wk'], ['pe', 'P/E'], ['dividendYield', 'Yield'], ['dailyValue', 'Traded / day'], ['change1y', '1 year'], ['fraud', 'Warnings']];
 // Warning-sign sort: level first, then the number of flags, so the default (high to low) puts the worst first.
 const FRAUD_RANK: Record<FraudLevel, number> = { clean: 0, suspicious: 1, high: 2 };
 
@@ -71,7 +73,8 @@ function AllCompanies() {
   const onSort = (k: string) => setParams({ sort: k, dir: sort.key === k ? -sort.dir : ASCENDING_FIRST.has(k) ? 1 : -1 });
 
   const key = (r: CompanyRow): unknown => (sort.key === 'signalRank' ? SIGNAL_ORDER[r.signal as Signal] * 1000 + r.score
-    : sort.key === 'fraud' ? FRAUD_RANK[r.fraud as FraudLevel] * 1000 + r.flags.length : (r as unknown as Record<string, unknown>)[sort.key]);
+    : sort.key === 'fraud' ? FRAUD_RANK[r.fraud as FraudLevel] * 1000 + r.flags.length
+    : sort.key === 'pos' ? rangePos(r.price, r.weekLow52, r.weekHigh52) : (r as unknown as Record<string, unknown>)[sort.key]);
   const preset = QUICK_PICKS.find((p) => p.key === params.get('preset'));
   const shown = rows
     .filter((r) => !preset || preset.test(r, data?.medians || {}))
@@ -146,26 +149,27 @@ function AllCompanies() {
         <button type="button" className="btn" onClick={() => setParams({ dir: -sort.dir })}>{sort.dir > 0 ? t('Low to high') : t('High to low')}</button>
       </div>
       <div className="panel table-wrap">
-        <table className="cards">
+        <table className="cards all-table">
           <thead><tr>
-            <SortHeader k="code" label="Company" sort={sort} onSort={onSort} /><SortHeader k="signalRank" label="Signal" sort={sort} onSort={onSort} /><SortHeader k="fraud" label="Warning-sign check" sort={sort} onSort={onSort} />
-            <SortHeader k="score" label="Score" sort={sort} onSort={onSort} numeric /><SortHeader k="price" label="Price" sort={sort} onSort={onSort} numeric />
+            <SortHeader k="code" label="Company" sort={sort} onSort={onSort} /><SortHeader k="signalRank" label="Signal" sort={sort} onSort={onSort} /><SortHeader k="fraud" label="Warnings" sort={sort} onSort={onSort} />
+            <SortHeader k="score" label="Score" sort={sort} onSort={onSort} numeric /><SortHeader k="price" label="Price" sort={sort} onSort={onSort} numeric /><SortHeader k="pos" label="52-wk" sort={sort} onSort={onSort} />
             <SortHeader k="pe" label="P/E" sort={sort} onSort={onSort} numeric /><SortHeader k="dividendYield" label="Yield" sort={sort} onSort={onSort} numeric />
             <SortHeader k="dailyValue" label="Traded / day" sort={sort} onSort={onSort} numeric /><SortHeader k="change1y" label="1 year" sort={sort} onSort={onSort} numeric />
           </tr></thead>
-          <tbody>{!data ? <tr><td colSpan={9} className="empty">{t('Loading…')}</td></tr> : shown.length ? shown.map((r) => (
+          <tbody>{!data ? <tr><td colSpan={10} className="empty">{t('Loading…')}</td></tr> : shown.length ? shown.map((r) => (
             <tr key={r.code} onClick={() => router.push('/c/' + encodeURIComponent(r.code))}>
               <td><div className="co-cell"><WatchButton code={r.code} /><div><a className="mono" href={'/c/' + encodeURIComponent(r.code)} onClick={(e) => e.stopPropagation()}><b>{r.code}</b></a>
                 <div className="small muted">{r.name}{r.sector ? ' · ' + sectorName(r.sector) : ''} · {t('Category')} {r.category}</div>
                 {r.stale ? <span className="pill s-neutral" title={t('Saved before the latest rule update; it refreshes in the background.')}>{t('old data')}</span> : null}</div></div></td>
               <td data-label="Signal"><SignalPill signal={r.signal as Signal} href={'/c/' + encodeURIComponent(r.code)} missed={r.missed} /></td>
-              <td data-label="Warning-sign check"><FraudPill level={r.fraud as FraudLevel} href={'/c/' + encodeURIComponent(r.code) + '#safety'} flags={r.flags} />{r.flags.length ? <div className="small muted">{r.flags.join(', ')}</div> : null}</td>
+              <td data-label="Warnings"><FraudPill level={r.fraud as FraudLevel} href={'/c/' + encodeURIComponent(r.code) + '#safety'} flags={r.flags} />{r.flags.length ? <div className="small muted">{r.flags.join(', ')}</div> : null}</td>
               <td className="n mono" data-label="Score">{r.score}</td><td className="n mono" data-label="Price">৳{fmt(r.price)}</td>
+              <td data-label="52-wk"><RangeCell price={r.price} low={r.weekLow52} high={r.weekHigh52} /></td>
               <td className="n mono" data-label="P/E">{fmt(r.pe, 1)}</td><td className="n mono" data-label="Yield">{r.dividendYield != null ? fmt(r.dividendYield, 1) + '%' : '—'}</td>
               <td className="n mono" data-label="Traded / day">{moneyPerDay(r.dailyValue)}</td>
               <td className={`n mono ${tone(r.change1y)}`} data-label="1 year">{signed(r.change1y)}</td>
             </tr>
-          )) : <tr><td colSpan={9} className="empty">{t('No company matches these filters.')}</td></tr>}</tbody>
+          )) : <tr><td colSpan={10} className="empty">{t('No company matches these filters.')}</td></tr>}</tbody>
         </table>
       </div>
     </>

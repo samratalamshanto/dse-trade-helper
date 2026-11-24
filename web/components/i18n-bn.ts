@@ -1057,4 +1057,5 @@ export const BN: Record<string, string> = {
   'Price ৳{p}': 'দাম ৳{p}',
   '৳{v} per ৳10,000 per year': 'প্রতি ৳১০,০০০-এ বছরে ৳{v}',
   'this dividend ৳{v}': 'এই লভ্যাংশে ৳{v}',
+  '52-wk': '৫২-সপ্তাহ',
 };

@@ -28,7 +28,7 @@ test.describe('/all', () => {
     await expect(page.locator('#all-filters').getByRole('combobox', { name: 'Pick a company' })).toHaveCount(1);
     await page.goto('/all?fraud=high');
     await expect(page.getByText(/Showing \d+ companies/)).toBeVisible();
-    for (const t of await rows(page).locator('td[data-label="Warning-sign check"]').allInnerTexts()) expect(t).not.toMatch(/No flags/);
+    for (const t of await rows(page).locator('td[data-label="Warnings"]').allInnerTexts()) expect(t).not.toMatch(/No flags/);
     await page.getByRole('button', { name: 'Clear filters' }).click();
     await expect(page).not.toHaveURL(/fraud=/);
   });

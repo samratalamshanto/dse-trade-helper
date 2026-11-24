@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { daysUntil, dividendChecks, dividendPerTenK, paidFromProfit, paidYears, passCount, perTenK, rangePos, yieldVsUsual, type DividendInput } from '../lib/dividend-checks.ts';
+import { daysUntil, rangePct, dividendChecks, dividendPerTenK, paidFromProfit, paidYears, passCount, perTenK, rangePos, yieldVsUsual, type DividendInput } from '../lib/dividend-checks.ts';
 import { translateLine } from '../components/i18n-match.ts';
 
 const base: DividendInput = { price: 100, yieldPct: 6, yearlyCashPerShare: 6, eps: 8, avgYieldPct: 4, paidYears: 5, fraud: 'clean', weekLow52: 80, weekHigh52: 140 };
@@ -100,4 +100,11 @@ test('each known check shows its figure and rule; unknown keeps its plain text',
 test('check wording stays neutral: no advice words', () => {
   const all = [base, { ...base, yieldPct: 1, eps: -1, paidYears: 0, fraud: 'high', price: 139 }].flatMap((r) => dividendChecks(r).map((c) => c.text));
   for (const t of all) assert.doesNotMatch(t, /\b(buy|sell|avoid|fraud|worth|profit-taking|take profit)\b/i);
+});
+
+test('52-week percent rounds down everywhere, so a pass never reads 50%', () => {
+  assert.equal(rangePct(0.496), 49);
+  assert.equal(rangePct(0.29), 29, 'float error in 0.29*100 does not drop a point');
+  assert.equal(rangePct(0.5), 50);
+  assert.equal(rangePct(1), 100);
 });

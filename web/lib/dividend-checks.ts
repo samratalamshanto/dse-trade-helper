@@ -33,6 +33,9 @@ export const dividendPerTenK = (cashPerShare: number | null, price: number | nul
   num(cashPerShare) && num(price) && price > 0 ? round((cashPerShare / price) * TEN_K) : null;
 
 // 0 = at the 52-week low, 1 = at the high. A flat range (low = high) tells nothing, so it is not known.
+// One rounding for every 52-week percent: down, so a pass (under 50%) never shows 50%.
+export const rangePct = (pos: number): number => Math.floor(pos * 100 + 1e-9);
+
 export function rangePos(price: number | null, low: number | null, high: number | null): number | null {
   if (num(low) && num(high) && low === high) return null;
   return rangeStats({ code: '', price, weekLow52: low, weekHigh52: high })?.position ?? null;
@@ -77,7 +80,7 @@ export function dividendChecks(r: DividendInput): DividendCheck[] {
       : check('years', 'unknown', 'Dividend history is not known.'),
     !r.fraud ? check('warning', 'unknown', 'Warning signs are not known.') : r.fraud === 'clean' ? check('warning', 'pass', 'No warning sign found.') : check('warning', 'fail', 'Has a warning sign.'),
     // Floor, so a shown "50%" is never a pass (the rule is under half).
-    pos != null ? check('range', pos < 0.5 ? 'pass' : 'fail', `52-week position: ${Math.floor(pos * 100 + 1e-9)}% of range (under 50% passes)`)
+    pos != null ? check('range', pos < 0.5 ? 'pass' : 'fail', `52-week position: ${rangePct(pos)}% of range (under 50% passes)`)
       : check('range', 'unknown', '52-week range is not known.'),
   ];
 }

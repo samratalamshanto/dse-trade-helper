@@ -5,6 +5,7 @@ import { fmt } from '@/components/format';
 import { SignalPill, type Signal } from '@/components/ui';
 import { PillPopover } from '@/components/PillPopover';
 import { dividendChecks, dividendPerTenK, passCount, perTenK, yieldVsUsual, type DividendCheck } from '@/lib/dividend-checks';
+import { RangeCell } from '@/components/PositionBar';
 import type { CalendarRow } from '@/lib/service';
 
 const MARK: Record<DividendCheck['state'], string> = { pass: '✔', fail: '✖', unknown: '?' };
@@ -30,8 +31,8 @@ export function ValueCells({ r, upcoming = false }: { r: CalendarRow; upcoming?:
   const { t } = useLang();
   return (
     <>
-      <td data-label={t('Dividend checks')} className="chk-cell"><ChecksPill r={r} upcoming={upcoming} /></td>
-      <td data-label={t('Score')} className="n nw">{r.score != null && r.signal ? <><span className="mono">{r.score}</span> <SignalPill signal={r.signal as Signal} /></> : '—'}</td>
+      <td data-label={t('Dividend checks')} className="chk-cell"><ChecksPill r={r} upcoming={upcoming} /><div className="chk-range" title={t('52-week position')}><RangeCell price={r.price} low={r.weekLow52} high={r.weekHigh52} /></div></td>
+      <td data-label={t('Score')} className="n">{r.score != null && r.signal ? <><span className="mono">{r.score}</span><div><SignalPill signal={r.signal as Signal} /></div></> : '—'}</td>
     </>
   );
 }

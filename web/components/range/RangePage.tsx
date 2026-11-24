@@ -18,6 +18,7 @@ import { rangeStats, rangeLooksWrong, gainFromBuyPct, type RangeRow, type Owned 
 import type { CompanyRow } from '@/lib/service';
 import type { MarketSession } from '@/lib/dse';
 import { CompanySearch } from '@/components/CompanySearch';
+import { rangePct } from '@/lib/dividend-checks';
 import { Icon } from '@/components/ui';
 
 interface CompaniesResponse { rows: CompanyRow[]; medians?: Record<string, number | null>; session: MarketSession | null }
@@ -287,8 +288,8 @@ export function RangePage() {
                 <td className="n mono nw" data-label={t('52-week range')}>{r.weekLow52 != null && r.weekHigh52 != null ? `৳${fmt(r.weekLow52)} – ৳${fmt(r.weekHigh52)}` : '—'}</td>
                 <td data-label={t('Position in range')}>
                   {r.position != null && r.aboveLowPct != null ? <><PositionBar position={r.position} /> <span className="small mono">{r.aboveLowPct < 0
-                    ? t(`${Math.round(r.position * 100)}% of range · ${fmt(-r.aboveLowPct, 1)}% below low`)
-                    : t(`${Math.round(r.position * 100)}% of range · ${fmt(r.aboveLowPct, 1)}% above low`)}</span></> : '—'}
+                    ? t(`${rangePct(r.position)}% of range · ${fmt(-r.aboveLowPct, 1)}% below low`)
+                    : t(`${rangePct(r.position)}% of range · ${fmt(r.aboveLowPct, 1)}% above low`)}</span></> : '—'}
                 </td>
                 {showHoldings && <>
                   <td className="n mono" data-label={t('Your avg price')}>{r.avgCost != null ? `৳${fmt(r.avgCost)}` : '—'}</td>

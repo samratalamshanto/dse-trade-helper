@@ -28,6 +28,7 @@ import { AllocationChart } from '@/components/portfolio/AllocationChart';
 import { IncomeSection } from '@/components/portfolio/IncomeSection';
 import { WhatIfCalc } from '@/components/portfolio/WhatIfCalc';
 import css from './trades.module.css';
+import { RangeCell } from '@/components/PositionBar';
 
 interface Companies { rows: CompanyRow[]; session: MarketSession | null }
 interface Dividends { upcoming: CalendarRow[]; recent: CalendarRow[]; expected: CalendarRow[]; session: MarketSession | null }
@@ -235,20 +236,21 @@ export default function PortfolioPage() {
         <div className={`panel table-wrap ${css.section}`}><h2 className="h3">{tr('Holdings')}</h2>
         <p className="small muted">{tr('The status comes from fixed rules on your numbers and public DSE data. It is a learning aid, not advice. Tap a status to see why.')}</p>
         <table className="cards">
-          <thead><tr><th>{tr('Code')}</th><th className="n">{tr('Shares')}</th><th className="n">{tr('Avg cost')}</th><th className="n">{tr('Price now')}</th><th className="n">{tr('Value')}</th><th className="n">{tr('Profit / loss')}</th><th>{tr('Status')}</th></tr></thead>
+          <thead><tr><th>{tr('Code')}</th><th className="n">{tr('Shares')}</th><th className="n">{tr('Avg cost')}</th><th className="n">{tr('Price now')}</th><th className="n">{tr('Value')}</th><th className="n">{tr('Profit / loss')}</th><th>{tr('52-wk')}</th><th>{tr('Status')}</th></tr></thead>
           <tbody>{data.holdings.map((h) => {
             const open = openReasons === h.code;
             return (
               <Fragment key={h.code}>
                 <tr><td><Link href={`/c/${encodeURIComponent(h.code)}`}><b>{h.code}</b></Link></td><td className="n" data-label={tr('Shares')}>{h.shares}</td><td className="n" data-label={tr('Avg cost')}>৳{fmt(h.avgCost)}</td>
                   <td className="n" data-label={tr('Price now')}>{h.price == null ? '—' : `৳${fmt(h.price)}`}</td><td className="n" data-label={tr('Value')}>{h.value == null ? '—' : `৳${fmt(h.value)}`}</td><td className={`n ${tone(h.unrealised)}`} data-label={tr('Profit / loss')}>{signed(h.unrealised)}</td>
+                  <td data-label={tr('52-wk')}>{(() => { const c = companies.find((x) => x.code === h.code); return <RangeCell price={h.price} low={c?.weekLow52 ?? null} high={c?.weekHigh52 ?? null} />; })()}</td>
                   <td className={css.check}>{h.check || h.shares > 0 ? (
                     <button type="button" className={css.checkToggle} aria-expanded={open} onClick={() => setOpenReasons((c) => (c === h.code ? null : h.code))}>
                       {h.check ? <CheckBadge check={{ ...h.check, label: tr(h.check.label) }} /> : null}<span className="small">{tr(open ? 'Hide' : 'Details')}</span>
                     </button>
                   ) : <span className="muted">—</span>}</td></tr>
                 {open ? (
-                  <tr className={css.detail}><td colSpan={7}>
+                  <tr className={css.detail}><td colSpan={8}>
                     {h.check ? <ul className={css.reasons}>{h.check.reasons.map((r) => <li key={r}>{tr(r)}</li>)}</ul> : null}
                     {h.shares > 0 ? <SellFacts h={h} dividends={dividendsOf(h.code)} feePct={sellFeePct} weightPct={portfolioValue > 0 ? ((h.value ?? h.invested) / portfolioValue) * 100 : null} /> : null}
                     {h.limits ? <p className="small muted">{tr('Your limits')}: {tr(`stop-loss ${h.limits.stopPct}%, target ${h.limits.targetPct}%`)}</p> : null}
