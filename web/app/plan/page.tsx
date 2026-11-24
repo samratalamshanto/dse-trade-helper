@@ -11,6 +11,7 @@ import { ALLOCATION, futureValue, GROWTH_RATES, GROWTH_YEARS, INITIAL_CHOICES, M
 import type { CompanyDetail, Dashboard } from '@/lib/service';
 import { Tr } from '@/components/Tr';
 import { useLang } from '@/components/i18n';
+import { scrollFade } from '@/components/scroll-fade';
 
 const SECTIONS = [['start', 'First steps'], ['risks', 'Risks'], ['market', 'Market'], ['companies', 'Example companies'], ['ranking', 'Ranking'], ['portfolio', 'Example portfolio'], ['growth', 'Growth'], ['research', 'Research list']] as const;
 const SECTION_OFFSET = 90;
@@ -101,7 +102,7 @@ export default function PlanPage() {
       <h1><Tr text="Start investing" /></h1>
       <p className="muted">First steps for a new investor: open a BO account, pick a broker, start small, and learn the risks.
         Further down is an <b>example</b> long-term plan with four well-known companies, to show how a plan can look.</p>
-      <nav className="section-tabs" aria-label="Sections on this page">
+      <nav className="section-tabs" aria-label="Sections on this page" ref={scrollFade}>
         {SECTIONS.map(([id, label]) => <a key={id} href={'#' + id} aria-current={active === id ? 'true' : undefined}>{t(label)}</a>)}
       </nav>
 

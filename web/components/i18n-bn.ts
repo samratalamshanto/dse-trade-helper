@@ -855,6 +855,7 @@ export const BN: Record<string, string> = {
   'System notifications appear even when this tab is in the background.': 'এই ট্যাব পেছনে থাকলেও সিস্টেম নোটিফিকেশন দেখা যায়।',
   'In-page toasts appear in the bottom-right corner regardless of permission.': 'অনুমতি থাকুক বা না থাকুক, পাতার ডান-নিচের কোণে ছোট বার্তা দেখা যায়।',
   'Add default alerts for my watchlist ({n} companies)': 'আমার ওয়াচলিস্টের জন্য সাধারণ অ্যালার্ট যোগ করুন ({n}টি কোম্পানি)',
+  'Add default alerts for my watchlist (1 company)': 'আমার ওয়াচলিস্টের জন্য সাধারণ অ্যালার্ট যোগ করুন (১টি কোম্পানি)',
   'Adds dividend + new warning sign rules for each watchlist company.': 'ওয়াচলিস্টের প্রতিটি কোম্পানির জন্য লভ্যাংশ ও নতুন সতর্ক সংকেতের নিয়ম যোগ করে।',
   'No rules yet. Add one below.': 'এখনো কোনো নিয়ম নেই। নিচে একটি যোগ করুন।',
   'No alerts have fired yet.': 'এখনো কোনো অ্যালার্ট বাজেনি।',

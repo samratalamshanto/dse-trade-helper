@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useApi, useApp } from '@/components/AppProvider';
 import { dhakaToday, fmtDateLang, lastDataLabel, marketState } from '@/components/format';
 import { useStoredValue } from '@/components/useStored';
@@ -11,6 +11,9 @@ import type { CompanyRow } from '@/lib/service';
 import type { MarketSession } from '@/lib/dse';
 
 const SEARCH_LIMIT = 8;
+// Phones get a shorter placeholder, since the long one is cut off at 390 px.
+const PHONE = '(max-width: 640px)';
+const onPhoneChange = (cb: () => void) => { const m = matchMedia(PHONE); m.addEventListener('change', cb); return () => m.removeEventListener('change', cb); };
 
 interface CompaniesResponse { rows: CompanyRow[]; codes: { code: string; sector: string }[]; session: MarketSession | null }
 
@@ -22,6 +25,7 @@ function Search() {
   const [open, setOpen] = useState(false);
   const [hi, setHi] = useState(0);
   const box = useRef<HTMLDivElement>(null);
+  const phone = useSyncExternalStore(onPhoneChange, () => matchMedia(PHONE).matches, () => false);
   const byCode = useMemo(() => Object.fromEntries((data?.rows || []).map((r) => [r.code, r])), [data]);
   const hits = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -40,7 +44,7 @@ function Search() {
   return (
     <div className="search" ref={box}>
       <Icon name="search" />
-      <input id="q" placeholder={t('Company code or name')} autoComplete="off" aria-label={t('Search company')}
+      <input id="q" placeholder={t(phone ? 'Search company' : 'Company code or name')} autoComplete="off" aria-label={t('Search company')}
         role="combobox" aria-expanded={open && hits.length > 0}
         aria-controls={open && hits.length > 0 ? 'suggest' : undefined}
         aria-activedescendant={open && hits.length > 0 ? `suggest-opt-${hi}` : undefined}
