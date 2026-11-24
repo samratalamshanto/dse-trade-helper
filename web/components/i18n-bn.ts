@@ -1040,4 +1040,12 @@ export const BN: Record<string, string> = {
   'Close price': 'সমাপনী দাম',
   '{n}% below': '{n}% নিচে',
   '{n}% above': '{n}% উপরে',
+  '12-month cash yield: {v}% (5% or more passes)': '১২ মাসের নগদ ফলন: {v}% (৫% বা বেশি হলে উত্তীর্ণ)',
+  'Paid from profit: {v}% of EPS (100% or less passes)': 'মুনাফা থেকে প্রদান: EPS-এর {v}% (১০০% বা কম হলে উত্তীর্ণ)',
+  'Paid in {n} of last 5 years (4 or more passes)': 'গত ৫ বছরের {n} বছরে প্রদান (৪ বা বেশি হলে উত্তীর্ণ)',
+  '52-week position: {v}% of range (under 50% passes)': '৫২ সপ্তাহে অবস্থান: সীমার {v}% (৫০%-এর নিচে হলে উত্তীর্ণ)',
+  'Yield vs usual: {v} pts (usual {u}%)': 'স্বাভাবিকের তুলনায় ফলন: {v} পয়েন্ট (স্বাভাবিক {u}%)',
+  'Price ৳{p}': 'দাম ৳{p}',
+  '৳{v} per ৳10,000 per year': 'প্রতি ৳১০,০০০-এ বছরে ৳{v}',
+  'this dividend ৳{v}': 'এই লভ্যাংশে ৳{v}',
 };

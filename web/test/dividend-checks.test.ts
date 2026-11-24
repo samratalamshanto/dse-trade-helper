@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { daysUntil, dividendChecks, dividendPerTenK, paidFromProfit, paidYears, passCount, perTenK, rangePos, yieldVsUsual, type DividendInput } from '../lib/dividend-checks.ts';
+import { translateLine } from '../components/i18n-match.ts';
 
 const base: DividendInput = { price: 100, yieldPct: 6, yearlyCashPerShare: 6, eps: 8, avgYieldPct: 4, paidYears: 5, fraud: 'clean', weekLow52: 80, weekHigh52: 140 };
 const states = (r: DividendInput) => Object.fromEntries(dividendChecks(r).map((c) => [c.key, c.state]));
@@ -79,6 +80,21 @@ test('five checks: missing data is not known, never a fail', () => {
   assert.equal(states({ ...base, yearlyCashPerShare: 0 }).profit, 'unknown', 'no cash paid is not a pass');
   assert.equal(states({ ...base, yearlyCashPerShare: 0, eps: -1 }).profit, 'unknown', 'a loss year with no dividend is not a fail either');
   assert.equal(states({ ...base, weekLow52: 100, weekHigh52: 100 }).range, 'unknown');
+});
+
+test('each known check shows its figure and rule; unknown keeps its plain text', () => {
+  const text = (r: DividendInput) => Object.fromEntries(dividendChecks(r).map((c) => [c.key, c.text]));
+  assert.deepEqual(text({ ...base, yieldPct: 9.34, yearlyCashPerShare: 2.64, price: 131 }), {
+    yield: '12-month cash yield: 9.34% (5% or more passes)', profit: 'Paid from profit: 33% of EPS (100% or less passes)',
+    years: 'Paid in 5 of last 5 years (4 or more passes)', warning: 'No warning sign found.', range: '52-week position: 85% of range (under 50% passes)',
+  });
+  const half = dividendChecks({ ...base, price: 109.9 }).find((c) => c.key === 'range')!;
+  assert.equal(half.state, 'pass');
+  assert.match(half.text, /: 49% of range/, 'a pass never shows 50%');
+  assert.equal(text({ ...base, yieldPct: null }).yield, '12-month cash yield is not known.');
+  for (const c of dividendChecks(base)) assert.notEqual(translateLine(c.text), c.text, `Bangla for: ${c.text}`);
+  assert.equal(translateLine('Yield vs usual: +0.9 pts (usual 8.4%)'), 'স্বাভাবিকের তুলনায় ফলন: +০.৯ পয়েন্ট (স্বাভাবিক ৮.৪%)');
+  assert.equal(translateLine('৳934 per ৳10,000 per year'), 'প্রতি ৳১০,০০০-এ বছরে ৳৯৩৪');
 });
 
 test('check wording stays neutral: no advice words', () => {

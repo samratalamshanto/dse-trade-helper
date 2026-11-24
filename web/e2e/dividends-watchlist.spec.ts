@@ -26,25 +26,47 @@ test('dividends: the search box narrows every table to the typed company', async
   for (const t of await upcoming.locator('td b.mono').allInnerTexts()) expect(t).toContain(code);
   await page.getByRole('searchbox', { name: 'Find a company (code or name)' }).fill('zzzz-no-such');
   await expect(page.getByText('No company matches the search.')).toBeVisible();
-  await page.getByRole('navigation', { name: 'Sections' }).getByRole('link', { name: /Expected/ }).click();
+  // The search stays when the tab changes.
+  await page.getByRole('tab', { name: /Expected/ }).click();
   await expect(page).toHaveURL(/#expected$/);
+  await expect(page.getByText('No company matches the search.')).toBeVisible();
 });
 
-test('dividends: value columns, the checks popover, the 30-day filter and the checks sort', async ({ page }, info) => {
+test('dividends: section tabs show one table, follow the URL hash and back/forward', async ({ page }) => {
+  await page.goto('/dividends');
+  const tabs = page.getByRole('tablist', { name: 'Sections' });
+  await expect(tabs.getByRole('tab', { name: /Upcoming/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('table.cards')).toHaveCount(1);
+  await tabs.getByRole('tab', { name: /Declared/ }).click();
+  await expect(page).toHaveURL(/#declared$/);
+  await expect(tabs.getByRole('tab', { name: /Declared/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('heading', { name: /Declared in the last 60 days/ })).toBeVisible();
+  await expect(page.locator('table.cards')).toHaveCount(1);
+  await page.goBack();
+  await expect(tabs.getByRole('tab', { name: /Upcoming/ })).toHaveAttribute('aria-selected', 'true');
+  await page.goto('/dividends#expected');
+  await expect(page.getByRole('heading', { name: 'Expected next announcements' })).toBeVisible();
+});
+
+test('dividends: fewer columns, figures in the checks popover, the 30-day filter and the checks sort', async ({ page }, info) => {
   await page.goto('/dividends');
   const upcoming = page.locator('table.cards').first().locator('tbody tr');
   await expect(upcoming.first()).toBeVisible();
-  for (const label of ['৳ per ৳10,000', '52-week position', 'Yield vs usual', 'Paid from profit', 'Paid in', 'Dividend checks', 'Score']) {
+  for (const label of ['Dividend', 'Cash / share', '12-month cash yield', 'Last day to buy', 'Record date', 'Dividend checks', 'Score']) {
     await expect(upcoming.first().locator(`td[data-label="${label}"]`)).toHaveCount(1);
   }
-  // Every table has the checks pill; tapping it lists the five checks and does not open the company page.
-  for (const table of await page.locator('table.cards').all()) await expect(table.locator('td.chk-cell .pill-pop').first()).toBeVisible();
+  for (const label of ['Price', '৳ per ৳10,000', '52-week position', 'Yield vs usual', 'Paid from profit', 'Paid in']) {
+    await expect(upcoming.first().locator(`td[data-label="${label}"]`)).toHaveCount(0);
+  }
+  // Tapping the checks pill lists the five checks with their figures and does not open the company page.
   const pill = upcoming.first().locator('td.chk-cell .pill-pop > button');
   await expect(pill).toHaveText(/^Passes [0-5] of 5$/);
   await pill.scrollIntoViewIfNeeded();
   await pill.click();
   await expect(pill).toHaveAttribute('aria-expanded', 'true');
-  await expect(upcoming.first().locator('td.chk-cell .pop-box li')).toHaveCount(5);
+  const lines = upcoming.first().locator('td.chk-cell .pop-box li');
+  expect(await lines.count()).toBeGreaterThanOrEqual(5);
+  await expect(lines.filter({ hasText: /^Price ৳/ })).toHaveCount(1);
   await expect(page).toHaveURL(/\/dividends/);
   await page.keyboard.press('Escape');
   await expect(upcoming.first().locator('td.chk-cell .pop-box')).toHaveCount(0);
@@ -66,11 +88,16 @@ test('dividends: value columns, the checks popover, the 30-day filter and the ch
     await page.getByRole('button', { name: 'Dividend checks' }).click();
     await expect(page.locator('th[data-sort="checks"]')).toHaveAttribute('aria-sort', 'descending');
   }
-  // Rows without a warning sign stay first; inside that group more passes come first.
+  // A picked column sorts by that column only: more passes first, warning sign or not.
   const counts = (await upcoming.locator('td.chk-cell .pill-pop > button').allInnerTexts()).map((t) => Number(/Passes (\d)/.exec(t)?.[1]));
-  const flagged = await upcoming.evaluateAll((rows) => rows.map((r) => !!r.querySelector('td:first-child .pill')));
-  const clean = counts.filter((_, i) => !flagged[i]);
-  expect(clean).toEqual([...clean].sort((a, b) => b - a));
+  expect(counts).toEqual([...counts].sort((a, b) => b - a));
+  await expect(page.getByText('Companies with no warning sign are listed first.')).toHaveCount(0);
+  if (!isPhone(info.project.name)) {
+    await page.getByRole('button', { name: 'Score', exact: true }).click();
+    await expect(page.locator('th[data-sort="score"]')).toHaveAttribute('aria-sort', 'descending');
+    const scores = (await upcoming.locator('td[data-label="Score"] .mono').allInnerTexts()).map(Number);
+    expect(scores).toEqual([...scores].sort((a, b) => b - a));
+  }
 });
 
 test('sectors: the search box keeps only matching sectors', async ({ page }) => {
