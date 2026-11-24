@@ -31,6 +31,7 @@ interface TableRow {
   weekHigh52: number | null;
   aboveLowPct: number | null;
   position: number | null;
+  score: number | null;
   shares?: number;
   avgCost?: number;
   gainPct?: number | null;
@@ -41,6 +42,7 @@ const BASE_SORTS: [string, string][] = [
   ['code', 'Company'],
   ['price', 'Price'],
   ['range', '52-week range'],
+  ['score', 'Score'],
 ];
 // Old links used one sort per column; each old column now lives in the Position or Range cell.
 const OLD_SORTS: Record<string, string> = { aboveLow: 'position', belowHigh: 'position', weekLow52: 'range', weekHigh52: 'range' };
@@ -56,6 +58,7 @@ function sortKey(r: TableRow, k: string): number | string | null {
   if (k === 'code') return r.code;
   if (k === 'price') return r.price;
   if (k === 'range') return r.weekLow52;
+  if (k === 'score') return r.score;
   if (k === 'avgCost') return r.avgCost ?? null;
   if (k === 'gainPct') return r.gainPct ?? null;
   if (k === 'shares') return r.shares ?? null;
@@ -87,6 +90,9 @@ export function RangePage() {
   const picks = useMemo(() => parsePickList(pickParam), [pickParam]);
   const within = Number(params.get('within') || '');
   const withinActive = Number.isFinite(within) && within > 0;
+  // ?minScore=70: keep companies whose rule score (0-100, as on Companies) is at least this.
+  const minScore = Number(params.get('minScore') || '');
+  const minScoreActive = Number.isFinite(minScore) && minScore > 0;
   const codeFilter = params.get('code') || '';
   const [companyQ, setCompanyQ] = useState(codeFilter);
   // Follow the address when it changes (back button, Show all), without an effect.
@@ -132,6 +138,8 @@ export function RangePage() {
         price: r.price, weekLow52: r.weekLow52, weekHigh52: r.weekHigh52,
         aboveLowPct: stats?.aboveLowPct ?? null,
         position: stats?.position ?? null,
+        // An unrated company (no EPS published) has no score, as on the company and compare pages.
+        score: !r.notRated && Number.isFinite(r.score) ? r.score : null,
         ...(owned ? { shares: owned.shares, avgCost: owned.avgCost, gainPct: gainFromBuyPct(r.price, owned.avgCost) } : {}),
       };
     });
@@ -148,11 +156,12 @@ export function RangePage() {
       list = list.filter((r) => passes.has(r.code));
     }
     if (withinActive) list = list.filter((r) => r.aboveLowPct != null && r.aboveLowPct <= within);
+    if (minScoreActive) list = list.filter((r) => r.score != null && r.score >= minScore);
     if (codeFilter) list = list.filter((r) => r.code === codeFilter);
     return [...list].sort((a, b) => compareNullsLast(sortKey(a, sortKeyParam), sortKey(b, sortKeyParam), sortDirVal));
-  }, [rows, data, picks, sortKeyParam, sortDirVal, withinActive, within, codeFilter]);
+  }, [rows, data, picks, sortKeyParam, sortDirVal, withinActive, within, minScoreActive, minScore, codeFilter]);
 
-  // A tab keeps who, pick and within; the sort resets to the tab's own default.
+  // A tab keeps who, pick, within and minScore; the sort resets to the tab's own default.
   const tabHref = (v: 'low' | 'risen') => {
     const q = new URLSearchParams(params.toString());
     q.delete('sort'); q.delete('dir');
@@ -164,7 +173,7 @@ export function RangePage() {
   const setParams = (patch: Record<string, string | number>) => {
     const q = new URLSearchParams(params.toString());
     for (const [k, v] of Object.entries(patch)) {
-      if (v === '' || (k === 'view' && v === 'low') || (k === 'who' && v === '') || (k === 'within' && v === '') || (k === 'pick' && v === '') || (k === 'code' && v === '')) q.delete(k);
+      if (v === '' || (k === 'view' && v === 'low') || (k === 'who' && v === '') || (k === 'within' && v === '') || (k === 'minScore' && v === '') || (k === 'pick' && v === '') || (k === 'code' && v === '')) q.delete(k);
       else q.set(k, String(v));
     }
     router.replace(pathname + (q.toString() ? '?' + q : ''), { scroll: false });
@@ -201,6 +210,7 @@ export function RangePage() {
       </nav>
 
       <div className="panel filter-panel">
+        <p className="small muted"><Tr text="Tap more than one to combine them: a company must pass all of them." /></p>
         <QuickPickChips active={picks} onPick={(p, wasOn) => setParams({ pick: (wasOn ? picks.filter((k) => k !== p.key) : [...picks, p.key]).join(',') })} />
       </div>
 
@@ -222,8 +232,18 @@ export function RangePage() {
             onChange={(e) => setParams({ within: e.target.value || '' })} />
           <Tr text="% of the low" />
         </label>
-        {withinActive && (
-          <button type="button" className="btn ghost" onClick={() => { setCompanyQ(''); setParams({ within: '', code: '' }); }}>
+        <label className="within-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
+          <Tr text="Min score" />
+          <input
+            type="number" min={1} max={100} step={1}
+            value={minScoreActive ? minScore : ''}
+            aria-label={t('Minimum score (0 to 100)')}
+            style={{ width: '70px' }}
+            placeholder="—"
+            onChange={(e) => setParams({ minScore: e.target.value || '' })} />
+        </label>
+        {(withinActive || minScoreActive) && (
+          <button type="button" className="btn ghost" onClick={() => { setCompanyQ(''); setParams({ within: '', minScore: '', code: '' }); }}>
             <Tr text="Clear filters" />
           </button>
         )}
@@ -258,6 +278,7 @@ export function RangePage() {
             <SortHeader k="price" label="Price" sort={sort} onSort={onSort} numeric />
             <SortHeader k="range" label="52-week range" sort={sort} onSort={onSort} numeric />
             <SortHeader k="position" label="Position" sort={sort} onSort={onSort} />
+            <SortHeader k="score" label="Score" sort={sort} onSort={onSort} numeric />
             {showHoldings && <>
               <SortHeader k="avgCost" label="Your avg price" sort={sort} onSort={onSort} numeric />
               <SortHeader k="gainPct" label="Your gain %" sort={sort} onSort={onSort} numeric />
@@ -266,15 +287,15 @@ export function RangePage() {
           </tr></thead>
           <tbody>
             {!data ? (
-              <tr><td colSpan={showHoldings ? 7 : 4} className="empty">{t('Loading…')}</td></tr>
+              <tr><td colSpan={showHoldings ? 8 : 5} className="empty">{t('Loading…')}</td></tr>
             ) : showHoldings && holdingsState !== 'ready' ? (
-              <tr><td colSpan={7} className="empty">{holdingsState === 'failed' ? t('Could not load your holdings. Try again in a minute.') : t('Loading…')}</td></tr>
+              <tr><td colSpan={8} className="empty">{holdingsState === 'failed' ? t('Could not load your holdings. Try again in a minute.') : t('Loading…')}</td></tr>
             ) : who === 'watchlist' && watchlistCodes.length === 0 ? (
-              <tr><td colSpan={4} className="empty">
+              <tr><td colSpan={5} className="empty">
                 <Tr text="Your watchlist is empty." />{' '}<Link href="/all"><Tr text="Browse companies" /></Link>.
               </td></tr>
             ) : showHoldings && holdingCount === 0 ? (
-              <tr><td colSpan={7} className="empty">
+              <tr><td colSpan={8} className="empty">
                 <Tr text="No holdings yet. Add trades on" />{' '}
                 <Link href="/portfolio"><Tr text="Portfolio" /></Link>.
               </td></tr>
@@ -292,6 +313,7 @@ export function RangePage() {
                     ? t(`${rangePct(r.position)}% of range · ${fmt(-r.aboveLowPct, 1)}% below low`)
                     : t(`${rangePct(r.position)}% of range · ${fmt(r.aboveLowPct, 1)}% above low`)}</span></> : '—'}
                 </td>
+                <td className="n mono" data-label={t('Score')}>{r.score != null ? r.score : '—'}</td>
                 {showHoldings && <>
                   <td className="n mono" data-label={t('Your avg price')}>{r.avgCost != null ? `৳${fmt(r.avgCost)}` : '—'}</td>
                   <td className={`n mono ${tone(r.gainPct)}`} data-label={t('Your gain %')}>{signed(r.gainPct)}</td>
@@ -299,7 +321,7 @@ export function RangePage() {
                 </>}
               </tr>
             )) : (
-              <tr><td colSpan={showHoldings ? 7 : 4} className="empty"><Tr text={picks.length > 1 ? 'No company passes all the quick picks you chose. Turn one off to see more.' : 'No company has figures in this filter.'} /></td></tr>
+              <tr><td colSpan={showHoldings ? 8 : 5} className="empty"><Tr text={picks.length > 1 ? 'No company passes all the quick picks you chose. Turn one off to see more.' : 'No company has figures in this filter.'} /></td></tr>
             )}
           </tbody>
         </table>

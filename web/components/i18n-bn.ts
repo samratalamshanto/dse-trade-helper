@@ -491,6 +491,8 @@ export const BN: Record<string, string> = {
   'No warning sign': 'কোনো সতর্ক সংকেত নেই',
   'In this browser, rules are checked while a page of this site is open, and each rule fires at most once a day.': 'এই ব্রাউজারে সাইটের কোনো পাতা খোলা থাকলে নিয়মগুলো যাচাই হয়, আর প্রতিটি নিয়ম দিনে সর্বোচ্চ একবার বাজে।',
   'Price rules also go to your Telegram when you are signed in with Google and Telegram is connected.': 'Google দিয়ে সাইন ইন করা থাকলে এবং Telegram যুক্ত থাকলে দামের নিয়মগুলো আপনার Telegram-এও যায়।',
+  'Min score': 'ন্যূনতম স্কোর', 'Minimum score (0 to 100)': 'ন্যূনতম স্কোর (০ থেকে ১০০)',
+  'Tap more than one to combine them: a company must pass all of them.': 'একাধিক বাছাই একসাথে চাপুন: কোম্পানিকে সবগুলো পূরণ করতে হবে।',
   'Alert if it falls': 'দাম কমলে জানান', 'Alert if it rises': 'দাম বাড়লে জানান',
   'Delete rule': 'নিয়ম মুছুন',
   'Rule matches': 'নিয়মের সাথে মিলেছে',
