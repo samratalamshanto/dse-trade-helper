@@ -255,7 +255,7 @@ export default function AlertsPage() {
         {watchlistCodes.length > 0 && (
           <div style={{ marginBottom: 12 }}>
             <button className="btn" type="button" onClick={handleAddDefaults} disabled={!companies.length}>
-              {t(`Add default alerts for my watchlist (${watchlistCodes.length} companies)`)}
+              <Tr text={watchlistCodes.length === 1 ? 'Add default alerts for my watchlist (1 company)' : 'Add default alerts for my watchlist ({n} companies)'} n={watchlistCodes.length} />
             </button>
             <span className="small muted" style={{ marginLeft: 8 }}>
               {t('Adds dividend + new warning sign rules for each watchlist company.')}

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Tr } from '@/components/Tr';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Line } from 'react-chartjs-2';
 import { useApi, useApp } from '@/components/AppProvider';
 import { ChangeText } from '@/components/CompanyCard';
@@ -88,11 +88,22 @@ function Compare() {
   const setCodes = (next: string[]) => router.replace(pathname + (next.length ? '?codes=' + next.map(encodeURIComponent).join(',') : ''), { scroll: false });
   // A code that failed to load gives its slot back, so it never blocks adding a valid one.
   const usable = codes.filter((c) => !errors[c]);
+  const table = useRef<HTMLDivElement>(null);
+  const added = useRef('');
+  // On a phone the table is below the fold, so after Add it scrolls into view once the new company loads.
+  useEffect(() => {
+    const el = table.current;
+    if (!el || !added.current || !data[added.current]) return;
+    added.current = '';
+    const r = el.getBoundingClientRect();
+    if (r.top < innerHeight * 0.75 && r.bottom > 0) return;
+    el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  }, [data]);
   const add = () => {
     const c = pick.trim().toUpperCase();
     if (!CODE_RE.test(c) || (known.size && !known.has(c))) { setPickError(`${t('No DSE company with the code')} "${c}".`); return; }
     setPickError('');
-    if (!usable.includes(c) && usable.length < MAX) setCodes([...usable, c]);
+    if (!usable.includes(c) && usable.length < MAX) { added.current = c; setCodes([...usable, c]); }
     setPick('');
   };
   const loaded = codes.filter((c) => data[c]).map((c) => [c, data[c]] as [string, CompanyDetail]);
@@ -117,7 +128,7 @@ function Compare() {
       {!codes.length ? <div className="panel empty-state"><p><b>{t('Pick at least two companies.')}</b></p><p className="muted">{t('Type a code above, or open a company and press "Compare with others".')}</p></div> : null}
       {loaded.length > 1 ? <p className="small muted scroll-hint">{t('Swipe the table sideways to see every company →')}</p> : null}
       {loaded.length ? (
-        <div className="panel table-wrap"><table className="compare">
+        <div className="panel table-wrap" ref={table}><table className="compare">
           <thead><tr><th><Tr text="Measure" /></th>{loaded.map(([c, d]) => <th key={c}><Link href={'/c/' + encodeURIComponent(c)} className="mono link-btn">{c}</Link><div className="small muted">{sectorName(d.company.sector)}</div></th>)}</tr></thead>
           <tbody>{ROWS.map((def) => {
             const best = bestCode(def, loaded);

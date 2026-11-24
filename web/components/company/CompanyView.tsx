@@ -14,6 +14,7 @@ import { Details } from '@/components/company/Details';
 import Link from 'next/link';
 import { bnDigits, useLang } from '@/components/i18n';
 import { WatchButton } from '@/components/Watchlist';
+import { scrollFade } from '@/components/scroll-fade';
 import { fmt, fmtDateLang, sectorName } from '@/components/format';
 import { CATEGORY_TEXT, flagCountText } from '@/lib/glossary';
 import { Tr } from '@/components/Tr';
@@ -49,6 +50,7 @@ export function CompanyView({ code }: { code: string }) {
     const el = tabRefs.current[tab], bar = tablist.current;
     if (el && bar) bar.scrollTo({ left: el.offsetLeft - (bar.clientWidth - el.offsetWidth) / 2 });
   }, [tab, ready]);
+  useEffect(() => scrollFade(tablist.current), [ready]);
 
   if (error && !d) {
     const missing = /no company/i.test(error);

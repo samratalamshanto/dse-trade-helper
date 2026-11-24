@@ -21,7 +21,9 @@ interface CompaniesResponse { rows: CompanyRow[]; codes: { code: string; sector:
 
 // Cheapest P/E and A–Z code are the natural first view; everything else starts with the biggest value.
 const ASCENDING_FIRST = new Set(['code', 'pe']);
-const SORTS: [string, string][] = [['score', 'Score'], ['signalRank', 'Signal'], ['code', 'Company'], ['price', 'Price'], ['pe', 'P/E'], ['dividendYield', 'Yield'], ['dailyValue', 'Traded / day'], ['change1y', '1 year']];
+const SORTS: [string, string][] = [['score', 'Score'], ['signalRank', 'Signal'], ['code', 'Company'], ['price', 'Price'], ['pe', 'P/E'], ['dividendYield', 'Yield'], ['dailyValue', 'Traded / day'], ['change1y', '1 year'], ['fraud', 'Warning-sign check']];
+// Warning-sign sort: level first, then the number of flags, so the default (high to low) puts the worst first.
+const FRAUD_RANK: Record<FraudLevel, number> = { clean: 0, suspicious: 1, high: 2 };
 
 const csvCell = (v: unknown) => (/[",\n]/.test(String(v ?? '')) ? `"${String(v).replace(/"/g, '""')}"` : String(v ?? ''));
 
@@ -68,7 +70,8 @@ function AllCompanies() {
   };
   const onSort = (k: string) => setParams({ sort: k, dir: sort.key === k ? -sort.dir : ASCENDING_FIRST.has(k) ? 1 : -1 });
 
-  const key = (r: CompanyRow): unknown => (sort.key === 'signalRank' ? SIGNAL_ORDER[r.signal as Signal] * 1000 + r.score : (r as unknown as Record<string, unknown>)[sort.key]);
+  const key = (r: CompanyRow): unknown => (sort.key === 'signalRank' ? SIGNAL_ORDER[r.signal as Signal] * 1000 + r.score
+    : sort.key === 'fraud' ? FRAUD_RANK[r.fraud as FraudLevel] * 1000 + r.flags.length : (r as unknown as Record<string, unknown>)[sort.key]);
   const preset = QUICK_PICKS.find((p) => p.key === params.get('preset'));
   const shown = rows
     .filter((r) => !preset || preset.test(r, data?.medians || {}))
@@ -145,7 +148,7 @@ function AllCompanies() {
       <div className="panel table-wrap">
         <table className="cards">
           <thead><tr>
-            <SortHeader k="code" label="Company" sort={sort} onSort={onSort} /><SortHeader k="signalRank" label="Signal" sort={sort} onSort={onSort} /><th><Tr text="Warning-sign check" /></th>
+            <SortHeader k="code" label="Company" sort={sort} onSort={onSort} /><SortHeader k="signalRank" label="Signal" sort={sort} onSort={onSort} /><SortHeader k="fraud" label="Warning-sign check" sort={sort} onSort={onSort} />
             <SortHeader k="score" label="Score" sort={sort} onSort={onSort} numeric /><SortHeader k="price" label="Price" sort={sort} onSort={onSort} numeric />
             <SortHeader k="pe" label="P/E" sort={sort} onSort={onSort} numeric /><SortHeader k="dividendYield" label="Yield" sort={sort} onSort={onSort} numeric />
             <SortHeader k="dailyValue" label="Traded / day" sort={sort} onSort={onSort} numeric /><SortHeader k="change1y" label="1 year" sort={sort} onSort={onSort} numeric />

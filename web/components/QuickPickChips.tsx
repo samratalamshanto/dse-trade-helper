@@ -3,6 +3,7 @@
 import { Tr } from '@/components/Tr';
 import { useLang } from '@/components/i18n';
 import { Icon, type IconName } from '@/components/ui';
+import { scrollFade } from '@/components/scroll-fade';
 import { QUICK_PICKS, type QuickPick, type QuickPickKey } from '@/lib/quick-picks';
 
 const PICK_UI: Record<QuickPickKey, { icon: IconName; tone: string }> = {
@@ -19,7 +20,7 @@ export function QuickPickChips({ active, onPick }: { active: QuickPickKey | null
   const current = QUICK_PICKS.find((p) => p.key === active);
   return (
     <>
-      <div role="group" aria-label={t('Quick picks:')} className="presets">
+      <div role="group" aria-label={t('Quick picks:')} className="presets" ref={scrollFade}>
         <span className="small muted"><Tr text="Quick picks:" /></span>
         {QUICK_PICKS.map((p) => {
           const ui = PICK_UI[p.key];
