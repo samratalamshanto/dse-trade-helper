@@ -25,7 +25,7 @@ function findButtonOffenders() {
   const sel = (e: Element) => e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (typeof e.className === 'string' && e.className.trim() ? '.' + e.className.trim().split(/\s+/).join('.') : '');
   const out: string[] = [];
   // Sort headers (arrow) and tabs (selected underline) are flat by design: owner decision 2026-11-24.
-  document.querySelectorAll('button:not(.sort-btn):not(.tab-link), [role=button], a.btn').forEach((el) => {
+  document.querySelectorAll('button:not(.sort-btn):not(.tabs .tab-link), [role=button], a.btn').forEach((el) => {
     const r = el.getBoundingClientRect(); const cs = getComputedStyle(el);
     if (r.width === 0 || r.height === 0 || cs.visibility === 'hidden' || cs.display === 'none') return;
     const text = (el.textContent ?? '').trim(); const label = el.getAttribute('aria-label') ?? el.getAttribute('aria-labelledby') ?? '';

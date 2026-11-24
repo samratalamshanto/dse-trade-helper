@@ -56,6 +56,7 @@ test.describe('/range', () => {
     await page.route('**/api/portfolio/value', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(HOLDINGS_RESP) }));
     await page.goto('/range');
     await expect(page.getByRole('heading', { name: '52-week range' })).toBeVisible();
+    await expect(rows(page).locator('td.empty')).toHaveCount(0);
     await expect(rows(page).first()).toBeVisible();
   });
 

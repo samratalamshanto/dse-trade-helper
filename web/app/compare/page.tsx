@@ -93,12 +93,14 @@ function Compare() {
   // On a phone the table is below the fold, so after Add it scrolls into view once the new company loads.
   useEffect(() => {
     const el = table.current;
-    if (!el || !added.current || !data[added.current]) return;
+    if (!el || !added.current) return;
+    if (errors[added.current]) { added.current = ''; return; }
+    if (!data[added.current]) return;
     added.current = '';
     const r = el.getBoundingClientRect();
     if (r.top < innerHeight * 0.75 && r.bottom > 0) return;
     el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
-  }, [data]);
+  }, [data, errors]);
   const add = () => {
     const c = pick.trim().toUpperCase();
     if (!CODE_RE.test(c) || (known.size && !known.has(c))) { setPickError(`${t('No DSE company with the code')} "${c}".`); return; }
