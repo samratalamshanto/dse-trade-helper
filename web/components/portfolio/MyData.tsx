@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { dropUnreadable, exportData, importData, useBrowserData, useKeyStopped, type Mode, type Saved } from '@/components/portfolio-store';
 import { BACKUP_MAX_BYTES, backupSummary, parseBackup, type MyData } from '@/lib/backup';
 import css from '@/app/portfolio/trades.module.css';
+import { useLang } from '@/components/i18n';
 
 function download(name: string, text: string): void {
   const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
@@ -17,7 +18,8 @@ function download(name: string, text: string): void {
 const message = (e: unknown, fallback: string) => (e instanceof Error ? e.message : fallback);
 
 export function KeyStoppedNote() {
-  return useKeyStopped() ? <div className="note warn" role="status">Your Google Sheet password stopped working, so this shows the data saved in this browser. Reconnect below.</div> : null;
+  const { t } = useLang();
+  return useKeyStopped() ? <div className="note warn" role="status">{t('Your Google Sheet password stopped working, so this shows the data saved in this browser. Reconnect below.')}</div> : null;
 }
 
 // Saved data this browser cannot read is never thrown away silently: the rest keeps working and the user decides.
@@ -50,6 +52,7 @@ export function UnreadableNote() {
 
 // One JSON file with everything this page uses; import checks the whole file before it writes anything.
 export function BackupPanel({ mode, onChanged }: { mode: Mode; onChanged: () => void }) {
+  const { t } = useLang();
   const [file, setFile] = useState<MyData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
@@ -70,22 +73,22 @@ export function BackupPanel({ mode, onChanged }: { mode: Mode; onChanged: () => 
   return (
     <div className={css.section}>
       <div className={css.actions}>
-        <button className="btn" type="button" onClick={() => void exportIt()}>Export my data</button>
-        {mode === 'sheet' ? <span className="small muted">Import works with Google Sheet sync off.</span> : (
-          <label className="btn">Import my data<input className="sr-only" type="file" accept=".json,application/json" onChange={(e) => { const f = e.target.files?.[0]; if (f) void pick(f); e.target.value = ''; }} /></label>
+        <button className="btn" type="button" onClick={() => void exportIt()}>{t('Export my data')}</button>
+        {mode === 'sheet' ? <span className="small muted">{t('Import works with Google Sheet sync off.')}</span> : (
+          <label className="btn">{t('Import my data')}<input className="sr-only" type="file" accept=".json,application/json" onChange={(e) => { const f = e.target.files?.[0]; if (f) void pick(f); e.target.value = ''; }} /></label>
         )}
       </div>
       {file ? (
         <div className={`note ${css.section}`} role="status">
-          This file has {backupSummary(file)}.
+          {t(`This file has ${backupSummary(file)}.`)}
           <div className={css.actions}>
-            <button className="btn primary" type="button" onClick={() => apply('add')}>Add to what is here</button>
-            <button className="btn" type="button" onClick={() => apply('replace')}>Replace what is here</button>
-            <button className="link-btn" type="button" onClick={() => setFile(null)}>Cancel</button>
+            <button className="btn primary" type="button" onClick={() => apply('add')}>{t('Add to what is here')}</button>
+            <button className="btn" type="button" onClick={() => apply('replace')}>{t('Replace what is here')}</button>
+            <button className="link-btn" type="button" onClick={() => setFile(null)}>{t('Cancel')}</button>
           </div>
         </div>
       ) : null}
-      {done ? <p className="small t-good" role="status">{done}</p> : null}
+      {done ? <p className="small t-good" role="status">{t(done)}</p> : null}
       {error ? <p className={css.error} role="alert">{error}</p> : null}
     </div>
   );

@@ -9,6 +9,7 @@ import { Topbar } from '@/components/Topbar';
 import { AlertsWatcher } from '@/components/AlertsWatcher';
 import { PrefsSync } from '@/components/PrefsSync';
 import { UserGuide } from '@/components/UserGuide';
+import { Tr } from '@/components/Tr';
 import './globals.css';
 
 // Self-hosted (SIL OFL fonts) so pages never depend on a slow download from Google at build or dev time.
@@ -42,15 +43,15 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <LangProvider>
         <AppProvider>
-          <a className="skip-link" href="#view">Skip to content</a>
+          <a className="skip-link" href="#view"><Tr text="Skip to content" /></a>
           <div className="layout">
             <Sidebar />
             <main>
               <Topbar />
               <div id="view" tabIndex={-1}>{children}</div>
               <footer>
-                Signals are automatic rule results, not advice. Not affiliated with, or endorsed by, Dhaka Stock Exchange or BSEC. Not a licensed investment adviser.
-                {' '}<a href="/privacy">Privacy</a> · <a href="/terms">Terms</a>
+                <Tr text="Signals are automatic rule results, not advice. Not affiliated with, or endorsed by, Dhaka Stock Exchange or BSEC. Not a licensed investment adviser." />
+                {' '}<a href="/privacy"><Tr text="Privacy" /></a> · <a href="/terms"><Tr text="Terms" /></a>
               </footer>
             </main>
           </div>

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect, type FormEvent, type ReactNode } from 'react';
 import { fmt } from '@/components/format';
-import { useLang } from '@/components/i18n';
+import { bnDigits, useLang } from '@/components/i18n';
 import { Info } from '@/components/ui';
 import { call, readKey } from '@/components/trades-client';
 import { holdingQuery, savePlan } from '@/components/portfolio-store';
@@ -30,10 +30,11 @@ const SELL_HINT = 'Days of normal trading = the value of the shares ÷ the avera
 
 // "1,000 shares (৳7,03,500) ≈ 1.7 days of its normal trading", with a thin-trading mark.
 export function SellEase({ what, ease }: { what: ReactNode; ease: Ease | null }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
+  const num = (s: string) => (lang === 'bn' ? bnDigits(s) : s);
   if (!ease) return <>—</>;
   return (
-    <>{what}{Number.isFinite(ease.days) ? <> ≈ <span className="mono">{ease.days < 0.1 ? '< 0.1' : fmt(ease.days, ease.days < 10 ? 1 : 0)}</span> {t('days of its normal trading')}</> : <>: {t('no trades in the last 20 days')}</>}
+    <>{what}{Number.isFinite(ease.days) ? <> ≈ <span className="mono">{num(ease.days < 0.1 ? '< 0.1' : fmt(ease.days, ease.days < 10 ? 1 : 0))}</span> {t('days of its normal trading')}</> : <>: {t('no trades in the last 20 days')}</>}
       {ease.thin ? <> <span className="pill s-caution">{t('Thin trading')}</span></> : null} <Info text={t(SELL_HINT)} /></>
   );
 }
@@ -45,32 +46,32 @@ function Result({ p, bar }: { p: BuyPlan; bar: ReactNode }) {
     <div className={css.result}>
       <div className={css.action}>
         <span className={`pill ${css.badge} ${TONE_PILL[p.tone] ?? 's-neutral'}`} data-action={p.action}>{t(p.label)}</span>
-        <span className={`mono ${css.split}`}>{splitLine(p)}</span>
+        <span className={`mono ${css.split}`}>{t(splitLine(p))}</span>
       </div>
-      <ul className="reasons">{p.reasons.map((r, i) => <li key={i + r}><span>{r}</span></li>)}</ul>
-      {p.warnings.length ? <div className="note warn" role="note"><b>{t('Watch out')}:</b><ul>{p.warnings.map((w, i) => <li key={i + w}>{w}</li>)}</ul></div> : null}
+      <ul className="reasons">{p.reasons.map((r, i) => <li key={i + r}><span>{t(r)}</span></li>)}</ul>
+      {p.warnings.length ? <div className="note warn" role="note"><b>{t('Watch out')}:</b><ul>{p.warnings.map((w, i) => <li key={i + w}>{t(w)}</li>)}</ul></div> : null}
       <div className={css.facts}>
         <div>
           <h4>{t("Where today's price stands")}</h4>
           {bar}
           <p className="small">{t('20-day average')}: <span className="mono">{p.sma20 == null ? '—' : '৳' + fmt(p.sma20)}</span>
-            {p.vsSma20Pct != null ? <> ({fmt(Math.abs(p.vsSma20Pct), 1)}% {p.vsSma20Pct < 0 ? t('below') : t('above')})</> : null}</p>
+            {p.vsSma20Pct != null ? <> ({p.vsSma20Pct < 0 ? t(`${fmt(Math.abs(p.vsSma20Pct), 1)}% below`) : t(`${fmt(Math.abs(p.vsSma20Pct), 1)}% above`)})</> : null}</p>
           <p className="small">{t('Trend')}: <span className={`pill ${p.trend === 'rising' ? 's-research' : p.trend === 'falling' ? 's-avoid' : 's-neutral'}`}>{t(p.trend ?? 'not enough history')}</span></p>
         </div>
         <div>
-          <h4>{t('What usually happened')} <Info text={`Share of the last ${p.sample} trading days followed, within 5 trading days, by a close this much lower or higher. History, not a forecast.`} /></h4>
+          <h4>{t('What usually happened')} <Info text={t(`Share of the last ${p.sample} trading days followed, within 5 trading days, by a close this much lower or higher.`) + ' ' + t('History, not a forecast.')} /></h4>
           <table className={css.odds}>
             <thead><tr><th scope="col">{t('Move')}</th><th scope="col" className="n">{t('Fell within 5 days')}</th><th scope="col" className="n">{t('Rose within 5 days')}</th></tr></thead>
             <tbody>{p.moveOdds.map((o) => <tr key={o.pct}><th scope="row">{o.pct}%</th><td className="n mono">{o.fell == null ? '—' : o.fell + '%'}</td><td className="n mono">{o.rose == null ? '—' : o.rose + '%'}</td></tr>)}</tbody>
           </table>
-          {sentence ? <p className="small">{sentence}</p> : null}
+          {sentence ? <p className="small">{t(sentence)}</p> : null}
         </div>
       </div>
-      {p.dividend ? <p className="small">{t('Dividend')}: {t('own it at the end of')} {p.dividend.lastBuyDate} ({p.dividend.tradingDaysLeft} {t('trading days left')}){p.dividend.cashPerShare != null ? ` · ৳${fmt(p.dividend.cashPerShare)} ${t('a share')}` : ''}.</p> : null}
-      <p className="small">{t('Planned cost')}: <span className="mono">৳{fmt(p.totalWithCommission)}</span> = {p.quantity} {t('shares at an average')} ৳{fmt(p.avgPrice)} + ৳{fmt(p.commission)} {t('broker commission')}
-        <Info text={`Commission is an estimate at ${p.commissionPct}% of the trade value (brokers charge about 0.3–0.5%, levies included). Ask your broker for the exact rate.`} /></p>
-      {p.sellEase ? <p className="small">{t('How easy to sell')}: <SellEase what={<>{p.quantity} {t('shares')} (৳{fmt(p.cost, 0)})</>} ease={p.sellEase} /></p> : null}
-      {p.afterBuy ? <p className="small">{t(p.later > 0 && p.alertPrice != null ? 'After this buy, if the alert price fills' : 'After this buy')}: {p.afterBuy.shares} {t('shares at an average')} ৳{fmt(p.afterBuy.avgCost)}{p.afterBuy.weightPct != null ? ` · ${fmt(p.afterBuy.weightPct, 0)}% ${t('of your holdings')}` : ` · ${t('add your trades on Portfolio to see its share of your holdings')}`}.</p> : null}
+      {p.dividend ? <p className="small">{t('Dividend')}: {t(`own it at the end of ${p.dividend.lastBuyDate} (${p.dividend.tradingDaysLeft} trading days left)`)}{p.dividend.cashPerShare != null ? ` · ${t(`৳${fmt(p.dividend.cashPerShare)} a share`)}` : ''}.</p> : null}
+      <p className="small">{t('Planned cost')}: {t(`৳${fmt(p.totalWithCommission)} = ${p.quantity} shares at an average ৳${fmt(p.avgPrice)} + ৳${fmt(p.commission)} broker commission`)}
+        <Info text={t(`Commission is an estimate at ${p.commissionPct}% of the trade value (brokers charge about 0.3–0.5%, levies included).`) + ' ' + t('Ask your broker for the exact rate.')} /></p>
+      {p.sellEase ? <p className="small">{t('How easy to sell')}: <SellEase what={t(`${p.quantity} shares (৳${fmt(p.cost, 0)})`)} ease={p.sellEase} /></p> : null}
+      {p.afterBuy ? <p className="small">{t(p.later > 0 && p.alertPrice != null ? 'After this buy, if the alert price fills' : 'After this buy')}: {t(`${p.afterBuy.shares} shares at an average ৳${fmt(p.afterBuy.avgCost)}`)}{p.afterBuy.weightPct != null ? ` · ${t(`${fmt(p.afterBuy.weightPct, 0)}% of your holdings`)}` : ` · ${t('add your trades on Portfolio to see its share of your holdings')}`}.</p> : null}
       <p className="why">{t('Rules on past prices: what happened before, never a forecast. Learning aid, not investment advice.')}</p>
     </div>
   );
@@ -96,7 +97,7 @@ export function BuyPlanner({ code, bar }: { code: string; bar: ReactNode }) {
     try {
       setPlan(await call<BuyPlan>(readKey(), `/api/plan/${encodeURIComponent(code)}?${mode}=${encodeURIComponent(amount)}${await holdingQuery(code)}`));
       setError(null);
-    } catch (err) { setPlan(null); setError(err instanceof Error ? err.message : 'Could not make a plan.'); } finally { setBusy(false); }
+    } catch (err) { setPlan(null); setError(err instanceof Error ? err.message : t('Could not make a plan.')); } finally { setBusy(false); }
   };
 
   const save = async (d: PlanDraft) => {

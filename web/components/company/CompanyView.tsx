@@ -12,7 +12,7 @@ import { News } from '@/components/company/News';
 import { PriceHistory } from '@/components/company/PriceHistory';
 import { Details } from '@/components/company/Details';
 import Link from 'next/link';
-import { useLang } from '@/components/i18n';
+import { bnDigits, useLang } from '@/components/i18n';
 import { WatchButton } from '@/components/Watchlist';
 import { fmt, fmtDateLang, sectorName } from '@/components/format';
 import { CATEGORY_TEXT, flagCountText } from '@/lib/glossary';
@@ -73,11 +73,11 @@ export function CompanyView({ code }: { code: string }) {
     <>
       <div className="panel hero">
         <div className="hero-top">
-          <div className="hero-name"><h1 title={c.name}>{c.name}</h1><div className="muted mono small">{c.code} · {sectorName(c.sector)} · {t('Category')} {c.category} · {t('Listed')} {c.listingYear}</div>
+          <div className="hero-name"><h1 title={c.name}>{c.name}</h1><div className="muted mono small">{c.code} · {t(sectorName(c.sector))} · {t('Category')} {c.category} · {t('Listed')} {c.listingYear}</div>
             {CATEGORY_TEXT[c.category] ? <div className={`small ${c.category === 'Z' ? 't-bad' : 'muted'}`}>{t(CATEGORY_TEXT[c.category])}</div> : null}
             <div className="hero-actions"><WatchButton code={c.code} withText /><Link className="btn" href={'/compare?codes=' + encodeURIComponent(c.code)}>{t('Compare with others')}</Link></div></div>
-          <div className="hero-price"><div className="mono" style={{ fontSize: 28, fontWeight: 600 }}>৳{fmt(c.price)}</div><div className="mono small"><ChangeText pct={c.changePct} suffix={d.today?.live ? ' today' : ' last session'} /></div>
-            <div className="small muted">{t('DSE data')}: {d.session?.dataTime || fmtDateLang(d.session?.sessionDate, lang)} · {t('source')} dse.com.bd</div>
+          <div className="hero-price"><div className="mono" style={{ fontSize: 28, fontWeight: 600 }}>৳{fmt(c.price)}</div><div className="mono small"><ChangeText pct={c.changePct} suffix={' ' + t(d.today?.live ? 'today' : 'last session')} /></div>
+            <div className="small muted">{t('DSE data')}: {d.session?.dataTime ? t(d.session.dataTime) : fmtDateLang(d.session?.sessionDate, lang)} · {t('source')} dse.com.bd</div>
             {d.freshSkipped ? <div className="small t-warn" role="status">{t('DSE is busy, so this is the saved copy. Try Refresh in a minute.')}</div> : null}
             <RangeBar52 c={c} compact /><HeaderStats d={d} /></div>
         </div>
@@ -86,7 +86,7 @@ export function CompanyView({ code }: { code: string }) {
             <span className="pill s-neutral big-pill"><Icon name="neutral" /> {t(NOT_RATED)}</span></Link>
             : <SignalPill signal={signal} big href="/learn#signals" missed={a.checks.filter((x) => !x.ok).map((x) => x.label).slice(0, 3)} />}{' '}
 {a.notRated ? null : (
-          <span className="mono small muted">{t('Score')} {a.score}/100 <Info text="Each signal has its own range. High risk 0–30, Caution 31–60, No strong signal 61–75, Passes the checks 76–100." /></span>)}
+          <span className="mono small muted">{t('Score')} {lang === 'bn' ? bnDigits(String(a.score)) : a.score}/{lang === 'bn' ? bnDigits('100') : 100} <Info text="Each signal has its own range. High risk 0–30, Caution 31–60, No strong signal 61–75, Passes the checks 76–100." /></span>)}
         </div>
         {(() => {
           const openNews = () => { show('news', false); tablist.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
@@ -132,7 +132,7 @@ export function CompanyView({ code }: { code: string }) {
         {tab === 'owners' ? <Owners c={c} /> : null}
         {tab === 'details' ? <Details details={c.details} /> : null}
       </div>
-      <p className="why">{t('Data as of')} {d.session?.dataTime || fmtDateLang(d.session?.sessionDate, lang)} · {t('Source: DSE public website')}.{' '}<a className="link-btn" href={'https://www.dse.com.bd/company/' + encodeURIComponent(c.code)} target="_blank" rel="noopener noreferrer">{t('Open on DSE ↗')}</a></p>
+      <p className="why">{t('Data as of')} {d.session?.dataTime ? t(d.session.dataTime) : fmtDateLang(d.session?.sessionDate, lang)} · {t('Source: DSE public website')}.{' '}<a className="link-btn" href={'https://www.dse.com.bd/company/' + encodeURIComponent(c.code)} target="_blank" rel="noopener noreferrer">{t('Open on DSE ↗')}</a></p>
     </>
   );
 }

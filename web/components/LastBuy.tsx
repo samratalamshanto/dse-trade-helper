@@ -1,4 +1,5 @@
-import { dhakaToday, fmtDate } from '@/components/format';
+import { dhakaToday, fmtDateLang } from '@/components/format';
+import { useLang } from '@/components/i18n';
 import { Tr } from '@/components/Tr';
 import { Info } from '@/components/ui';
 import { tradingDaysBetween } from '@/lib/dhaka';
@@ -13,15 +14,16 @@ export function DaysLeft({ r }: { r: BuyDates }) {
   if (!r.lastBuyDate || isTooLate(r, today)) return null;
   const n = tradingDaysBetween(today, r.lastBuyDate);
   if (n <= 1 && r.lastBuyDate === today) return <span className="pill s-caution"><Tr text="last day today" /></span>;
-  return <span className={`pill ${n <= 2 ? 's-caution' : 's-research'}`}>{n} <Tr text={n === 1 ? 'trading day left' : 'trading days left'} /></span>;
+  return <span className={`pill ${n <= 2 ? 's-caution' : 's-research'}`}><Tr text={n === 1 ? '{n} trading day left' : '{n} trading days left'} n={n} /></span>;
 }
 
 export function LastBuy({ r }: { r: BuyDates }) {
+  const { lang } = useLang();
   if (!r.lastBuyDate) return <>—</>;
   const late = isTooLate(r);
   return (
     <>
-      <span className={`mono${late ? ' muted' : ''}`}>{fmtDate(r.lastBuyDate)}</span>
+      <span className={`mono${late ? ' muted' : ''}`}>{fmtDateLang(r.lastBuyDate, lang)}</span>
       {r.lastBuyEstimated ? <> <span className="small muted" title="DSE has not posted its spot-market notice yet. This is the trading day before the record date."><Tr text="est." /></span></> : null}
       {late ? <> <span className="pill s-neutral"><Tr text="too late" /></span> <Info text="Too late: the last day to buy has passed, so buying now does not get this dividend." /></> : <> <DaysLeft r={r} /></>}
     </>

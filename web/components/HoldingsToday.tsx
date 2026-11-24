@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useApi } from '@/components/AppProvider';
 import { fmt } from '@/components/format';
+import { useLang } from '@/components/i18n';
 import { ChangeText } from '@/components/CompanyCard';
 import { CheckBadge, type TradesList } from '@/components/trades-client';
 import { listTrades, useMode } from '@/components/portfolio-store';
@@ -34,6 +35,7 @@ const signedMoney = (x: number) => `${x > 0 ? '+' : x < 0 ? '-' : ''}৳${fmt(Ma
 // The user's own holdings (this browser or the Google Sheet) with today's check; hidden when there are none.
 // onHeld tells the dashboard which codes are shown here, so My stocks does not list them a second time.
 export function HoldingsToday({ onHeld }: { onHeld?: (codes: string[]) => void }) {
+  const { t } = useLang();
   const [list, setList] = useState<TradesList | null>(null);
   const [before, setBefore] = useState<Labels>({});
   const { data: companies } = useApi<Companies>(list ? '/api/companies' : null);
@@ -65,24 +67,24 @@ export function HoldingsToday({ onHeld }: { onHeld?: (codes: string[]) => void }
 
   return (
     <section className="panel my-stocks" aria-labelledby="holdings-today-title">
-      <div className="today-head"><h2 className="h3" id="holdings-today-title">My holdings today</h2>
-        <Link href="/portfolio" className="small">Open portfolio →</Link></div>
-      <p className="small">Value <b className="mono">৳{fmt(value)}</b> · Today{' '}
+      <div className="today-head"><h2 className="h3" id="holdings-today-title">{t('My holdings today')}</h2>
+        <Link href="/portfolio" className="small">{t('Open portfolio →')}</Link></div>
+      <p className="small">{t('Value')} <b className="mono">৳{fmt(value)}</b> · {t('Today')}{' '}
         <b className={`mono ${today > 0 ? 'up' : today < 0 ? 'down' : ''}`}>{companies ? signedMoney(today) : '…'}</b></p>
       <ul className="today-list">{held.map((h) => {
         const changed = h.check && before[h.code] && before[h.code] !== h.check.label;
         return (
           <li key={h.code}>
-            <span><Link href={'/c/' + encodeURIComponent(h.code)} className="mono"><b>{h.code}</b></Link> {byCode[h.code] ? <span className="mono small">৳{fmt(byCode[h.code].price)}</span> : null} <span className="small muted">{h.shares} {h.shares === 1 ? 'share' : 'shares'}</span></span>
+            <span><Link href={'/c/' + encodeURIComponent(h.code)} className="mono"><b>{h.code}</b></Link> {byCode[h.code] ? <span className="mono small">৳{fmt(byCode[h.code].price)}</span> : null} <span className="small muted">{h.shares === 1 ? t(`${h.shares} share`) : t(`${h.shares} shares`)}</span></span>
             <span className="my-stock-facts">
               {byCode[h.code] ? <span className="mono small"><ChangeText pct={byCode[h.code].changePct} /></span> : null}
-              {changed ? <span className="small t-warn" title={`Was: ${before[h.code]}`}>Changed since last visit</span> : null}
-              {h.check ? <CheckBadge check={h.check} /> : null}
+              {changed ? <span className="small t-warn" title={`${t('Was:')} ${t(before[h.code])}`}>{t('Changed since last visit')}</span> : null}
+              {h.check ? <CheckBadge check={{ ...h.check, label: t(h.check.label) }} /> : null}
             </span>
           </li>
         );
       })}</ul>
-      <p className="small muted">Checks use fixed rules on your numbers and public DSE data — a learning aid, not investment advice.</p>
+      <p className="small muted">{t('Checks use fixed rules on your numbers and public DSE data — a learning aid, not investment advice.')}</p>
     </section>
   );
 }
