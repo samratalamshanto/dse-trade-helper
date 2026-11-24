@@ -17,8 +17,20 @@ test.describe('/all', () => {
   test('phone: the selects stay folded until Filters is pressed', async ({ page }, info) => {
     test.skip(info.project.name !== 'phone', 'the Filters button shows only at phone width');
     await expect(page.getByLabel('Signal', { exact: true })).toBeHidden();
+    // The company search sits in the same grid but stays visible while the selects are folded.
+    await expect(page.getByRole('combobox', { name: 'Pick a company' })).toBeVisible();
     await page.getByRole('button', { name: /^Filters/ }).click();
     await expect(page.getByLabel('Signal', { exact: true })).toBeVisible();
+  });
+
+  test('the warning-sign select is gone, but an old ?fraud= link still filters and Clear filters drops it', async ({ page }) => {
+    await expect(page.locator('#f-fraud')).toHaveCount(0);
+    await expect(page.locator('#all-filters').getByRole('combobox', { name: 'Pick a company' })).toHaveCount(1);
+    await page.goto('/all?fraud=high');
+    await expect(page.getByText(/Showing \d+ companies/)).toBeVisible();
+    for (const t of await rows(page).locator('td[data-label="Warning-sign check"]').allInnerTexts()) expect(t).not.toMatch(/No flags/);
+    await page.getByRole('button', { name: 'Clear filters' }).click();
+    await expect(page).not.toHaveURL(/fraud=/);
   });
 
   test('signal filter narrows the list', async ({ page }, info) => {

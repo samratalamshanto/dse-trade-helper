@@ -3,9 +3,10 @@
 import Link from 'next/link';
 import { Tr } from '@/components/Tr';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { useApi } from '@/components/AppProvider';
-import { fmt, sectorName, signed } from '@/components/format';
+import { compareNullsLast, fmt, sectorName, signed } from '@/components/format';
+import { SortHeader } from '@/components/SortHeader';
 import { FraudPill, Icon, Skeleton, type FraudLevel } from '@/components/ui';
 import { useLang } from '@/components/i18n';
 import type { CompanyRow } from '@/lib/service';
@@ -21,7 +22,9 @@ function WarningSigns() {
   const pathname = usePathname();
   const codeFilter = params.get('code') || '';
   const [companyQ, setCompanyQ] = useState(codeFilter);
-  useEffect(() => { setCompanyQ(codeFilter); }, [codeFilter]);
+  // Follow the address when it changes (back button, Show all), without an effect.
+  const [syncedCode, setSyncedCode] = useState(codeFilter);
+  if (syncedCode !== codeFilter) { setSyncedCode(codeFilter); setCompanyQ(codeFilter); }
   const rows = data?.rows ?? [];
   const searchData = useMemo(() => {
     const r = data?.rows ?? [];
@@ -36,10 +39,15 @@ function WarningSigns() {
   };
 
   if (error && !data) return <div className="note bad">Could not load the list: {error}</div>;
-  const warn = rows.filter((r) => r.fraud !== 'clean' && r.category !== 'Z').sort((a, b) => b.flags.length - a.flags.length || (b.change1y ?? 0) - (a.change1y ?? 0));
-  const z = rows.filter((r) => r.category === 'Z').sort((a, b) => (b.change1y ?? -Infinity) - (a.change1y ?? -Infinity));
+  const warn = rows.filter((r) => r.fraud !== 'clean' && r.category !== 'Z');
+  const z = rows.filter((r) => r.category === 'Z');
   const baseList = lane === 'z' ? z : warn;
-  const list = codeFilter ? baseList.filter((r) => r.code === codeFilter) : baseList;
+  // Default: flags, then 1-year change (the Z tab: 1-year change). Ties fall back to the 1-year change.
+  const sort = { key: params.get('sort') || (lane === 'z' ? 'change1y' : 'flags'), dir: params.get('dir') === '1' ? 1 : -1 };
+  const key = (r: CompanyRow): unknown => (sort.key === 'flags' ? r.flags.length : sort.key === 'code' ? r.code : sort.key === 'price' ? r.price : r.change1y);
+  const onSort = (k: string) => setParams({ sort: k, dir: sort.key === k ? String(-sort.dir) : k === 'code' ? '1' : '-1' });
+  const list = (codeFilter ? baseList.filter((r) => r.code === codeFilter) : baseList)
+    .sort((a, b) => compareNullsLast(key(a), key(b), sort.dir) || (b.change1y ?? -Infinity) - (a.change1y ?? -Infinity));
 
   return (
     <>
@@ -52,6 +60,7 @@ function WarningSigns() {
       <p className="muted small">{lane === 'z'
         ? <Tr text="Category Z companies missed AGMs, paid no dividend or stopped operating. Sorted by 1-year price change: a fast rise in a Z share is a pattern to investigate." />
         : <Tr text="Sorted by number of flags, then by 1-year price change." />} <Tr text="The 1-year change is grey on purpose: fast rises are a pattern to investigate here, not good news." /></p>
+      {lane === 'warn' && <p className="small"><span className="t-bad"><Tr text="Red" /></span>: <Tr text="a fast price rise or loss-making rise backed by a flag of another kind." /> <span className="t-warn"><Tr text="Amber" /></span>: <Tr text="patterns to check, not backed by a second kind of flag." /></p>}
       <div className="picker-row">
         <CompanySearch
           companies={searchData}
@@ -68,7 +77,10 @@ function WarningSigns() {
         )}
       </div>
       <div className="panel table-wrap"><table className="cards">
-        <thead><tr><th>Company</th><th><Tr text="Warning-sign check" /></th><th><Tr text="Flags" /></th><th className="n">Price</th><th className="n">1 year</th></tr></thead>
+        <thead><tr>
+          <SortHeader k="code" label="Company" sort={sort} onSort={onSort} /><SortHeader k="flags" label="Warning-sign check" sort={sort} onSort={onSort} /><th><Tr text="Flags" /></th>
+          <SortHeader k="price" label="Price" sort={sort} onSort={onSort} numeric /><SortHeader k="change1y" label="1 year" sort={sort} onSort={onSort} numeric />
+        </tr></thead>
         <tbody>{!data ? <tr><td colSpan={5} className="empty">Loading…</td></tr> : list.length ? list.map((r) => (
           <tr key={r.code} onClick={() => router.push('/c/' + encodeURIComponent(r.code))}>
             <td><b className="mono">{r.code}</b><div className="small muted">{r.name} · {sectorName(r.sector)}</div></td>

@@ -29,7 +29,6 @@ interface TableRow {
   weekLow52: number | null;
   weekHigh52: number | null;
   aboveLowPct: number | null;
-  belowHighPct: number | null;
   position: number | null;
   shares?: number;
   avgCost?: number;
@@ -37,13 +36,13 @@ interface TableRow {
 }
 
 const BASE_SORTS: [string, string][] = [
-  ['aboveLow', 'Above low %'],
-  ['belowHigh', 'Below high %'],
+  ['position', 'Position'],
   ['code', 'Company'],
   ['price', 'Price'],
-  ['weekLow52', '52-wk low'],
-  ['weekHigh52', '52-wk high'],
+  ['range', '52-week range'],
 ];
+// Old links used one sort per column; each old column now lives in the Position or Range cell.
+const OLD_SORTS: Record<string, string> = { aboveLow: 'position', belowHigh: 'position', weekLow52: 'range', weekHigh52: 'range' };
 const HOLDINGS_SORTS: [string, string][] = [
   ['avgCost', 'Your avg price'],
   ['gainPct', 'Your gain %'],
@@ -52,12 +51,10 @@ const HOLDINGS_SORTS: [string, string][] = [
 const ASCENDING_FIRST = new Set(['code']);
 
 function sortKey(r: TableRow, k: string): number | string | null {
-  if (k === 'aboveLow') return r.aboveLowPct;
-  if (k === 'belowHigh') return r.belowHighPct;
+  if (k === 'position') return r.position;
   if (k === 'code') return r.code;
   if (k === 'price') return r.price;
-  if (k === 'weekLow52') return r.weekLow52;
-  if (k === 'weekHigh52') return r.weekHigh52;
+  if (k === 'range') return r.weekLow52;
   if (k === 'avgCost') return r.avgCost ?? null;
   if (k === 'gainPct') return r.gainPct ?? null;
   if (k === 'shares') return r.shares ?? null;
@@ -90,11 +87,14 @@ export function RangePage() {
   const withinActive = Number.isFinite(within) && within > 0;
   const codeFilter = params.get('code') || '';
   const [companyQ, setCompanyQ] = useState(codeFilter);
-  useEffect(() => { setCompanyQ(codeFilter); }, [codeFilter]);
+  // Follow the address when it changes (back button, Show all), without an effect.
+  const [syncedCode, setSyncedCode] = useState(codeFilter);
+  if (syncedCode !== codeFilter) { setSyncedCode(codeFilter); setCompanyQ(codeFilter); }
 
-  const defaultSort = view === 'risen' ? { key: 'aboveLow', dir: -1 } : { key: 'aboveLow', dir: 1 };
+  const defaultSort = view === 'risen' ? { key: 'position', dir: -1 } : { key: 'position', dir: 1 };
   const sortDirParam = params.get('dir');
-  const sortKeyParam = params.get('sort') || defaultSort.key;
+  const rawSort = params.get('sort') || defaultSort.key;
+  const sortKeyParam = OLD_SORTS[rawSort] ?? rawSort;
   // Only 1 and -1 are directions; anything else in the address falls back to the tab's default.
   const sortDirVal = sortDirParam === '1' ? 1 : sortDirParam === '-1' ? -1 : defaultSort.dir;
   const sort = { key: sortKeyParam, dir: sortDirVal };
@@ -127,7 +127,6 @@ export function RangePage() {
         code: r.code, name: r.name,
         price: r.price, weekLow52: r.weekLow52, weekHigh52: r.weekHigh52,
         aboveLowPct: stats?.aboveLowPct ?? null,
-        belowHighPct: stats?.belowHighPct ?? null,
         position: stats?.position ?? null,
         ...(owned ? { shares: owned.shares, avgCost: owned.avgCost, gainPct: gainFromBuyPct(r.price, owned.avgCost) } : {}),
       };
@@ -167,7 +166,7 @@ export function RangePage() {
     router.replace(pathname + (q.toString() ? '?' + q : ''), { scroll: false });
   };
 
-  const defaultDir = (k: string) => ASCENDING_FIRST.has(k) ? 1 : (k === 'aboveLow' ? (view === 'risen' ? -1 : 1) : -1);
+  const defaultDir = (k: string) => ASCENDING_FIRST.has(k) ? 1 : (k === 'position' ? (view === 'risen' ? -1 : 1) : -1);
   const onSort = (k: string) => setParams({ sort: k, dir: sort.key === k ? -sort.dir : defaultDir(k) });
 
   const allSorts = who === 'holdings' ? [...BASE_SORTS, ...HOLDINGS_SORTS] : BASE_SORTS;
@@ -202,24 +201,13 @@ export function RangePage() {
       </div>
 
       <div className="panel filter-panel" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
-        <div role="group" aria-label={t('Who to show')}>
-          <button type="button" className={`btn${who === '' ? ' primary' : ''}`}
-            aria-pressed={who === ''}
-            onClick={() => setParams({ who: '' })}>
-            <Tr text="All companies" />
-          </button>
-          <button type="button" className={`btn${who === 'watchlist' ? ' primary' : ''}`}
-            aria-pressed={who === 'watchlist'}
-            onClick={() => setParams({ who: 'watchlist' })}>
-            <Tr text="My watchlist" />
-          </button>
-          <button type="button" className={`btn${who === 'holdings' ? ' primary' : ''}`}
-            aria-pressed={who === 'holdings'}
-            onClick={() => setParams({ who: 'holdings' })}>
-            <Tr text="My holdings" />
-          </button>
+        {/* One choice of three, drawn like the page tabs (underline on the selected one). */}
+        <div className="tabs who-tabs" role="group" aria-label={t('Who to show')}>
+          {([['', 'All companies'], ['watchlist', 'My watchlist'], ['holdings', 'My holdings']] as const).map(([k, l]) => (
+            <button key={l} type="button" className="tab-link" aria-pressed={who === k} onClick={() => setParams({ who: k })}><Tr text={l} /></button>
+          ))}
         </div>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
+        <label className="within-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
           <Tr text="Within" />
           <input
             type="number" min={0.5} max={100} step={0.5}
@@ -264,11 +252,8 @@ export function RangePage() {
           <thead><tr>
             <SortHeader k="code" label="Company" sort={sort} onSort={onSort} />
             <SortHeader k="price" label="Price" sort={sort} onSort={onSort} numeric />
-            <SortHeader k="weekLow52" label="52-wk low" sort={sort} onSort={onSort} numeric />
-            <SortHeader k="weekHigh52" label="52-wk high" sort={sort} onSort={onSort} numeric />
-            <SortHeader k="aboveLow" label="Above low %" sort={sort} onSort={onSort} numeric />
-            <SortHeader k="belowHigh" label="Below high %" sort={sort} onSort={onSort} numeric />
-            <th aria-label={t('Position in range')}><Tr text="Position" /></th>
+            <SortHeader k="range" label="52-week range" sort={sort} onSort={onSort} numeric />
+            <SortHeader k="position" label="Position" sort={sort} onSort={onSort} />
             {showHoldings && <>
               <SortHeader k="avgCost" label="Your avg price" sort={sort} onSort={onSort} numeric />
               <SortHeader k="gainPct" label="Your gain %" sort={sort} onSort={onSort} numeric />
@@ -277,15 +262,15 @@ export function RangePage() {
           </tr></thead>
           <tbody>
             {!data ? (
-              <tr><td colSpan={showHoldings ? 10 : 7} className="empty">{t('Loading…')}</td></tr>
+              <tr><td colSpan={showHoldings ? 7 : 4} className="empty">{t('Loading…')}</td></tr>
             ) : showHoldings && holdingsState !== 'ready' ? (
-              <tr><td colSpan={10} className="empty">{holdingsState === 'failed' ? t('Could not load your holdings. Try again in a minute.') : t('Loading…')}</td></tr>
+              <tr><td colSpan={7} className="empty">{holdingsState === 'failed' ? t('Could not load your holdings. Try again in a minute.') : t('Loading…')}</td></tr>
             ) : who === 'watchlist' && watchlistCodes.length === 0 ? (
-              <tr><td colSpan={7} className="empty">
+              <tr><td colSpan={4} className="empty">
                 <Tr text="Your watchlist is empty." />{' '}<Link href="/all"><Tr text="Browse companies" /></Link>.
               </td></tr>
             ) : showHoldings && holdingCount === 0 ? (
-              <tr><td colSpan={10} className="empty">
+              <tr><td colSpan={7} className="empty">
                 <Tr text="No holdings yet. Add trades on" />{' '}
                 <Link href="/portfolio"><Tr text="Portfolio" /></Link>.
               </td></tr>
@@ -297,16 +282,11 @@ export function RangePage() {
                   {rangeLooksWrong(r) ? <div className="small t-warn"><Tr text="Data looks wrong: the price is far outside its 52-week range." /></div> : null}
                 </td>
                 <td className="n mono" data-label={t('Price')}>{r.price != null ? `৳${fmt(r.price)}` : '—'}</td>
-                <td className="n mono" data-label={t('52-wk low')}>{r.weekLow52 != null ? `৳${fmt(r.weekLow52)}` : '—'}</td>
-                <td className="n mono" data-label={t('52-wk high')}>{r.weekHigh52 != null ? `৳${fmt(r.weekHigh52)}` : '—'}</td>
-                <td className={`n mono ${tone(r.aboveLowPct)}`} data-label={t('Above low %')}>
-                  {r.aboveLowPct != null ? `${r.aboveLowPct > 0 ? '+' : ''}${fmt(r.aboveLowPct, 1)}%` : '—'}
-                </td>
-                <td className="n mono" data-label={t('Below high %')}>
-                  {r.belowHighPct != null ? `${fmt(r.belowHighPct, 1)}%` : '—'}
-                </td>
+                <td className="n mono nw" data-label={t('52-week range')}>{r.weekLow52 != null && r.weekHigh52 != null ? `৳${fmt(r.weekLow52)} – ৳${fmt(r.weekHigh52)}` : '—'}</td>
                 <td data-label={t('Position in range')}>
-                  {r.position != null ? <PositionBar position={r.position} /> : '—'}
+                  {r.position != null && r.aboveLowPct != null ? <><PositionBar position={r.position} /> <span className="small mono">{r.aboveLowPct < 0
+                    ? t(`${Math.round(r.position * 100)}% of range · ${fmt(-r.aboveLowPct, 1)}% below low`)
+                    : t(`${Math.round(r.position * 100)}% of range · ${fmt(r.aboveLowPct, 1)}% above low`)}</span></> : '—'}
                 </td>
                 {showHoldings && <>
                   <td className="n mono" data-label={t('Your avg price')}>{r.avgCost != null ? `৳${fmt(r.avgCost)}` : '—'}</td>
@@ -315,7 +295,7 @@ export function RangePage() {
                 </>}
               </tr>
             )) : (
-              <tr><td colSpan={showHoldings ? 10 : 7} className="empty"><Tr text="No company has figures in this filter." /></td></tr>
+              <tr><td colSpan={showHoldings ? 7 : 4} className="empty"><Tr text="No company has figures in this filter." /></td></tr>
             )}
           </tbody>
         </table>

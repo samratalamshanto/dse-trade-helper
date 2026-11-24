@@ -56,6 +56,7 @@ function AllCompanies() {
   const allowed: Record<Filter, readonly string[]> = {
     signal: Object.keys(SIGNALS), sector: sectors, fraud: Object.keys(FRAUD), cat: ['A', 'B', 'N', 'Z'], yield: ['3', '5', '8'], liquid: ['10', '100'],
   };
+  // `fraud` has no select any more; old ?fraud= links still filter, and Clear filters drops it.
   // Ignore unknown URL values instead of filtering everything away.
   const state = Object.fromEntries(FILTERS.map((k) => [k, allowed[k].includes(params.get(k) || '') ? params.get(k) || '' : ''])) as Record<Filter, string>;
   const sort = { key: params.get('sort') || 'score', dir: Number(params.get('dir')) || -1 };
@@ -99,28 +100,27 @@ function AllCompanies() {
       <p className="muted">{data ? <>{rows.length} companies listed{fresh < rows.length ? `, ${fresh} with the newest data` : ''}. </> : null}Click a row for the full explanation.</p>
       <div className="panel filter-panel">
         <QuickPickChips active={preset?.key ?? null} onPick={(p) => setParams(p ? { preset: p.key, sort: p.sort, dir: p.dir } : { preset: '', sort: 'score', dir: -1 })} />
-        <div className="picker-row">
-          <CompanySearch
-            companies={searchData}
-            value={companyQ}
-            onChange={(q) => { setCompanyQ(q); if (codeFilter) setParams({ code: '' }); }}
-            onPick={(code) => { setCompanyQ(code); setParams({ code }); }}
-            label={t('Pick a company')}
-            placeholder={t('Pick a company')}
-          />
-          {codeFilter && (
-            <button type="button" className="btn ghost" onClick={() => { setCompanyQ(''); setParams({ code: '' }); }}>
-              <Icon name="cross" />{t('Show all')}
-            </button>
-          )}
-        </div>
-        {/* On a phone the six selects fold behind this button, so the list is visible without scrolling. */}
+        {/* On a phone the five selects fold behind this button; the search stays visible. */}
         <button type="button" className="btn filter-toggle" aria-expanded={filtersOpen} aria-controls="all-filters" onClick={() => setFiltersOpen(!filtersOpen)}>
           <Icon name="list" />{t('Filters')}{activeFilters ? ` (${activeFilters})` : ''}</button>
         <div id="all-filters" className={`filter-grid all-filters${filtersOpen ? ' open' : ''}`}>
+          <div className="picker-row grid-search">
+            <CompanySearch
+              companies={searchData}
+              value={companyQ}
+              onChange={(q) => { setCompanyQ(q); if (codeFilter) setParams({ code: '' }); }}
+              onPick={(code) => { setCompanyQ(code); setParams({ code }); }}
+              label={t('Pick a company')}
+              placeholder={t('Pick a company')}
+            />
+            {codeFilter && (
+              <button type="button" className="btn ghost" onClick={() => { setCompanyQ(''); setParams({ code: '' }); }}>
+                <Icon name="cross" />{t('Show all')}
+              </button>
+            )}
+          </div>
           {select('signal', 'Signal', 'research', [['', 'Any signal'], ...Object.entries(SIGNALS).map(([k, s]) => [k, s.label] as [string, string])])}
           {select('sector', 'Sector', 'grid', [['', 'All sectors'], ...sectors.map((s) => [s, sectorName(s)] as [string, string])])}
-          {select('fraud', 'Warning-sign check', 'clean', [['', 'Any warning sign'], ...Object.entries(FRAUD) as [string, string][]])}
           {select('cat', 'Category', 'list', [['', 'Any category'], ...['A', 'B', 'N', 'Z'].map((c) => [c, 'Category ' + c] as [string, string])])}
           {select('yield', 'Dividend yield', 'coins', [['', 'Any dividend yield'], ['3', 'Yield 3%+'], ['5', 'Yield 5%+'], ['8', 'Yield 8%+']])}
           {select('liquid', 'Trading', 'columns', [['', 'Any trading volume'], ['10', '৳0.1 cr+ a day'], ['100', '৳1 cr+ a day']])}

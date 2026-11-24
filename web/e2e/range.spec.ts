@@ -5,7 +5,7 @@ const COMPANIES_RESP = {
     { code: 'GP', name: 'Grameenphone', sector: 'Telecom', category: 'A', price: 300, weekLow52: 200, weekHigh52: 400,
       changePct: 0.5, signal: 'research', score: 85, fraud: 'clean', flags: [],
       pe: 15, dividendYield: 5, epsCagr: 10, change1y: 20, dailyValue: 5e7, stale: false },
-    { code: 'ROBI', name: 'Robi Axiata', sector: 'Telecom', category: 'B', price: 50, weekLow52: 40, weekHigh52: 60,
+    { code: 'ROBI', name: 'Robi Axiata', sector: 'Telecom', category: 'B', price: 52, weekLow52: 40, weekHigh52: 60,
       changePct: -0.2, signal: 'neutral', score: 65, fraud: 'clean', flags: [],
       pe: 20, dividendYield: 2, epsCagr: 5, change1y: 10, dailyValue: 1e7, stale: false },
     { code: 'SQURPHARMA', name: 'Square Pharma', sector: 'Pharma', category: 'A', price: 220, weekLow52: 180, weekHigh52: 240,
@@ -26,9 +26,9 @@ const COMPANIES_RESP = {
   session: null,
 };
 
-// BRAC 16.7%, SQURPHARMA 22.2%, ROBI 25%, GP 50%
-const NEAR_LOW_ORDER = ['BRAC', 'SQURPHARMA', 'ROBI', 'GP'];
-const RISEN_ORDER = ['GP', 'ROBI', 'SQURPHARMA', 'BRAC'];
+// Position in the range: BRAC 25%, GP 50%, ROBI 60%, SQURPHARMA 67%. Above the low: BRAC 16.7%, SQURPHARMA 22.2%, ROBI 30%, GP 50%.
+const NEAR_LOW_ORDER = ['BRAC', 'GP', 'ROBI', 'SQURPHARMA'];
+const RISEN_ORDER = ['SQURPHARMA', 'ROBI', 'GP', 'BRAC'];
 
 const ROBI_TRADE = {
   id: 'robi1', date: '2026-01-05', code: 'ROBI', side: 'BUY',
@@ -59,23 +59,31 @@ test.describe('/range', () => {
     await expect(rows(page).first()).toBeVisible();
   });
 
-  test('default tab is Near the low, sorted ascending by Above low %', async ({ page }) => {
+  test('default tab is Near the low, sorted ascending by Position', async ({ page }) => {
     await expect(page.getByRole('link', { name: 'Near the 52-week low' })).toHaveAttribute('aria-current', 'page');
     expect(await codes(page)).toEqual(NEAR_LOW_ORDER);
-    await expect(page.locator('th[data-sort="aboveLow"]')).toHaveAttribute('aria-sort', 'ascending');
+    await expect(page.locator('th[data-sort="position"]')).toHaveAttribute('aria-sort', 'ascending');
+    await expect(rows(page).first()).toContainText('25% of range · 16.7% above low');
+    await expect(rows(page).first()).toContainText('৳60.00 – ৳100.00');
   });
 
-  test('flipping sort on Above low % reverses the order', async ({ page }, info) => {
+  test('an old link sorted by Above low % sorts by Position', async ({ page }, info) => {
+    await page.goto('/range?sort=aboveLow&dir=-1');
+    await expect.poll(() => codes(page)).toEqual(RISEN_ORDER);
+    if (info.project.name !== 'phone') await expect(page.locator('th[data-sort="position"]')).toHaveAttribute('aria-sort', 'descending');
+  });
+
+  test('flipping sort on Position reverses the order', async ({ page }, info) => {
     if (info.project.name === 'phone') {
       await page.getByRole('button', { name: 'Low to high' }).click();
     } else {
-      await page.getByRole('button', { name: /Above low %/ }).click();
+      await page.getByRole('button', { name: 'Position', exact: true }).click();
     }
     await expect(page).toHaveURL(/dir=-1/);
     expect(await codes(page)).toEqual([...NEAR_LOW_ORDER].reverse());
   });
 
-  test('Risen from the low tab sorts by Above low % descending', async ({ page }) => {
+  test('Risen from the low tab sorts by Position descending', async ({ page }) => {
     await page.getByRole('link', { name: 'Risen from the low' }).click();
     await expect(page).toHaveURL(/view=risen/);
     await expect(page.getByRole('link', { name: 'Risen from the low' })).toHaveAttribute('aria-current', 'page');
@@ -88,6 +96,7 @@ test.describe('/range', () => {
     await expect(rows(page).first()).toBeVisible();
     await page.getByRole('button', { name: 'My holdings' }).click();
     await expect(page).toHaveURL(/who=holdings/);
+    await expect(page.getByRole('button', { name: 'My holdings' })).toHaveAttribute('aria-pressed', 'true');
     const holdingCodes = await codes(page);
     expect(holdingCodes).toEqual(['ROBI']);
     await expect(rows(page).first()).toContainText('44');
@@ -110,10 +119,10 @@ test.describe('/range', () => {
   test('a quick pick narrows the table, and the tabs keep it', async ({ page }) => {
     await page.getByRole('button', { name: 'Passes the checks' }).click();
     await expect(page).toHaveURL(/pick=good/);
-    await expect.poll(() => codes(page)).toEqual(['SQURPHARMA', 'GP']);
+    await expect.poll(() => codes(page)).toEqual(['GP', 'SQURPHARMA']);
     await page.getByRole('link', { name: 'Risen from the low' }).click();
     await expect(page).toHaveURL(/pick=good/);
-    await expect.poll(() => codes(page)).toEqual(['GP', 'SQURPHARMA']);
+    await expect.poll(() => codes(page)).toEqual(['SQURPHARMA', 'GP']);
   });
 
   test('a rule with a quick pick only matches companies that pass it', async ({ page }) => {
