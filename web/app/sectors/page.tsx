@@ -56,7 +56,7 @@ export default function SectorsPage() {
           {s.found.length ? <p className="small"><Tr text="Has" />: {s.found.slice(0, TOP).map((r, i) => <span key={r.code}>{i ? ', ' : ''}<Link href={'/c/' + encodeURIComponent(r.code)} className="mono">{r.code}</Link></span>)}</p> : null}
           <div className="grid g2 sector-stats">
             <div><div className="small muted"><Tr text="Median P/E" /></div><div className="mono stat">{fmt(s.medianPe, 1)}</div></div>
-            <div><div className="small muted"><Tr text="Average move" /></div><div className={`mono stat ${tone(s.avgMove)}`}>{signed(s.avgMove, 2)}</div></div>
+            <div><div className="small muted"><Tr text="Average move (latest session)" /></div><div className={`mono stat ${tone(s.avgMove)}`}>{signed(s.avgMove, 2)}</div></div>
           </div>
           <div className="signal-split" role="img" aria-label={KEYS.map((k) => `${t(SIGNALS[k].label)} ${s.counts[k]}`).join(', ')}>
             {KEYS.map((k) => (s.counts[k] ? <i key={k} className={`seg-${k}`} style={{ flexGrow: s.counts[k] }} /> : null))}

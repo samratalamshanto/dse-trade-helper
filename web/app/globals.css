@@ -509,3 +509,9 @@ table.cards td { vertical-align: top; }
   .all-table th, .all-table td, table.div-value th, table.div-value td { padding-inline: 5px; }
   .all-table th, table.div-value th { vertical-align: bottom; }
 }
+/* lane E: inline disclosure links in company notes stay text links on phones; the ::after box keeps the 44px tap area. */
+.score-ref { margin-left: 8px; }
+@media (max-width: 640px) {
+  .note .link-btn { display: inline; min-height: 0; padding: 0; border: 0; border-radius: 0; line-height: inherit; }
+  .score-ref { display: block; margin-left: 0; }
+}

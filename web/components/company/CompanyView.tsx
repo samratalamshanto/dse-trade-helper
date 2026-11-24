@@ -15,11 +15,12 @@ import Link from 'next/link';
 import { bnDigits, useLang } from '@/components/i18n';
 import { WatchButton } from '@/components/Watchlist';
 import { scrollFade } from '@/components/scroll-fade';
-import { fmt, fmtDateLang, sectorName } from '@/components/format';
+import { fmt, fmtDateLang, scoreRefs, sectorName } from '@/components/format';
 import { CATEGORY_TEXT, flagCountText } from '@/lib/glossary';
 import { Tr } from '@/components/Tr';
 import { FRAUD, Icon, Info, SignalPill, type FraudLevel, type IconName, type Signal } from '@/components/ui';
-import type { CompanyDetail } from '@/lib/service';
+import type { CompanyDetail, CompanyRow } from '@/lib/service';
+import type { MarketSession } from '@/lib/dse';
 
 const TABS = [['overview', 'Overview'], ['history', 'Price history (52 weeks)'], ['valuation', 'Price vs own history'], ['financials', '5-year financials'], ['dividends', 'Dividends'], ['news', 'News'], ['safety', 'Safety checks'], ['owners', 'Owners'], ['details', 'Company details']] as const;
 type Tab = (typeof TABS)[number][0];
@@ -36,6 +37,10 @@ const NOTE_TONE: Record<Signal, string> = { research: 'good', avoid: 'bad', caut
 export function CompanyView({ code }: { code: string }) {
   const { t, lang } = useLang();
   const { data: d, error } = useApi<CompanyDetail>(code ? '/api/company/' + encodeURIComponent(code) : null);
+  // Market reference points for the score, from the cached company list (no new endpoint).
+  const { data: list } = useApi<{ rows: CompanyRow[]; session: MarketSession | null }>('/api/companies');
+  // Only companies with earnings data (notRated = no EPS), so the median compares like with like.
+  const refs = scoreRefs(list?.rows.filter((r) => !r.notRated).map((r) => r.score) ?? []);
   const [tab, setTab] = useState<Tab>('overview');
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const tablist = useRef<HTMLDivElement>(null);
@@ -88,7 +93,7 @@ export function CompanyView({ code }: { code: string }) {
             <span className="pill s-neutral big-pill"><Icon name="neutral" /> {t(NOT_RATED)}</span></Link>
             : <SignalPill signal={signal} big href="/learn#signals" missed={a.checks.filter((x) => !x.ok).map((x) => x.label).slice(0, 3)} />}{' '}
 {a.notRated ? null : (
-          <span className="mono small muted">{t('Score')} {lang === 'bn' ? bnDigits(String(a.score)) : a.score}/{lang === 'bn' ? bnDigits('100') : 100} <Info text="Each signal has its own range. High risk 0–30, Caution 31–60, No strong signal 61–75, Passes the checks 76–100." /></span>)}
+          <span className="mono small muted">{t('Score')} {lang === 'bn' ? bnDigits(String(a.score)) : a.score}/{lang === 'bn' ? bnDigits('100') : 100} <Info text="Each signal has its own range. High risk 0–30, Caution 31–60, No strong signal 61–75, Passes the checks 76–100." />{refs ? <span className="score-ref">{t('market median {m} · top 25% {p}').replace('{m}', lang === 'bn' ? bnDigits(String(refs.median)) : String(refs.median)).replace('{p}', lang === 'bn' ? bnDigits(String(refs.top25)) : String(refs.top25))}</span> : null}</span>)}
         </div>
         {(() => {
           const openNews = () => { show('news', false); tablist.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };

@@ -48,7 +48,7 @@ function ruleDesc(rule: AlertRule): string {
   switch (rule.type) {
     case 'price_above': return `${rule.code} price ≥ ৳${rule.target.toFixed(2)}`;
     case 'price_below': return `${rule.code} price ≤ ৳${rule.target.toFixed(2)}`;
-    case 'dividend': return `${rule.code}: dividend within ${rule.daysBefore} day${rule.daysBefore !== 1 ? 's' : ''} of last buy`;
+    case 'dividend': return `${rule.code}: ${rule.daysBefore} day${rule.daysBefore !== 1 ? 's' : ''} before the last day to buy for the dividend`;
     case 'fraud_flag': return `${rule.code}: any new warning sign`;
     case 'big_move': return `${rule.code}: move ≥ ${rule.threshold}% in a day`;
   }
@@ -416,7 +416,7 @@ export default function AlertsPage() {
               {/* Days before (dividend only) */}
               {formType === 'dividend' && (
                 <div className={styles.fieldWrap}>
-                  <label htmlFor="alert-days">{t('Days before last buy')}</label>
+                  <label htmlFor="alert-days">{t('Days before the last day to buy')}</label>
                   <input
                     id="alert-days"
                     type="number"

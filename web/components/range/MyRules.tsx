@@ -108,7 +108,8 @@ export function MyRules({ rows, companies, medians, watchlist, holdings }: Props
 
   return (
     <div className="panel">
-      <h2 className="h3" id="my-rules-heading"><Tr text="My rules" /></h2>
+      <h2 className="h3" id="my-rules-heading"><Tr text="Saved rules" /></h2>
+      <p className="small muted"><Tr text="Matches show here. With Telegram connected, each rule sends one message per trading day." /></p>
       {rules.length === 0 ? <p className="small muted"><Tr text="No rules yet: add one below." /></p> : null}
       {rules.map((r) => {
         const matches = byRule.get(r.id) ?? [];

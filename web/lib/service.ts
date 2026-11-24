@@ -114,7 +114,7 @@ async function buildCompanyList() {
     const a = analyze(c, medians[c.sector]);
     return {
       code: c.code, name: c.name, sector: c.sector, category: c.category, price: c.price, changePct: c.changePct,
-      signal: a.signal, score: a.score, quality: a.quality, fraud: a.fraud.level, flags: a.fraud.flags.map((f) => f.title),
+      signal: a.signal, score: a.score, quality: a.quality, notRated: a.notRated, fraud: a.fraud.level, flags: a.fraud.flags.map((f) => f.title),
       missed: a.checks.filter((x) => !x.ok).map((x) => x.label).slice(0, 3),
       pe: a.metrics.pe, avgPastPe: a.metrics.avgPastPe, dividendYield: a.metrics.latestYield, epsCagr: a.metrics.epsCagr, change1y: a.metrics.change1y,
       dailyValue: a.metrics.avgDailyValue, weekHigh52: c.weekHigh52 ?? null, weekLow52: c.weekLow52 ?? null, stale: c.version !== DATA_VERSION,

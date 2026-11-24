@@ -26,7 +26,7 @@ const LIST = {
   badRows: [],
   plans: [
     plan(ID1, { code: 'BRACBANK', price: 60, targetPrice: 62, live: { status: 'reached', remaining: 5, awayPct: -3.2, text: 'Target ৳62.00 reached — buy the other 5 now' } }),
-    plan(ID2, { live: { status: 'waiting', remaining: 5, awayPct: 2, text: 'Waiting — 2.0% above your ৳222.20 target' } }),
+    plan(ID2, { live: { status: 'waiting', remaining: 5, awayPct: 2, text: 'Waiting — 2.0% away from your ৳222.20 target' } }),
     plan('33333333-3333-4333-8333-333333333333', { status: 'done', live: { status: 'done', remaining: 0, awayPct: null, text: 'Done' } }),
     plan('44444444-4444-4444-8444-444444444444', { until: '2026-11-01', live: { status: 'expired', remaining: 5, awayPct: null, text: 'Ended 2026-11-01 — edit the date or cancel it' } }),
   ],

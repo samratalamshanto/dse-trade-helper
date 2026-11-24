@@ -211,7 +211,7 @@ export function RangePage() {
           ))}
         </div>
         <label className="within-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
-          <Tr text="Within" />
+          <span className="muted"><Tr text="Filter this list" />:</span> <Tr text="Within" />
           <input
             type="number" min={0.5} max={100} step={0.5}
             value={withinActive ? within : ''}

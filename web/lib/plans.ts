@@ -86,5 +86,5 @@ export function planStatus(p: PlanInput, price: number | null, today: string): P
   if (price == null || p.targetPrice == null) return { status: 'waiting', remaining, awayPct: null, text: 'Waiting — no live price yet' };
   const awayPct = Math.round(((price - p.targetPrice) / p.targetPrice) * 1000) / 10;
   if (price <= p.targetPrice) return { status: 'reached', remaining, awayPct, text: `Target ৳${p.targetPrice.toFixed(2)} reached — buy the other ${remaining} now` };
-  return { status: 'waiting', remaining, awayPct, text: `Waiting — ${awayPct.toFixed(1)}% above your ৳${p.targetPrice.toFixed(2)} target` };
+  return { status: 'waiting', remaining, awayPct, text: `Waiting — ${awayPct.toFixed(1)}% away from your ৳${p.targetPrice.toFixed(2)} target` };
 }

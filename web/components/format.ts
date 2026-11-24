@@ -88,3 +88,11 @@ export function compareNullsLast(x: unknown, y: unknown, dir: number): number {
   if (empty(x) || empty(y)) return empty(x) === empty(y) ? 0 : empty(x) ? 1 : -1;
   return ((x as number) > (y as number) ? 1 : (x as number) < (y as number) ? -1 : 0) * dir;
 }
+
+// Market reference points for a score: median and 75th percentile (linear interpolation), rounded; null when no scores.
+export function scoreRefs(scores: readonly (number | null | undefined)[]): { median: number; top25: number } | null {
+  const s = scores.filter((x): x is number => x != null && Number.isFinite(x)).sort((a, b) => a - b);
+  if (!s.length) return null;
+  const q = (p: number) => { const i = (s.length - 1) * p, lo = Math.floor(i); return Math.round(s[lo] + (s[Math.ceil(i)] - s[lo]) * (i - lo)); };
+  return { median: q(0.5), top25: q(0.75) };
+}

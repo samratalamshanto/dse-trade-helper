@@ -59,7 +59,7 @@ function WarningSigns() {
       </nav>
       <p className="muted small">{lane === 'z'
         ? <Tr text="Category Z companies missed AGMs, paid no dividend or stopped operating. Sorted by 1-year price change: a fast rise in a Z share is a pattern to investigate." />
-        : <Tr text="Sorted by number of flags, then by 1-year price change." />} <Tr text="The 1-year change is grey on purpose: fast rises are a pattern to investigate here, not good news." /></p>
+        : <><Tr text="Category Z: missed AGMs, paid no dividend or stopped operating. Highest risk on DSE." /> <Tr text="Sorted by number of flags, then by 1-year price change." /></>} <Tr text="The 1-year change is grey on purpose: fast rises are a pattern to investigate here, not good news." /></p>
       {lane === 'warn' && <p className="small"><span className="t-bad"><Tr text="Red" /></span>: <Tr text="a fast price rise or loss-making rise backed by a flag of another kind." /> <span className="t-warn"><Tr text="Amber" /></span>: <Tr text="patterns to check, not backed by a second kind of flag." /></p>}
       <div className="picker-row">
         <CompanySearch

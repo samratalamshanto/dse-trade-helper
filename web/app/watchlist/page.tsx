@@ -114,7 +114,9 @@ export default function WatchlistPage() {
                     ? <>{t(`${pctNum(dv.cashPct)}%`)} · {t('buy by')} <LastBuy r={dv} /><div className="small muted">{t('record date')} {fmtDateLang(dv.recordDate, lang)}</div></>
                     : rdv && ((rdv.cashPct != null && rdv.cashPct > 0) || (rdv.stockPct != null && rdv.stockPct > 0))
                       ? <><span className="muted">{t('none upcoming')}</span><div className="small muted">
-                          {rdv.cashPct != null && rdv.cashPct > 0
+                          {rdv.cashPct != null && rdv.cashPct > 0 && rdv.stockPct != null && rdv.stockPct > 0
+                            ? t(`last: ৳${fmt(rdv.cashPerShare ?? 0, 2)} + ${fmt(rdv.stockPct, 1)}% bonus, record date passed`)
+                            : rdv.cashPct != null && rdv.cashPct > 0
                             ? t(`last: ৳${fmt(rdv.cashPerShare ?? 0, 2)}, record date passed`)
                             : t(`last: ${fmt(rdv.stockPct ?? 0, 1)}% bonus, record date passed`)}
                           {rdv.interim ? <> · <span className="pill s-neutral">{t('interim')}</span></> : null}

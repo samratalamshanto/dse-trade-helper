@@ -50,8 +50,8 @@ const TONE_PILL: Record<string, string> = { good: 's-research', warn: 's-caution
 
 // One short line under the verdict pill, so a low P/E next to "Cheap for a reason" is explained.
 const VERDICT_REASON: Record<string, string> = {
-  value: 'Low P/E for this company, earnings growing', trap: 'Low P/E for this company, earnings shrinking',
-  expensive: 'High P/E for this company, earnings growing', risky: 'High P/E for this company, earnings shrinking', fair: 'P/E in its usual range',
+  value: 'Low P/E for this company, earnings flat or up', trap: 'Low P/E for this company, earnings down, a loss or no prior year',
+  expensive: 'High P/E for this company, earnings flat or up', risky: 'High P/E for this company, earnings down, a loss or no prior year', fair: 'P/E in its usual range',
 };
 
 const ROWS: RowDef[] = [

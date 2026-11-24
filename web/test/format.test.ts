@@ -1,6 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { lastDataLabel, monthYearShort } from '../components/format.ts';
+import { lastDataLabel, monthYearShort, scoreRefs } from '../components/format.ts';
+
+test('scoreRefs: median and 75th percentile, nulls ignored', () => {
+  assert.deepStrictEqual(scoreRefs([10, 20, 30, 40, 50]), { median: 30, top25: 40 });
+  assert.deepStrictEqual(scoreRefs([40, null, 10, 30, 20]), { median: 25, top25: 33 });
+  assert.deepStrictEqual(scoreRefs([7]), { median: 7, top25: 7 });
+  assert.strictEqual(scoreRefs([null, undefined, NaN]), null);
+});
 
 test('lastDataLabel: today shows only the time; another day adds the weekday', () => {
   assert.strictEqual(lastDataLabel('Nov 24, 2026 at 2:42 PM', null, '2026-11-24', 'en'), '2:42 PM');
