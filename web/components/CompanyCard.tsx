@@ -10,7 +10,7 @@ import type { CompanyRow } from '@/lib/service';
 // Before the first trade DSE reports no change; say so instead of showing a fake 0.00%.
 export function ChangeText({ pct, suffix = '' }: { pct: number | null | undefined; suffix?: string }) {
   const { session } = useApp();
-  if (marketState(session).key !== 'open' && !pct) return <span className="muted"><Tr text="no trade yet today" /></span>;
+  if (marketState(session).key !== 'open' && !pct) return <span className="muted"><Tr text="Not traded today" /></span>;
   return <span className={tone(pct)}>{signed(pct, 2)}{suffix}</span>;
 }
 

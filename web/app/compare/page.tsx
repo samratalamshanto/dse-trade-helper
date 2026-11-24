@@ -48,12 +48,18 @@ interface RowDef { label: string; value: (d: CompanyDetail) => number | null; sh
 
 const TONE_PILL: Record<string, string> = { good: 's-research', warn: 's-caution', bad: 's-avoid', neutral: 's-neutral' };
 
+// One short line under the verdict pill, so a low P/E next to "Cheap for a reason" is explained.
+const VERDICT_REASON: Record<string, string> = {
+  value: 'Low P/E for this company, earnings growing', trap: 'Low P/E for this company, earnings shrinking',
+  expensive: 'High P/E for this company, earnings growing', risky: 'High P/E for this company, earnings shrinking', fair: 'P/E in its usual range',
+};
+
 const ROWS: RowDef[] = [
   { label: 'Price', value: () => null, show: (d) => '৳' + fmt(d.company.price), better: null },
   { label: 'Today', value: () => null, show: (d) => <ChangeText pct={d.company.changePct} />, better: null },
   { label: 'Signal', value: (d) => (d.analysis.notRated ? null : d.analysis.score), show: (d) => (d.analysis.notRated ? <span className="pill s-neutral"><Tr text="Not rated — no EPS published" /></span> : <><SignalPill signal={d.analysis.signal as Signal} href={'/c/' + encodeURIComponent(d.company.code)} missed={d.analysis.checks.filter((x) => !x.ok).map((x) => x.label).slice(0, 3)} /> <span className="mono small">{d.analysis.score}</span></>), better: 'high' },
   { label: 'Warning-sign check', value: () => null, show: (d) => <FraudPill level={d.analysis.fraud.level as FraudLevel} href={'/c/' + encodeURIComponent(d.company.code) + '#safety'} flags={d.analysis.fraud.flags.map((f) => f.title)} />, better: null },
-  { label: 'Cheap or expensive', value: () => null, show: (d) => { const v = d.position?.verdict; return v ? <PillPopover className={`pill ${TONE_PILL[v.tone]}`} pill={<Tr text={v.label} />} meaning={v.text} href={'/c/' + encodeURIComponent(d.company.code)} /> : '—'; }, better: null },
+  { label: 'Cheap or expensive', value: () => null, show: (d) => { const v = d.position?.verdict; return v ? <><PillPopover className={`pill ${TONE_PILL[v.tone]}`} pill={<Tr text={v.label} />} meaning={v.text} href={'/c/' + encodeURIComponent(d.company.code)} /><div className="small muted"><Tr text={VERDICT_REASON[v.key] ?? ''} /></div></> : '—'; }, better: null },
   { label: 'P/E', value: (d) => d.analysis.metrics.pe ?? null, show: (d) => fmt(d.analysis.metrics.pe, 1), better: 'low' },
   { label: 'Sector P/E', value: () => null, show: (d) => fmt(d.sectorPe, 1), better: null },
   { label: 'P/B', value: (d) => d.analysis.metrics.pb ?? null, show: (d) => fmt(d.analysis.metrics.pb, 2), better: 'low' },

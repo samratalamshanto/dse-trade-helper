@@ -105,7 +105,7 @@ test.describe('/trades (API mocked)', () => {
     const reason = tbody.getByText('Up 21.0% — past your 20% target');
     await expect(reason).toBeHidden();
     await row.getByRole('button', { name: /Above your target/ }).click();
-    await expect(row.locator('.pill.s-caution:visible')).toHaveText('Above your target');
+    await expect(row.getByRole('button', { name: /Above your target/ }).locator('.pill')).toHaveText('Above your target');
     await expect(reason).toBeVisible();
     await expect(tbody.getByText('Your limits: stop-loss 10%, target 20%')).toBeVisible();
   });

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import type { MarketSession } from '@/lib/dse';
 import { refreshDue } from '@/components/format';
 
@@ -97,10 +97,14 @@ function fromCache<T>(path: string | null, tick: number): ApiResult<T> {
   return { data: (hit?.data as T) ?? null, error: null, loading: !hit || hit.tick !== tick };
 }
 
+const noSubscribe = () => () => {};
+
 // Loads a JSON API path, reloads on Refresh / auto-refresh, and keeps the old data visible while reloading.
 export function useApi<T extends { session?: MarketSession | null }>(path: string | null): ApiResult<T> {
   const { tick, freshTick, setSession } = useApp();
-  const [state, setState] = useState<ApiResult<T>>(() => fromCache<T>(path, tick));
+  // While hydrating, start empty like the server did: another component may have filled the cache before this one hydrates.
+  const hydrating = useSyncExternalStore(noSubscribe, () => false, () => true);
+  const [state, setState] = useState<ApiResult<T>>(() => fromCache<T>(hydrating ? null : path, tick));
   const shownPath = useRef<string | null>(null);
   const loadedTick = useRef(-1);
 

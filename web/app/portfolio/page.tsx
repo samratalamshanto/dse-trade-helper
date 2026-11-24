@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { fmt, fmtDate, fmtDateLang } from '@/components/format';
 import { dhakaToday } from '@/lib/dhaka';
-import { Icon, Skeleton } from '@/components/ui';
+import { Icon, SignalPill, Skeleton, type Signal } from '@/components/ui';
 import TelegramTestButton from '@/components/TelegramTestButton';
 import { TelegramConnect } from '@/components/TelegramConnect';
 import { CheckBadge, KEY_STORE, SIGNED_IN_STORE, type TradesList as List } from '@/components/trades-client';
@@ -236,17 +236,19 @@ export default function PortfolioPage() {
         <div className={`panel table-wrap ${css.section}`}><h2 className="h3">{tr('Holdings')}</h2>
         <p className="small muted">{tr('The status comes from fixed rules on your numbers and public DSE data. It is a learning aid, not advice. Tap a status to see why.')}</p>
         <table className="cards">
-          <thead><tr><th>{tr('Code')}</th><th className="n">{tr('Shares')}</th><th className="n">{tr('Avg cost')}</th><th className="n">{tr('Price now')}</th><th className="n">{tr('Value')}</th><th className="n">{tr('Profit / loss')}</th><th>{tr('52-wk')}</th><th>{tr('Status')}</th></tr></thead>
+          <thead><tr><th>{tr('Code')}</th><th className="n">{tr('Shares')}</th><th className="n">{tr('Avg cost')}</th><th className="n">{tr('Price now')}</th><th className="n">{tr('Value')}</th><th className="n">{tr('Profit / loss')}</th><th>{tr('52-wk')}</th><th>{tr('Signal · your rules')}</th></tr></thead>
           <tbody>{data.holdings.map((h) => {
             const open = openReasons === h.code;
+            const co = companies.find((x) => x.code === h.code);
             return (
               <Fragment key={h.code}>
                 <tr><td><Link href={`/c/${encodeURIComponent(h.code)}`}><b>{h.code}</b></Link></td><td className="n" data-label={tr('Shares')}>{h.shares}</td><td className="n" data-label={tr('Avg cost')}>৳{fmt(h.avgCost)}</td>
                   <td className="n" data-label={tr('Price now')}>{h.price == null ? '—' : `৳${fmt(h.price)}`}</td><td className="n" data-label={tr('Value')}>{h.value == null ? '—' : `৳${fmt(h.value)}`}</td><td className={`n ${tone(h.unrealised)}`} data-label={tr('Profit / loss')}>{signed(h.unrealised)}</td>
-                  <td data-label={tr('52-wk')}>{(() => { const c = companies.find((x) => x.code === h.code); return <RangeCell price={h.price} low={c?.weekLow52 ?? null} high={c?.weekHigh52 ?? null} />; })()}</td>
-                  <td className={css.check}>{h.check || h.shares > 0 ? (
+                  <td data-label={tr('52-wk')}><RangeCell price={h.price} low={co?.weekLow52 ?? null} high={co?.weekHigh52 ?? null} /></td>
+                  <td className={css.check}>{co ? <><SignalPill signal={co.signal as Signal} href={'/c/' + encodeURIComponent(h.code)} missed={co.missed} /> </> : null}{h.check || h.shares > 0 ? (
                     <button type="button" className={css.checkToggle} aria-expanded={open} onClick={() => setOpenReasons((c) => (c === h.code ? null : h.code))}>
-                      {h.check ? <CheckBadge check={{ ...h.check, label: tr(h.check.label) }} /> : null}<span className="small">{tr(open ? 'Hide' : 'Details')}</span>
+                      {/* "No rule triggered" says nothing on its own; the signal pill leads and the reasons stay under Details. */}
+                      {h.check && h.check.action !== 'hold' ? <CheckBadge check={{ ...h.check, label: tr(h.check.label) }} /> : null}<span className="small">{tr(open ? 'Hide' : 'Details')}</span>
                     </button>
                   ) : <span className="muted">—</span>}</td></tr>
                 {open ? (

@@ -97,7 +97,7 @@ export default function WatchlistPage() {
               <tr key={code} onClick={() => router.push('/c/' + encodeURIComponent(code))}>
                 <td><div className="co-cell"><WatchButton code={code} /><div>
                   <a className="mono" href={'/c/' + encodeURIComponent(code)} onClick={(e) => e.stopPropagation()}><b>{code}</b></a>
-                  <div className="small muted">{r ? `${r.name} · ${t(sectorName(r.sector))} · ${t('Cat')} ${r.category}` : t(data ? 'Not in the latest DSE list' : 'Loading…')}</div>
+                  <div className="small muted">{r ? `${r.name} · ${t(sectorName(r.sector))} · ${t('Cat')}\u00a0${r.category}` : t(data ? 'Not in the latest DSE list' : 'Loading…')}</div>
                   <div className="small" onClick={(e) => e.stopPropagation()}>
                     <a href={'/alerts?code=' + encodeURIComponent(code)} className="muted">{t('Alert')}</a>
                     {' · '}
@@ -113,12 +113,12 @@ export default function WatchlistPage() {
                   {dv
                     ? <>{t(`${pctNum(dv.cashPct)}%`)} · {t('buy by')} <LastBuy r={dv} /><div className="small muted">{t('record date')} {fmtDateLang(dv.recordDate, lang)}</div></>
                     : rdv && ((rdv.cashPct != null && rdv.cashPct > 0) || (rdv.stockPct != null && rdv.stockPct > 0))
-                      ? <span className="muted">
+                      ? <><span className="muted">{t('none upcoming')}</span><div className="small muted">
                           {rdv.cashPct != null && rdv.cashPct > 0
-                            ? t(`declared ৳${fmt(rdv.cashPerShare ?? 0, 2)} · record date passed`)
-                            : t(`declared ${fmt(rdv.stockPct ?? 0, 1)}% bonus · record date passed`)}
+                            ? t(`last: ৳${fmt(rdv.cashPerShare ?? 0, 2)}, record date passed`)
+                            : t(`last: ${fmt(rdv.stockPct ?? 0, 1)}% bonus, record date passed`)}
                           {rdv.interim ? <> · <span className="pill s-neutral">{t('interim')}</span></> : null}
-                        </span>
+                        </div></>
                       : <span className="muted">{t('none announced')}</span>}
                 </td>
                 <td data-label={t('Decision facts')}>

@@ -24,7 +24,7 @@ test('watchlist: decision facts cell has 52-wk position, P/E and EPS for GP', as
   expect(hasAny).toBe(true);
 });
 
-// (2) APEXSPINN declared dividend whose record date passed: shows "declared ৳… · record date passed", not "none announced".
+// (2) APEXSPINN declared dividend whose record date passed: "none upcoming" plus "last: ৳…, record date passed", not "none announced".
 test('watchlist: APEXSPINN shows declared dividend with record date passed', async ({ page }) => {
   await page.goto('/watchlist');
   const row = page.locator('table.cards tbody tr', { hasText: 'APEXSPINN' });
@@ -32,7 +32,8 @@ test('watchlist: APEXSPINN shows declared dividend with record date passed', asy
   const divCell = row.locator('td[data-label="Next dividend"]');
   await expect(divCell).toBeVisible();
   await expect(divCell).not.toContainText('none announced');
-  await expect(divCell).toContainText('declared');
+  await expect(divCell).toContainText('none upcoming');
+  await expect(divCell).toContainText('last:');
   await expect(divCell).toContainText('record date passed');
 });
 
