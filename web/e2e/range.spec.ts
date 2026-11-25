@@ -4,7 +4,7 @@ const COMPANIES_RESP = {
   rows: [
     { code: 'GP', name: 'Grameenphone', sector: 'Telecom', category: 'A', price: 300, weekLow52: 200, weekHigh52: 400,
       changePct: 0.5, signal: 'research', score: 85, fraud: 'clean', flags: [],
-      pe: 15, dividendYield: 5, epsCagr: 10, change1y: 20, dailyValue: 5e7, stale: false, recordDate: '2099-12-10' },
+      pe: 15, dividendYield: 5, epsCagr: 10, change1y: 20, dailyValue: 5e7, stale: false, recordDate: '2099-12-10', recordCashPct: 15, recordStockPct: 5, recordCashPerShare: 1.5 },
     { code: 'ROBI', name: 'Robi Axiata', sector: 'Telecom', category: 'B', price: 52, weekLow52: 40, weekHigh52: 60,
       changePct: -0.2, signal: 'neutral', score: 65, fraud: 'clean', flags: [],
       pe: 20, dividendYield: 2, epsCagr: 5, change1y: 10, dailyValue: 1e7, stale: false, recordDate: '2020-01-01' },
@@ -13,7 +13,7 @@ const COMPANIES_RESP = {
       pe: 18, dividendYield: 3, epsCagr: 12, change1y: 15, dailyValue: 3e7, stale: false, recordDate: null },
     { code: 'BRAC', name: 'BRAC Bank', sector: 'Bank', category: 'A', price: 70, weekLow52: 60, weekHigh52: 100,
       changePct: 0.3, signal: 'caution', score: 55, fraud: 'clean', flags: [],
-      pe: 12, dividendYield: 4, epsCagr: 8, change1y: 5, dailyValue: 2e7, stale: false, recordDate: '2099-01-05' },
+      pe: 12, dividendYield: 4, epsCagr: 8, change1y: 5, dailyValue: 2e7, stale: false, recordDate: '2099-01-05', recordCashPct: null, recordStockPct: 10, recordCashPerShare: null },
   ],
   codes: [
     { code: 'GP', sector: 'Telecom' },
@@ -149,6 +149,11 @@ test.describe('/range', () => {
     await expect(cell('GP')).toContainText('Upcoming');
     await expect(cell('ROBI')).toContainText('Passed');
     await expect(cell('SQURPHARMA')).toContainText('No value');
+    await expect(cell('GP')).toContainText('৳1.50/share');
+    await expect(cell('GP')).toContainText('15% cash + 5% bonus');
+    await expect(cell('BRAC')).toContainText('10% bonus');
+    await expect(cell('BRAC')).not.toContainText('cash');
+    await expect(cell('SQURPHARMA')).not.toContainText('%');
     await page.goto('/range?sort=recordDate&dir=-1');
     await expect(rows(page).first()).toBeVisible();
     await expect.poll(() => codes(page)).toEqual(['GP', 'BRAC', 'ROBI', 'SQURPHARMA']);

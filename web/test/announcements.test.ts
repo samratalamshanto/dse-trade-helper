@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { parseAnnouncements, dividendStatus, directorActivity, toIso, previousTradingDay } from '../lib/announcements.ts';
+import { parseAnnouncements, dividendStatus, directorActivity, toIso, previousTradingDay, latestRecordDividend } from '../lib/announcements.ts';
 import { resolveRef } from '../lib/company.ts';
+import type { Events } from '../lib/types.ts';
 
 const NOW = new Date('2026-11-19');
 const ann = (date: string, type: string, summary: string, body: string) => ({ date, type, summary, body });
@@ -158,4 +159,20 @@ test('browser review: the yearly EPS stated in a declaration is read', () => {
   const [d] = parseAnnouncements([ann('27 Oct 2026', 'Dividend', 'Dividend Declaration',
     'recommended 130% Cash Dividend for the year ended June 30, 2026. Record Date: 16.11.2026. The Company has also reported Consolidated EPS of Tk. 31.24, NAV of Tk. 178.99.')]).declarations;
   assert.strictEqual(d.eps, 31.24);
+});
+
+test('latestRecordDividend: the newest real record date with its cash per share', () => {
+  const events = { declarations: [
+    { announced: '2026-10-01', recordDate: '2026-11-30', cashPct: 15, stockPct: 5 },
+    { announced: '2025-10-01', recordDate: '2025-11-20', cashPct: 10 },
+    { announced: '2026-11-01', recordDate: '2026-12-31', noDividend: true },
+  ] } as unknown as Events;
+  assert.deepEqual(latestRecordDividend(events, 10), { recordDate: '2026-11-30', cashPct: 15, stockPct: 5, cashPerShare: 1.5 });
+  assert.deepEqual(latestRecordDividend({ declarations: [{ announced: '2026-01-01', recordDate: '2026-02-01', stockPct: 10 }] } as unknown as Events, 10),
+    { recordDate: '2026-02-01', cashPct: null, stockPct: 10, cashPerShare: null });
+  assert.equal(latestRecordDividend({ declarations: [{ announced: '2026-01-01', cashPct: 10 }] } as unknown as Events, 10), null);
+  assert.equal(latestRecordDividend(null, 10), null);
+  assert.equal(latestRecordDividend(events, 100)?.cashPerShare, 15);
+  const revised = { declarations: [{ announced: '2026-09-01', recordDate: '2026-11-30', cashPct: 10 }, { announced: '2026-10-05', recordDate: '2026-11-30', cashPct: 12 }] } as unknown as Events;
+  assert.equal(latestRecordDividend(revised, 10)?.cashPct, 12);
 });

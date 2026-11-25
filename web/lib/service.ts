@@ -1,5 +1,5 @@
 import { analyze, currentYield, expectedLatestYear, sectorMedians, fiveYearSummary, pricePosition, metrics, fourQuestions, dividendRecord, hasSector } from './analysis.ts';
-import { dividendStatus, dhakaToday, previousTradingDay, toIso } from './announcements.ts';
+import { dividendStatus, dhakaToday, latestRecordDividend, previousTradingDay, toIso, type RecordDividend } from './announcements.ts';
 import { DATA_VERSION } from './company.ts';
 import { paidYears } from './dividend-checks.ts';
 import { priceHistory } from './price-history.ts';
@@ -104,6 +104,10 @@ const scanState = () => {
   return { running: scanRunning, done: all.filter((c) => !isStale(c)).length, total: all.length };
 };
 
+const recordDividendFields = (d: RecordDividend | null) => ({
+  recordDate: d?.recordDate ?? null, recordCashPct: d?.cashPct ?? null, recordStockPct: d?.stockPct ?? null, recordCashPerShare: d?.cashPerShare ?? null,
+});
+
 async function buildCompanyList() {
   const live: Live = await livePrices().catch(() => ({}));
   const equities = new Set(Object.values(live).filter((p) => p.assetType === 'EQ').map((p) => p.code));
@@ -119,8 +123,8 @@ async function buildCompanyList() {
       pe: a.metrics.pe, avgPastPe: a.metrics.avgPastPe, dividendYield: a.metrics.latestYield, epsCagr: a.metrics.epsCagr, change1y: a.metrics.change1y,
       dailyValue: a.metrics.avgDailyValue, weekHigh52: c.weekHigh52 ?? null, weekLow52: c.weekLow52 ?? null, stale: c.version !== DATA_VERSION,
       nextExpected: dividendStatus(c.events).nextExpected,
-      // The newest record date of a real dividend; the page labels it upcoming or passed against today.
-      recordDate: (c.events?.declarations || []).filter((d) => !d.noDividend && d.recordDate).map((d) => d.recordDate as string).sort().at(-1) ?? null,
+      // The newest record date of a real dividend and its amount; the page labels it upcoming or passed against today.
+      ...recordDividendFields(latestRecordDividend(c.events, c.faceValue || 10)),
     };
   });
   const codes = Object.values(live).filter((p) => p.assetType === 'EQ').map((p) => ({ code: p.code, sector: p.sector }));

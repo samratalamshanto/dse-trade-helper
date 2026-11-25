@@ -168,3 +168,15 @@ export function directorActivity(events?: Events | null, now = new Date()): { se
   const recent = (events?.directorTrades || []).filter((t) => t.date && t.date >= since);
   return { sells: recent.filter((t) => t.side === 'sell'), buys: recent.filter((t) => t.side === 'buy'), windowDays: DIRECTOR_WINDOW_DAYS };
 }
+
+export interface RecordDividend { recordDate: string; cashPct: number | null; stockPct: number | null; cashPerShare: number | null }
+
+// The real dividend with the newest record date, and its cash per share (cash % of the face value).
+export function latestRecordDividend(events: Events | null | undefined, faceValue: number): RecordDividend | null {
+  const d = (events?.declarations || []).filter((x) => !x.noDividend && x.recordDate)
+    .reduce<Declaration | null>((best, x) => (!best || x.recordDate! > best.recordDate!
+      || (x.recordDate === best.recordDate && (x.announced || '') > (best.announced || '')) ? x : best), null);
+  if (!d) return null;
+  const cashPct = d.cashPct ?? null;
+  return { recordDate: d.recordDate!, cashPct, stockPct: d.stockPct ?? null, cashPerShare: cashPct != null ? Math.round(cashPct * faceValue) / 100 : null };
+}

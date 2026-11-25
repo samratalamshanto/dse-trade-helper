@@ -7,7 +7,7 @@ import { Tr } from '@/components/Tr';
 import { useLang } from '@/components/i18n';
 import { useApi } from '@/components/AppProvider';
 import { SortHeader } from '@/components/SortHeader';
-import { compareNullsLast, fmt, fmtDateLang, signed, tone } from '@/components/format';
+import { compareNullsLast, fmt, fmtDateLang, pctNum, signed, tone } from '@/components/format';
 import { listTrades, useMode } from '@/components/portfolio-store';
 import { useWatchlist } from '@/components/Watchlist';
 import { QuickPickChips } from '@/components/QuickPickChips';
@@ -35,6 +35,9 @@ interface TableRow {
   position: number | null;
   score: number | null;
   recordDate: string | null;
+  recordCashPct: number | null;
+  recordStockPct: number | null;
+  recordCashPerShare: number | null;
   shares?: number;
   avgCost?: number;
   gainPct?: number | null;
@@ -161,7 +164,7 @@ export function RangePage() {
         position: stats?.position ?? null,
         // An unrated company (no EPS published) has no score, as on the company and compare pages.
         score: !r.notRated && Number.isFinite(r.score) ? r.score : null,
-        recordDate: r.recordDate ?? null,
+        recordDate: r.recordDate ?? null, recordCashPct: r.recordCashPct ?? null, recordStockPct: r.recordStockPct ?? null, recordCashPerShare: r.recordCashPerShare ?? null,
         ...(owned ? { shares: owned.shares, avgCost: owned.avgCost, gainPct: gainFromBuyPct(r.price, owned.avgCost) } : {}),
       };
     });
@@ -343,6 +346,8 @@ export function RangePage() {
                     : t(`${rangePct(r.position)}% of range · ${fmt(r.aboveLowPct, 1)}% above low`)}</span></> : '—'}
                 </td>
                 <td className="mono" data-label={t('Dividend date')}>{fmtDateLang(r.recordDate, lang)}
+                  {r.recordCashPerShare ? <div className="small">{t(`৳${fmt(r.recordCashPerShare)}/share`)}</div> : null}
+                  {r.recordCashPct || r.recordStockPct ? <div className="small">{[r.recordCashPct ? t(`${pctNum(r.recordCashPct)}% cash`) : '', r.recordStockPct ? t(`${pctNum(r.recordStockPct)}% bonus`) : ''].filter(Boolean).join(' + ')}</div> : null}
                   <div className="small muted">{t(DIV_LABEL[divState(r.recordDate, today)])}</div></td>
                 <td className="n mono" data-label={t('Score')}>{r.score != null ? r.score : '—'}</td>
                 {showHoldings && <>
