@@ -1099,4 +1099,8 @@ export const BN: Record<string, string> = {
   'High P/E for this company, earnings down, a loss or no prior year': 'এই কোম্পানির জন্য বেশি P/E, আয় কমেছে, লোকসান বা আগের বছরের তথ্য নেই',
   'No trade yet': 'এখনো লেনদেন হয়নি',
   'last: ৳{n} + {b}% bonus, record date passed': 'শেষ: ৳{n} + {b}% বোনাস, রেকর্ড তারিখ পেরিয়েছে',
+  'Dividend date': 'লভ্যাংশের তারিখ', 'Passed': 'পেরিয়ে গেছে', 'No value': 'তথ্য নেই', 'Add a filter': 'ফিল্টার যোগ করুন',
+  'Remove this filter': 'এই ফিল্টার সরান', 'Column': 'কলাম', 'Position % of range': 'রেঞ্জে অবস্থান %', '% above low': 'নিম্ন থেকে % উপরে',
+  'Hide filters': 'ফিল্টার লুকান', 'Show filters': 'ফিল্টার দেখান', 'filters on': 'ফিল্টার চালু',
+  'Filter': 'ফিল্টার',
 };

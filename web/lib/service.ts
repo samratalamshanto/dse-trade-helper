@@ -119,6 +119,8 @@ async function buildCompanyList() {
       pe: a.metrics.pe, avgPastPe: a.metrics.avgPastPe, dividendYield: a.metrics.latestYield, epsCagr: a.metrics.epsCagr, change1y: a.metrics.change1y,
       dailyValue: a.metrics.avgDailyValue, weekHigh52: c.weekHigh52 ?? null, weekLow52: c.weekLow52 ?? null, stale: c.version !== DATA_VERSION,
       nextExpected: dividendStatus(c.events).nextExpected,
+      // The newest record date of a real dividend; the page labels it upcoming or passed against today.
+      recordDate: (c.events?.declarations || []).filter((d) => !d.noDividend && d.recordDate).map((d) => d.recordDate as string).sort().at(-1) ?? null,
     };
   });
   const codes = Object.values(live).filter((p) => p.assetType === 'EQ').map((p) => ({ code: p.code, sector: p.sector }));

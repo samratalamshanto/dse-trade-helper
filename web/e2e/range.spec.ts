@@ -4,16 +4,16 @@ const COMPANIES_RESP = {
   rows: [
     { code: 'GP', name: 'Grameenphone', sector: 'Telecom', category: 'A', price: 300, weekLow52: 200, weekHigh52: 400,
       changePct: 0.5, signal: 'research', score: 85, fraud: 'clean', flags: [],
-      pe: 15, dividendYield: 5, epsCagr: 10, change1y: 20, dailyValue: 5e7, stale: false },
+      pe: 15, dividendYield: 5, epsCagr: 10, change1y: 20, dailyValue: 5e7, stale: false, recordDate: '2099-12-10' },
     { code: 'ROBI', name: 'Robi Axiata', sector: 'Telecom', category: 'B', price: 52, weekLow52: 40, weekHigh52: 60,
       changePct: -0.2, signal: 'neutral', score: 65, fraud: 'clean', flags: [],
-      pe: 20, dividendYield: 2, epsCagr: 5, change1y: 10, dailyValue: 1e7, stale: false },
+      pe: 20, dividendYield: 2, epsCagr: 5, change1y: 10, dailyValue: 1e7, stale: false, recordDate: '2020-01-01' },
     { code: 'SQURPHARMA', name: 'Square Pharma', sector: 'Pharma', category: 'A', price: 220, weekLow52: 180, weekHigh52: 240,
       changePct: 0.1, signal: 'research', score: 90, fraud: 'clean', flags: [],
-      pe: 18, dividendYield: 3, epsCagr: 12, change1y: 15, dailyValue: 3e7, stale: false },
+      pe: 18, dividendYield: 3, epsCagr: 12, change1y: 15, dailyValue: 3e7, stale: false, recordDate: null },
     { code: 'BRAC', name: 'BRAC Bank', sector: 'Bank', category: 'A', price: 70, weekLow52: 60, weekHigh52: 100,
       changePct: 0.3, signal: 'caution', score: 55, fraud: 'clean', flags: [],
-      pe: 12, dividendYield: 4, epsCagr: 8, change1y: 5, dailyValue: 2e7, stale: false },
+      pe: 12, dividendYield: 4, epsCagr: 8, change1y: 5, dailyValue: 2e7, stale: false, recordDate: '2099-01-05' },
   ],
   codes: [
     { code: 'GP', sector: 'Telecom' },
@@ -142,6 +142,60 @@ test.describe('/range', () => {
   });
 
 
+
+  test('dividend date column shows the record date and its label, and sorts', async ({ page }) => {
+    const cell = (code: string) => rows(page).filter({ hasText: code }).locator('td[data-label="Dividend date"]');
+    await expect(cell('GP')).toContainText('10 Dec 2099');
+    await expect(cell('GP')).toContainText('Upcoming');
+    await expect(cell('ROBI')).toContainText('Passed');
+    await expect(cell('SQURPHARMA')).toContainText('No value');
+    await page.goto('/range?sort=recordDate&dir=-1');
+    await expect(rows(page).first()).toBeVisible();
+    await expect.poll(() => codes(page)).toEqual(['GP', 'BRAC', 'ROBI', 'SQURPHARMA']);
+  });
+
+  test('column filters: Score > 60 and Position < 60 combine, and live in the address', async ({ page }) => {
+    await page.getByRole('button', { name: 'Add a filter' }).click();
+    await page.getByLabel('Value', { exact: true }).fill('60');
+    await expect(page).toHaveURL(/f=score%3Agt%3A60/);
+    await expect.poll(() => codes(page)).toEqual(['GP', 'ROBI', 'SQURPHARMA']);
+    await page.getByRole('button', { name: 'Add a filter' }).click();
+    await expect(page.getByLabel('Column')).toHaveCount(2);
+    await page.getByLabel('Column').nth(1).selectOption('pos');
+    await expect(page).toHaveURL(/pos%3Agt/);
+    await page.getByLabel('Compare').nth(1).selectOption('lt');
+    await expect(page).toHaveURL(/pos%3Alt/);
+    await page.getByLabel('Value', { exact: true }).nth(1).fill('60');
+    await expect.poll(() => codes(page)).toEqual(['GP']);
+    await page.getByRole('button', { name: 'Clear filters' }).click();
+    await expect(page).not.toHaveURL(/f=/);
+    await expect(rows(page)).toHaveCount(4);
+  });
+
+  test('two conditions on one column from a link: price between 60 and 250', async ({ page }) => {
+    await page.goto('/range?f=price:gt:60,price:lt:250');
+    await expect(rows(page).first()).toBeVisible();
+    await expect.poll(() => codes(page)).toEqual(['BRAC', 'SQURPHARMA']);
+  });
+
+  test('dividend labels: one tick narrows, two ticks mean either', async ({ page }) => {
+    await page.getByRole('button', { name: 'Upcoming', exact: true }).click();
+    await expect(page).toHaveURL(/div=up/);
+    await expect.poll(() => codes(page)).toEqual(['BRAC', 'GP']);
+    await page.getByRole('button', { name: 'No value', exact: true }).click();
+    await expect.poll(() => codes(page)).toEqual(['BRAC', 'GP', 'SQURPHARMA']);
+  });
+
+  test('Hide filters closes the panel, the table stays, and the choice survives a reload', async ({ page }) => {
+    await page.getByRole('button', { name: 'Hide filters' }).click();
+    await expect(page.getByLabel('Within % of the low')).toBeHidden();
+    await expect(rows(page)).toHaveCount(4);
+    await page.reload();
+    await expect(rows(page).first()).toBeVisible();
+    await expect(page.getByLabel('Within % of the low')).toBeHidden();
+    await page.getByRole('button', { name: 'Show filters' }).click();
+    await expect(page.getByLabel('Within % of the low')).toBeVisible();
+  });
 
   test('a row whose price is far outside its 52-week range is marked and sorted last', async ({ page }) => {
     const sibl = { ...COMPANIES_RESP.rows[0], code: 'SIBL', name: 'Social Islami Bank', price: 3, weekLow52: 122, weekHigh52: 590 };

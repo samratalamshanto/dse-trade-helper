@@ -7,7 +7,7 @@ import { Tr } from '@/components/Tr';
 import { useLang } from '@/components/i18n';
 import { useApi } from '@/components/AppProvider';
 import { SortHeader } from '@/components/SortHeader';
-import { compareNullsLast, fmt, signed, tone } from '@/components/format';
+import { compareNullsLast, fmt, fmtDateLang, signed, tone } from '@/components/format';
 import { listTrades, useMode } from '@/components/portfolio-store';
 import { useWatchlist } from '@/components/Watchlist';
 import { QuickPickChips } from '@/components/QuickPickChips';
@@ -19,6 +19,9 @@ import type { MarketSession } from '@/lib/dse';
 import { CompanySearch } from '@/components/CompanySearch';
 import { rangePct } from '@/lib/dividend-checks';
 import { Icon } from '@/components/ui';
+import { ColumnFilters } from '@/components/ColumnFilters';
+import { DIV_LABEL, columnFilterTest, divState, formatConditions, parseConditions, parseDivStates } from '@/lib/column-filters';
+import { dhakaToday } from '@/lib/dhaka';
 
 interface CompaniesResponse { rows: CompanyRow[]; medians?: Record<string, number | null>; session: MarketSession | null }
 
@@ -31,6 +34,7 @@ interface TableRow {
   aboveLowPct: number | null;
   position: number | null;
   score: number | null;
+  recordDate: string | null;
   shares?: number;
   avgCost?: number;
   gainPct?: number | null;
@@ -42,7 +46,9 @@ const BASE_SORTS: [string, string][] = [
   ['price', 'Price'],
   ['range', '52-week range'],
   ['score', 'Score'],
+  ['recordDate', 'Dividend date'],
 ];
+const FILTERS_OPEN_KEY = 'rangeFiltersOpen';
 // Old links used one sort per column; each old column now lives in the Position or Range cell.
 const OLD_SORTS: Record<string, string> = { aboveLow: 'position', belowHigh: 'position', weekLow52: 'range', weekHigh52: 'range' };
 const HOLDINGS_SORTS: [string, string][] = [
@@ -58,6 +64,7 @@ function sortKey(r: TableRow, k: string): number | string | null {
   if (k === 'price') return r.price;
   if (k === 'range') return r.weekLow52;
   if (k === 'score') return r.score;
+  if (k === 'recordDate') return r.recordDate;
   if (k === 'avgCost') return r.avgCost ?? null;
   if (k === 'gainPct') return r.gainPct ?? null;
   if (k === 'shares') return r.shares ?? null;
@@ -65,7 +72,7 @@ function sortKey(r: TableRow, k: string): number | string | null {
 }
 
 export function RangePage() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { data: apiData, error } = useApi<CompaniesResponse>('/api/companies');
   // The company list may already be cached in the browser (the top bar loads it); the server never has it.
   // Until mounted, render the same "Loading…" the server rendered, so hydration always matches.
@@ -92,6 +99,25 @@ export function RangePage() {
   // ?minScore=70: keep companies whose rule score (0-100, as on Companies) is at least this.
   const minScore = Number(params.get('minScore') || '');
   const minScoreActive = Number.isFinite(minScore) && minScore > 0;
+  // ?f=score:gt:50,pos:lt:20 and ?div=up,none: every row must pass; ticked dividend labels are either-or.
+  const fParam = params.get('f');
+  const divParam = params.get('div');
+  const conditions = useMemo(() => parseConditions(fParam), [fParam]);
+  const divStates = useMemo(() => parseDivStates(divParam), [divParam]);
+  const today = dhakaToday();
+  const columnFiltersActive = conditions.some((c) => c.value.trim()) || divStates.length > 0;
+  // Open by default; a reader who closes the panel finds it closed next time.
+  const [filtersOpen, setFiltersOpen] = useState(true);
+  useEffect(() => {
+    let saved: string | null = null;
+    try { saved = localStorage.getItem(FILTERS_OPEN_KEY); } catch { /* storage blocked: keep it open */ }
+    if (saved === '0') void Promise.resolve().then(() => setFiltersOpen(false));
+  }, []);
+  const toggleFilters = () => {
+    const next = !filtersOpen;
+    setFiltersOpen(next);
+    try { localStorage.setItem(FILTERS_OPEN_KEY, next ? '1' : '0'); } catch (e) { console.warn('range: filter panel state not saved in this browser', e); }
+  };
   const codeFilter = params.get('code') || '';
   const [companyQ, setCompanyQ] = useState(codeFilter);
   // Follow the address when it changes (back button, Show all), without an effect.
@@ -135,6 +161,7 @@ export function RangePage() {
         position: stats?.position ?? null,
         // An unrated company (no EPS published) has no score, as on the company and compare pages.
         score: !r.notRated && Number.isFinite(r.score) ? r.score : null,
+        recordDate: r.recordDate ?? null,
         ...(owned ? { shares: owned.shares, avgCost: owned.avgCost, gainPct: gainFromBuyPct(r.price, owned.avgCost) } : {}),
       };
     });
@@ -152,9 +179,10 @@ export function RangePage() {
     }
     if (withinActive) list = list.filter((r) => r.aboveLowPct != null && r.aboveLowPct <= within);
     if (minScoreActive) list = list.filter((r) => r.score != null && r.score >= minScore);
+    if (columnFiltersActive) list = list.filter(columnFilterTest(conditions, divStates, today));
     if (codeFilter) list = list.filter((r) => r.code === codeFilter);
     return [...list].sort((a, b) => compareNullsLast(sortKey(a, sortKeyParam), sortKey(b, sortKeyParam), sortDirVal));
-  }, [rows, data, picks, sortKeyParam, sortDirVal, withinActive, within, minScoreActive, minScore, codeFilter]);
+  }, [rows, data, picks, sortKeyParam, sortDirVal, withinActive, within, minScoreActive, minScore, codeFilter, columnFiltersActive, conditions, divStates, today]);
 
   // A tab keeps who, pick, within and minScore; the sort resets to the tab's own default.
   const tabHref = (v: 'low' | 'risen') => {
@@ -203,6 +231,9 @@ export function RangePage() {
         ><Tr text="Risen from the low" /></Link>
       </nav>
 
+      <button type="button" className="btn range-filters-toggle" aria-expanded={filtersOpen} aria-controls="range-filters" onClick={toggleFilters}>
+        <Icon name="list" />{t(filtersOpen ? 'Hide filters' : 'Show filters')}{!filtersOpen && (withinActive || minScoreActive || columnFiltersActive || picks.length || codeFilter) ? ` (${t('filters on')})` : ''}</button>
+      <div id="range-filters" hidden={!filtersOpen}>
       <div className="panel filter-panel">
         <p className="small muted"><Tr text="Tap more than one to combine them: a company must pass all of them." /></p>
         <p className="small muted"><Tr text="Want a message when a company comes near its low?" /> <Link href="/alerts#range-rules"><Tr text="Set a range rule on Alerts" /></Link></p>
@@ -237,8 +268,8 @@ export function RangePage() {
             placeholder="—"
             onChange={(e) => setParams({ minScore: e.target.value || '' })} />
         </label>
-        {(withinActive || minScoreActive) && (
-          <button type="button" className="btn ghost" onClick={() => { setCompanyQ(''); setParams({ within: '', minScore: '', code: '' }); }}>
+        {(withinActive || minScoreActive || columnFiltersActive) && (
+          <button type="button" className="btn ghost" onClick={() => { setCompanyQ(''); setParams({ within: '', minScore: '', code: '', f: '', div: '' }); }}>
             <Tr text="Clear filters" />
           </button>
         )}
@@ -255,6 +286,8 @@ export function RangePage() {
             <Icon name="cross" />{t('Show all')}
           </button>
         )}
+        <ColumnFilters conditions={conditions} states={divStates} onChange={(c, d) => setParams({ f: formatConditions(c), div: d.join(',') })} />
+      </div>
       </div>
 
       <div className="filters card-sort">
@@ -273,6 +306,7 @@ export function RangePage() {
             <SortHeader k="price" label="Price" sort={sort} onSort={onSort} numeric />
             <SortHeader k="range" label="52-week range" sort={sort} onSort={onSort} numeric />
             <SortHeader k="position" label="Position" sort={sort} onSort={onSort} />
+            <SortHeader k="recordDate" label="Dividend date" sort={sort} onSort={onSort} />
             <SortHeader k="score" label="Score" sort={sort} onSort={onSort} numeric />
             {showHoldings && <>
               <SortHeader k="avgCost" label="Your avg price" sort={sort} onSort={onSort} numeric />
@@ -282,15 +316,15 @@ export function RangePage() {
           </tr></thead>
           <tbody>
             {!data ? (
-              <tr><td colSpan={showHoldings ? 8 : 5} className="empty">{t('Loading…')}</td></tr>
+              <tr><td colSpan={showHoldings ? 9 : 6} className="empty">{t('Loading…')}</td></tr>
             ) : showHoldings && holdingsState !== 'ready' ? (
-              <tr><td colSpan={8} className="empty">{holdingsState === 'failed' ? t('Could not load your holdings. Try again in a minute.') : t('Loading…')}</td></tr>
+              <tr><td colSpan={9} className="empty">{holdingsState === 'failed' ? t('Could not load your holdings. Try again in a minute.') : t('Loading…')}</td></tr>
             ) : who === 'watchlist' && watchlistCodes.length === 0 ? (
-              <tr><td colSpan={5} className="empty">
+              <tr><td colSpan={6} className="empty">
                 <Tr text="Your watchlist is empty." />{' '}<Link href="/all"><Tr text="Browse companies" /></Link>.
               </td></tr>
             ) : showHoldings && holdingCount === 0 ? (
-              <tr><td colSpan={8} className="empty">
+              <tr><td colSpan={9} className="empty">
                 <Tr text="No holdings yet. Add trades on" />{' '}
                 <Link href="/portfolio"><Tr text="Portfolio" /></Link>.
               </td></tr>
@@ -308,6 +342,8 @@ export function RangePage() {
                     ? t(`${rangePct(r.position)}% of range · ${fmt(-r.aboveLowPct, 1)}% below low`)
                     : t(`${rangePct(r.position)}% of range · ${fmt(r.aboveLowPct, 1)}% above low`)}</span></> : '—'}
                 </td>
+                <td className="mono" data-label={t('Dividend date')}>{fmtDateLang(r.recordDate, lang)}
+                  <div className="small muted">{t(DIV_LABEL[divState(r.recordDate, today)])}</div></td>
                 <td className="n mono" data-label={t('Score')}>{r.score != null ? r.score : '—'}</td>
                 {showHoldings && <>
                   <td className="n mono" data-label={t('Your avg price')}>{r.avgCost != null ? `৳${fmt(r.avgCost)}` : '—'}</td>
@@ -316,7 +352,7 @@ export function RangePage() {
                 </>}
               </tr>
             )) : (
-              <tr><td colSpan={showHoldings ? 8 : 5} className="empty"><Tr text={picks.length > 1 ? 'No company passes all the quick picks you chose. Turn one off to see more.' : 'No company has figures in this filter.'} /></td></tr>
+              <tr><td colSpan={showHoldings ? 9 : 6} className="empty"><Tr text={picks.length > 1 ? 'No company passes all the quick picks you chose. Turn one off to see more.' : 'No company has figures in this filter.'} /></td></tr>
             )}
           </tbody>
         </table>

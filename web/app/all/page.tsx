@@ -10,28 +10,30 @@ import { SortHeader } from '@/components/SortHeader';
 import { RangeCell } from '@/components/PositionBar';
 import { rangePos } from '@/lib/dividend-checks';
 import { WatchButton } from '@/components/Watchlist';
-import { compareNullsLast, fmt, moneyPerDay, sectorName, signed, tone } from '@/components/format';
+import { compareNullsLast, fmt, fmtDateLang, moneyPerDay, sectorName, signed, tone } from '@/components/format';
 import { FRAUD, FraudPill, Icon, SIGNAL_ORDER, SIGNALS, SignalPill, Skeleton, type FraudLevel, type IconName, type Signal } from '@/components/ui';
 import type { CompanyRow } from '@/lib/service';
 import type { MarketSession } from '@/lib/dse';
 import { QUICK_PICKS, parsePickList, picksTest } from '@/lib/quick-picks';
 import { QuickPickChips } from '@/components/QuickPickChips';
 import { CompanySearch } from '@/components/CompanySearch';
+import { DIV_LABEL, divState } from '@/lib/column-filters';
+import { dhakaToday } from '@/lib/dhaka';
 
 interface CompaniesResponse { rows: CompanyRow[]; codes: { code: string; sector: string }[]; medians: Record<string, number | null>; session: MarketSession | null }
 
 
 // Cheapest P/E and A–Z code are the natural first view; everything else starts with the biggest value.
 const ASCENDING_FIRST = new Set(['code', 'pe', 'pos']);
-const SORTS: [string, string][] = [['score', 'Score'], ['signalRank', 'Signal'], ['code', 'Company'], ['price', 'Price'], ['pos', '52-wk'], ['pe', 'P/E'], ['dividendYield', 'Yield'], ['dailyValue', 'Traded / day'], ['change1y', '1 year'], ['fraud', 'Warnings']];
+const SORTS: [string, string][] = [['score', 'Score'], ['signalRank', 'Signal'], ['code', 'Company'], ['price', 'Price'], ['pos', '52-wk'], ['pe', 'P/E'], ['dividendYield', 'Yield'], ['dailyValue', 'Traded / day'], ['change1y', '1 year'], ['recordDate', 'Dividend date'], ['fraud', 'Warnings']];
 // Warning-sign sort: level first, then the number of flags, so the default (high to low) puts the worst first.
 const FRAUD_RANK: Record<FraudLevel, number> = { clean: 0, suspicious: 1, high: 2 };
 
 const csvCell = (v: unknown) => (/[",\n]/.test(String(v ?? '')) ? `"${String(v).replace(/"/g, '""')}"` : String(v ?? ''));
 
 function downloadCsv(rows: CompanyRow[]) {
-  const head = ['code', 'name', 'sector', 'category', 'signal', 'score', 'fraud', 'price', 'pe', 'dividend_yield_pct', 'traded_per_day_bdt', 'change_1y_pct', 'old_data'];
-  const lines = rows.map((r) => [r.code, r.name, r.sector, r.category, r.signal, r.score, r.fraud, r.price, r.pe, r.dividendYield, r.dailyValue, r.change1y, r.stale ? 'yes' : ''].map(csvCell).join(','));
+  const head = ['code', 'name', 'sector', 'category', 'signal', 'score', 'fraud', 'price', 'pe', 'dividend_yield_pct', 'traded_per_day_bdt', 'change_1y_pct', 'record_date', 'old_data'];
+  const lines = rows.map((r) => [r.code, r.name, r.sector, r.category, r.signal, r.score, r.fraud, r.price, r.pe, r.dividendYield, r.dailyValue, r.change1y, r.recordDate, r.stale ? 'yes' : ''].map(csvCell).join(','));
   const url = URL.createObjectURL(new Blob([[head.join(','), ...lines].join('\n')], { type: 'text/csv' }));
   const a = document.createElement('a');
   a.href = url; a.download = 'dse-companies.csv'; a.click();
@@ -42,7 +44,7 @@ const FILTERS = ['signal', 'sector', 'fraud', 'cat', 'yield', 'liquid'] as const
 type Filter = (typeof FILTERS)[number];
 
 function AllCompanies() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { data, error } = useApi<CompaniesResponse>('/api/companies');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const params = useSearchParams();
@@ -77,6 +79,7 @@ function AllCompanies() {
     : sort.key === 'pos' ? rangePos(r.price, r.weekLow52, r.weekHigh52) : (r as unknown as Record<string, unknown>)[sort.key]);
   // ?preset=good,dividend: a company must pass every chosen pick. The old one-value form reads the same way.
   const presets = parsePickList(params.get('preset'));
+  const today = dhakaToday();
   const passesPicks = picksTest(presets, rows, data?.medians || {});
   const shown = rows
     .filter(passesPicks)
@@ -164,9 +167,9 @@ function AllCompanies() {
             <SortHeader k="code" label="Company" sort={sort} onSort={onSort} /><SortHeader k="signalRank" label="Signal" sort={sort} onSort={onSort} /><SortHeader k="fraud" label="Warnings" sort={sort} onSort={onSort} />
             <SortHeader k="score" label="Score" sort={sort} onSort={onSort} numeric /><SortHeader k="price" label="Price" sort={sort} onSort={onSort} numeric /><SortHeader k="pos" label="52-wk" sort={sort} onSort={onSort} />
             <SortHeader k="pe" label="P/E" sort={sort} onSort={onSort} numeric /><SortHeader k="dividendYield" label="Yield" sort={sort} onSort={onSort} numeric />
-            <SortHeader k="dailyValue" label="Traded / day" sort={sort} onSort={onSort} numeric /><SortHeader k="change1y" label="1 year" sort={sort} onSort={onSort} numeric />
+            <SortHeader k="dailyValue" label="Traded / day" sort={sort} onSort={onSort} numeric /><SortHeader k="change1y" label="1 year" sort={sort} onSort={onSort} numeric /><SortHeader k="recordDate" label="Dividend date" sort={sort} onSort={onSort} />
           </tr></thead>
-          <tbody>{!data ? <tr><td colSpan={10} className="empty">{t('Loading…')}</td></tr> : shown.length ? shown.map((r) => (
+          <tbody>{!data ? <tr><td colSpan={11} className="empty">{t('Loading…')}</td></tr> : shown.length ? shown.map((r) => (
             <tr key={r.code} onClick={() => router.push('/c/' + encodeURIComponent(r.code))}>
               <td><div className="co-cell"><WatchButton code={r.code} /><div><a className="mono" href={'/c/' + encodeURIComponent(r.code)} onClick={(e) => e.stopPropagation()}><b>{r.code}</b></a>
                 <div className="small muted">{r.name}{r.sector ? ' · ' + sectorName(r.sector) : ''} · {t('Category')} {r.category}</div>
@@ -178,8 +181,10 @@ function AllCompanies() {
               <td className="n mono" data-label="P/E">{fmt(r.pe, 1)}</td><td className="n mono" data-label="Yield">{r.dividendYield != null ? fmt(r.dividendYield, 1) + '%' : '—'}</td>
               <td className="n mono" data-label="Traded / day">{moneyPerDay(r.dailyValue)}</td>
               <td className={`n mono ${tone(r.change1y)}`} data-label="1 year">{signed(r.change1y)}</td>
+              <td className="mono" data-label="Dividend date">{fmtDateLang(r.recordDate, lang)}
+                <div className="small muted">{t(DIV_LABEL[divState(r.recordDate, today)])}</div></td>
             </tr>
-          )) : <tr><td colSpan={10} className="empty">{t(presets.length > 1 && !activeFilters && !codeFilter ? 'No company passes all the quick picks you chose. Turn one off to see more.' : 'No company matches these filters.')}</td></tr>}</tbody>
+          )) : <tr><td colSpan={11} className="empty">{t(presets.length > 1 && !activeFilters && !codeFilter ? 'No company passes all the quick picks you chose. Turn one off to see more.' : 'No company matches these filters.')}</td></tr>}</tbody>
         </table>
       </div>
     </>

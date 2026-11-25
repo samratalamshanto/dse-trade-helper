@@ -109,11 +109,18 @@ test.describe('/all', () => {
     expect(await rows(page).count()).toBeLessThanOrEqual(goodCount);
   });
 
+  test('dividend date column shows the record date with upcoming, passed or no value, and sorts', async ({ page }) => {
+    const cells = rows(page).locator('td[data-label="Dividend date"]');
+    for (const t of (await cells.allInnerTexts()).slice(0, 20)) expect(t).toMatch(/Upcoming|Passed|No value/);
+    await page.goto('/all?sort=recordDate&dir=-1');
+    await expect(cells.first()).toContainText(/\d{4}/);
+  });
+
   test('CSV download has a header row', async ({ page }) => {
     const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /^Download list/ }).click()]);
     expect(dl.suggestedFilename()).toBe('dse-companies.csv');
     const text = await readFile((await dl.path())!, 'utf8');
-    expect(text.split('\n')[0]).toBe('code,name,sector,category,signal,score,fraud,price,pe,dividend_yield_pct,traded_per_day_bdt,change_1y_pct,old_data');
+    expect(text.split('\n')[0]).toBe('code,name,sector,category,signal,score,fraud,price,pe,dividend_yield_pct,traded_per_day_bdt,change_1y_pct,record_date,old_data');
     expect(text.split('\n').length).toBeGreaterThan(10);
   });
 });
