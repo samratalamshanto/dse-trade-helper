@@ -1101,6 +1101,6 @@ export const BN: Record<string, string> = {
   'last: ৳{n} + {b}% bonus, record date passed': 'শেষ: ৳{n} + {b}% বোনাস, রেকর্ড তারিখ পেরিয়েছে',
   'Dividend date': 'লভ্যাংশের তারিখ', 'Passed': 'পেরিয়ে গেছে', 'No value': 'তথ্য নেই', 'Add a filter': 'ফিল্টার যোগ করুন',
   'Remove this filter': 'এই ফিল্টার সরান', 'Column': 'কলাম', 'Position % of range': 'রেঞ্জে অবস্থান %', '% above low': 'নিম্ন থেকে % উপরে',
-  'Hide filters': 'ফিল্টার লুকান', 'Show filters': 'ফিল্টার দেখান', 'filters on': 'ফিল্টার চালু',
+  'Hide filters': 'ফিল্টার লুকান', 'Show filters': 'ফিল্টার দেখান', 'filters on': 'ফিল্টার চালু', 'Cash / share (৳)': 'নগদ / শেয়ার (৳)', 'Cash %': 'নগদ %', 'Bonus %': 'বোনাস %', 'Yield %': 'ফলন %',
   'Filter': 'ফিল্টার',
 };

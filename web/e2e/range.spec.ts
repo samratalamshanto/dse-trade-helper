@@ -150,6 +150,7 @@ test.describe('/range', () => {
     await expect(cell('ROBI')).toContainText('Passed');
     await expect(cell('SQURPHARMA')).toContainText('No value');
     await expect(cell('GP')).toContainText('৳1.50/share');
+    await expect(cell('GP')).toContainText('0.5% yield');
     await expect(cell('GP')).toContainText('15% cash + 5% bonus');
     await expect(cell('BRAC')).toContainText('10% bonus');
     await expect(cell('BRAC')).not.toContainText('cash');
@@ -181,6 +182,18 @@ test.describe('/range', () => {
     await page.goto('/range?f=price:gt:60,price:lt:250');
     await expect(rows(page).first()).toBeVisible();
     await expect.poll(() => codes(page)).toEqual(['BRAC', 'SQURPHARMA']);
+  });
+
+  test('dividend amount filters from a link: cash per share, bonus and yield', async ({ page }) => {
+    await page.goto('/range?f=cash:gt:1');
+    await expect(rows(page).first()).toBeVisible();
+    await expect.poll(() => codes(page)).toEqual(['GP']);
+    await page.goto('/range?f=bonus:gt:0');
+    await expect.poll(() => codes(page)).toEqual(['BRAC', 'GP']);
+    await page.goto('/range?f=yield:eq:0.5');
+    await expect.poll(() => codes(page)).toEqual(['GP']);
+    await page.goto('/range?f=yield:lt:0.4');
+    await expect(rows(page).locator('td.empty')).toHaveCount(1);
   });
 
   test('dividend labels: one tick narrows, two ticks mean either', async ({ page }) => {

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { columnFilterTest, divState, formatConditions, parseConditions, parseDivStates, passesCondition, type FilterRow } from '../lib/column-filters.ts';
+import { columnFilterTest, divState, formatConditions, parseConditions, parseDivStates, passesCondition, recordYieldPct, type FilterRow } from '../lib/column-filters.ts';
 
 type Row = FilterRow & { code: string };
 const row = (over: Partial<Row>): Row => ({ code: 'X', price: 15, position: 0.5, aboveLowPct: 52.34, score: 60, recordDate: null, ...over });
@@ -36,6 +36,24 @@ test('a row with no value fails; a half-typed value filters nothing', () => {
   assert.ok(passesCondition(row({ score: null }), { field: 'score', op: 'gt', value: '' }));
   assert.ok(passesCondition(row({}), { field: 'price', op: 'lt', value: '-' }));
   assert.ok(passesCondition(row({}), { field: 'rec', op: 'gt', value: '2026-1' }));
+});
+
+test('dividend amount filters: cash per share, cash %, bonus % and yield on today\'s price', () => {
+  const paid = row({ price: 50, recordCashPerShare: 1.5, recordCashPct: 15, recordStockPct: 5 });
+  assert.equal(recordYieldPct(1.5, 50), 3);
+  assert.equal(recordYieldPct(1, 46.3), 2.2);
+  assert.equal(recordYieldPct(null, 50), null);
+  assert.equal(recordYieldPct(1, null), null);
+  assert.ok(passesCondition(paid, { field: 'cash', op: 'gt', value: '1' }));
+  assert.ok(passesCondition(paid, { field: 'cashpct', op: 'eq', value: '15' }));
+  assert.ok(passesCondition(paid, { field: 'bonus', op: 'gt', value: '0' }));
+  assert.ok(passesCondition(paid, { field: 'yield', op: 'eq', value: '3' }));
+  assert.ok(passesCondition(row({ recordCashPerShare: 1.256 }), { field: 'cash', op: 'eq', value: '1.26' }));
+  assert.ok(passesCondition(row({ price: 46.3, recordCashPerShare: 1 }), { field: 'yield', op: 'eq', value: '2.2' }));
+  assert.equal(recordYieldPct(1, 0), null);
+  const none = row({ recordCashPerShare: null, recordCashPct: null, recordStockPct: null });
+  for (const field of ['cash', 'cashpct', 'bonus', 'yield'] as const) assert.ok(!passesCondition(none, { field, op: 'lt', value: '100' }));
+  assert.ok(!passesCondition(row({ recordCashPerShare: 0, recordCashPct: 0 }), { field: 'cash', op: 'lt', value: '1' }));
 });
 
 test('record date: label against today, and date comparisons', () => {

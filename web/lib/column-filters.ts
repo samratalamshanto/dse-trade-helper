@@ -1,11 +1,15 @@
 import { rangePct } from './dividend-checks.ts';
 
 // Column filters on the 52-week range page, kept in the address: ?f=score:gt:50,pos:lt:20&div=up,none
-export interface FilterRow { price: number | null; position: number | null; aboveLowPct: number | null; score: number | null; recordDate?: string | null }
+export interface FilterRow {
+  price: number | null; position: number | null; aboveLowPct: number | null; score: number | null; recordDate?: string | null;
+  recordCashPct?: number | null; recordStockPct?: number | null; recordCashPerShare?: number | null;
+}
 
 export const COLUMN_FIELDS = [
   { key: 'score', label: 'Score' }, { key: 'price', label: 'Price' }, { key: 'pos', label: 'Position % of range' },
   { key: 'above', label: '% above low' }, { key: 'rec', label: 'Record date' },
+  { key: 'cash', label: 'Cash / share (৳)' }, { key: 'cashpct', label: 'Cash %' }, { key: 'bonus', label: 'Bonus %' }, { key: 'yield', label: 'Yield %' },
 ] as const;
 export type FieldKey = (typeof COLUMN_FIELDS)[number]['key'];
 export const OPS = [['gt', '>'], ['lt', '<'], ['eq', '=']] as const;
@@ -21,6 +25,11 @@ const OP_KEYS = new Set<string>(OPS.map((o) => o[0]));
 const DIV_KEYS = new Set<string>(DIV_STATES.map((d) => d[0]));
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const round1 = (v: number | null | undefined): number | null => (v == null || !Number.isFinite(v) ? null : Math.round(v * 10) / 10);
+const round2 = (v: number | null | undefined): number | null => (!v || !Number.isFinite(v) ? null : Math.round(v * 100) / 100);
+
+// This dividend's cash per share as a percent of today's price, one decimal; none without a cash dividend or a price.
+export const recordYieldPct = (cashPerShare: number | null | undefined, price: number | null | undefined): number | null =>
+  cashPerShare && price && price > 0 ? round1((cashPerShare / price) * 100) : null;
 
 // Unknown fields or operators in the address are dropped; an empty value is kept so a new row can be typed into.
 export function parseConditions(raw: string | null): Condition[] {
@@ -43,6 +52,10 @@ function cell(r: FilterRow, field: FieldKey): number | string | null {
   if (field === 'pos') return r.position == null ? null : rangePct(r.position);
   if (field === 'above') return round1(r.aboveLowPct);
   if (field === 'score') return r.score;
+  if (field === 'cash') return round2(r.recordCashPerShare);
+  if (field === 'cashpct') return round2(r.recordCashPct);
+  if (field === 'bonus') return round2(r.recordStockPct);
+  if (field === 'yield') return recordYieldPct(r.recordCashPerShare, r.price);
   return r.price;
 }
 

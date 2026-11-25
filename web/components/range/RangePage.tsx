@@ -20,7 +20,7 @@ import { CompanySearch } from '@/components/CompanySearch';
 import { rangePct } from '@/lib/dividend-checks';
 import { Icon } from '@/components/ui';
 import { ColumnFilters } from '@/components/ColumnFilters';
-import { DIV_LABEL, columnFilterTest, divState, formatConditions, parseConditions, parseDivStates } from '@/lib/column-filters';
+import { DIV_LABEL, columnFilterTest, recordYieldPct, divState, formatConditions, parseConditions, parseDivStates } from '@/lib/column-filters';
 import { dhakaToday } from '@/lib/dhaka';
 
 interface CompaniesResponse { rows: CompanyRow[]; medians?: Record<string, number | null>; session: MarketSession | null }
@@ -347,6 +347,7 @@ export function RangePage() {
                 </td>
                 <td className="mono" data-label={t('Dividend date')}>{fmtDateLang(r.recordDate, lang)}
                   {r.recordCashPerShare ? <div className="small">{t(`৳${fmt(r.recordCashPerShare)}/share`)}</div> : null}
+                  {recordYieldPct(r.recordCashPerShare, r.price) != null ? <div className="small">{t(`${fmt(recordYieldPct(r.recordCashPerShare, r.price), 1)}% yield`)}</div> : null}
                   {r.recordCashPct || r.recordStockPct ? <div className="small">{[r.recordCashPct ? t(`${pctNum(r.recordCashPct)}% cash`) : '', r.recordStockPct ? t(`${pctNum(r.recordStockPct)}% bonus`) : ''].filter(Boolean).join(' + ')}</div> : null}
                   <div className="small muted">{t(DIV_LABEL[divState(r.recordDate, today)])}</div></td>
                 <td className="n mono" data-label={t('Score')}>{r.score != null ? r.score : '—'}</td>
