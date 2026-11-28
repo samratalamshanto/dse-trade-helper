@@ -496,7 +496,7 @@ export const BN: Record<string, string> = {
   'Phone alerts (Telegram)': 'ফোনে সতর্কতা (Telegram)',
   "Get a Telegram message when a price rule or a 52-week range rule matches, a plan reaches its price, a holding hits your stop-loss or target, or a dividend's last buy day is near.": 'দামের নিয়ম বা ৫২-সপ্তাহের সীমার নিয়ম মিললে, পরিকল্পনা তার দামে পৌঁছালে, কোনো শেয়ার আপনার স্টপ-লস বা লক্ষ্যে পৌঁছালে, বা লভ্যাংশের শেষ কেনার দিন কাছে এলে Telegram বার্তা পান।',
   'To get Telegram alerts, first sign in with Google on the': 'Telegram সতর্কতা পেতে আগে সাইন ইন করুন Google দিয়ে',
-  'Telegram me when a watchlist or holding share comes within 20%, 15%, 10% or 5% of its 52-week low': 'ওয়াচলিস্ট বা হোল্ডিং শেয়ার ৫২-সপ্তাহের সর্বনিম্নের ২০%, ১৫%, ১০% বা ৫%-এর মধ্যে এলে Telegram বার্তা পান',
+  'Send a Telegram message when a share on your watchlist or in your portfolio comes within 20%, 15%, 10% or 5% of its 52-week low': 'আপনার ওয়াচলিস্ট বা পোর্টফোলিওর কোনো শেয়ার ৫২-সপ্তাহের সর্বনিম্নের ২০%, ১৫%, ১০% বা ৫%-এর মধ্যে এলে Telegram বার্তা পান',
   'Portfolio page': 'পোর্টফোলিও পাতায়',
   'Phone alerts (Telegram) are set up on the': 'ফোনে সতর্কতা (Telegram) চালু করুন',
   'Your stop-loss and target, backup and Google Sheet sync.': 'আপনার স্টপ-লস ও লক্ষ্য, ব্যাকআপ এবং Google Sheet সিঙ্ক।',

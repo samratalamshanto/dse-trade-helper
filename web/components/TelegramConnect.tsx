@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { call } from '@/components/trades-client';
 
@@ -8,7 +8,7 @@ const POLL_MS = 3_000;
 interface Link { url: string; expiresAt: string }
 
 // Signed-in users: connect their own Telegram chat by a one-time link (button on phones, QR code to scan on a computer).
-export function TelegramConnect() {
+export function TelegramConnect({ children }: { children?: ReactNode } = {}) {
   const [connected, setConnected] = useState<boolean | null>(null);
   // 503: the site has no Telegram settings yet; show a note instead of a button that cannot work.
   const [unavailable, setUnavailable] = useState(false);
@@ -57,6 +57,7 @@ export function TelegramConnect() {
           <p className="small" role="status">{paused
             ? 'Paused: your Google sign-in ended. Sign out and sign in with Google again (panel below); alerts resume by themselves.'
             : 'Connected ✓ Alerts from your own Sheet come to your Telegram on trading days.'}</p>
+          {children}
           <p><button className="btn" type="button" disabled={busy} onClick={() => void disconnect()}>Disconnect Telegram</button></p>
         </>
       ) : link ? (
