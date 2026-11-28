@@ -15,7 +15,7 @@ export const tokenBoxReady = (): boolean => Buffer.from(process.env.TOKEN_ENC_KE
 // owner: the Google id the token belongs to; a sealed token copied to another row cannot be opened there.
 export function seal(plain: string, owner = ''): string {
   const iv = randomBytes(IV_BYTES);
-  const cipher = createCipheriv('aes-256-gcm', key(), iv);
+  const cipher = createCipheriv('aes-256-gcm', key(), iv, { authTagLength: TAG_BYTES });
   cipher.setAAD(Buffer.from(owner));
   const body = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()]);
   return Buffer.concat([iv, cipher.getAuthTag(), body]).toString('base64url');
@@ -23,7 +23,8 @@ export function seal(plain: string, owner = ''): string {
 
 export function open(sealed: string, owner = ''): string {
   const b = Buffer.from(sealed, 'base64url');
-  const decipher = createDecipheriv('aes-256-gcm', key(), b.subarray(0, IV_BYTES));
+  if (b.length < IV_BYTES + TAG_BYTES) throw new Error('Sealed token is too short.');
+  const decipher = createDecipheriv('aes-256-gcm', key(), b.subarray(0, IV_BYTES), { authTagLength: TAG_BYTES });
   decipher.setAAD(Buffer.from(owner));
   decipher.setAuthTag(b.subarray(IV_BYTES, IV_BYTES + TAG_BYTES));
   return Buffer.concat([decipher.update(b.subarray(IV_BYTES + TAG_BYTES)), decipher.final()]).toString('utf8');
