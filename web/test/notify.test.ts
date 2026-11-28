@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
-import { alertsFor, buildChunks, decide, dhakaClock, emptyState, inMarketWindow, isQuiet, nextState, readState, summaryDue, summaryText, writeState, type NotifyInput } from '../lib/notify.ts';
+import { alertsFor, buildChunks, decide, dhakaClock, emptyState, inMarketWindow, isQuiet, low52Bands, low52Verdict, nextState, readState, recDateLine, summaryDue, summaryText, writeState, type NotifyInput } from '../lib/notify.ts';
 import { escapeHtml, sendMessage, telegramEnabled } from '../lib/telegram.ts';
 
 // 2026-11-19 is a Thursday; Dhaka is UTC+6, so 03:45Z is 09:45 Dhaka.
@@ -46,15 +46,20 @@ test('a reached buy plan shows target price, current price when available, and l
   ];
   const a = alertsFor(base({ plans }), {});
   assert.deepEqual(a.map((x) => x.key), ['plan:p1:reached:2026-11-19', 'plan:p2:expiring:2026-11-22']);
-  assert.match(a[0].text, /GP.*৳222\.20.*current price ৳218\.50.*5 shares left/);
+  assert.match(a[0].text, /GP reached your plan price/);
+  assert.match(a[0].text, /Plan price: ৳222\.20/);
+  assert.match(a[0].text, /Current price: ৳218\.50/);
+  assert.match(a[0].text, /Shares left in your plan: 5/);
   assert.match(a[0].text, /https:\/\/dse-trade-helper.vercel.app\/c\/GP/);
 });
 
 test('a reached plan with no live price omits current price but still links', () => {
   const plans = [{ id: 'p1', code: 'GP', until: null, targetPrice: 100, live: { status: 'reached', remaining: 1 } }];
   const a = alertsFor(base({ plans }), {});
-  assert.doesNotMatch(a[0].text, /current price/);
-  assert.match(a[0].text, /৳100\.00.*1 shares left.*\/c\/GP/);
+  assert.doesNotMatch(a[0].text, /Current price/);
+  assert.match(a[0].text, /Plan price: ৳100\.00/);
+  assert.match(a[0].text, /Shares left in your plan: 1/);
+  assert.match(a[0].text, /\/c\/GP/);
 });
 
 test('a holding alerts only when its check changes to Review or Take profit', () => {
@@ -73,7 +78,7 @@ test('a held company whose dividend last-buy day is today or the next trading da
   const holdings = [{ code: 'AAA', shares: 1, value: 1, check: null }, { code: 'BBB', shares: 1, value: 1, check: null }, { code: 'CCC', shares: 1, value: 1, check: null }];
   const a = alertsFor(base({ holdings, lastBuyDates: { AAA: '2026-11-19', BBB: '2026-11-22', CCC: '2026-11-25' } }), {});
   assert.deepEqual(a.map((x) => x.key), ['div:AAA:2026-11-19', 'div:BBB:2026-11-22']);
-  assert.match(a[0].text, /today \(2026-11-19\)/);
+  assert.match(a[0].text, /Today \(2026-11-19\)/);
   assert.match(a[1].text, /next trading day/);
 });
 
@@ -84,7 +89,7 @@ test('the morning summary includes pick price and reason, and no footer', () => 
     plans: [{ id: '1', code: 'A', until: null, targetPrice: 1, live: { status: 'reached', remaining: 1 } }, { id: '2', code: 'B', until: null, targetPrice: 1, live: { status: 'waiting', remaining: 1 } }],
     picks: [{ code: 'A&B', name: 'x', price: 10, reason: 'lower half of its 52-week range' }],
   }));
-  assert.equal(s, '<b>Morning summary (DSE data) — 2026-11-19</b>\nHoldings: ৳12,346 (today -৳1,234)\nBuy plans: 1 reached, 1 waiting\nResearch list: A&amp;B ৳10.00 (lower half of its 52-week range) — https://dse-trade-helper.vercel.app/c/A%26B');
+  assert.equal(s, '📋 <b>Morning summary (DSE data) — 2026-11-19</b>\nHoldings: ৳12,346 (today -৳1,234)\nBuy plans: 1 reached, 1 waiting\nResearch: A&amp;B ৳10.00 (lower half of its 52-week range)\nOpen: https://dse-trade-helper.vercel.app/c/A%26B');
 });
 
 test('dedupe: a sent key is never sent again; the summary comes once a day after 09:45', () => {
@@ -200,7 +205,10 @@ test('range rule match lines include price, 52-week low, and high', () => {
   const row = { code: 'GP', price: 220, weekLow52: 200, weekHigh52: 300 };
   const a = alertsFor(base({ rangeRules: [rule], rangeRows: [row], owned: [] }), {});
   assert.deepEqual(a.map((x) => x.key), ['range:nr1:2026-11-19']);
-  assert.equal(a[0].text, '<b>Your rule:</b> within 10% of the 52-week low (all companies)\n• <b>GP</b> ৳220.00 (low ৳200.00, high ৳300.00): 10% above its 52-week low — https://dse-trade-helper.vercel.app/c/GP');
+  assert.match(a[0].text, /📊 <b>Your 52-week rule<\/b>/);
+  assert.match(a[0].text, /within 10% of the 52-week low \(all companies\)/);
+  assert.match(a[0].text, /• <b>GP<\/b> ৳220\.00 \(low ৳200\.00, high ৳300\.00\): 10% above its 52-week low/);
+  assert.match(a[0].text, /Open: https:\/\/dse-trade-helper\.vercel\.app\/c\/GP/);
 });
 
 test('range match line omits numbers when price or range is missing', () => {
@@ -223,8 +231,9 @@ test('a wide rule lists only the closest 10 companies and counts the rest', () =
   assert.equal(a.length, 1);
   const lines = a[0].text.split('\n');
   assert.equal(lines.filter((l) => l.startsWith('• ')).length, 10);
-  assert.match(lines[1], /C00/);
-  assert.equal(lines.at(-1), '…and 5 more on the 52-week range page');
+  assert.match(lines[2], /C00/);
+  assert.ok(a[0].text.includes('…and 5 more'));
+  assert.match(lines.at(-1) ?? '', /…and 5 more — Open: https:\/\/dse-trade-helper\.vercel\.app\/range/);
 });
 
 test('the same range match does not repeat on the same day (decide + sent state)', () => {
@@ -314,6 +323,7 @@ test('dataError adds a data-error alert once per day, deduped by decide', () => 
   const a = alertsFor(base({ dataError: true }), {});
   assert.equal(a.length, 1);
   assert.equal(a[0].key, 'data-error:2026-11-19');
+  assert.match(a[0].text, /DSE data unavailable/);
   assert.match(a[0].text, /could not read DSE data/);
 
   const withState = decide(base({ dataError: true }), { ...emptyState(), sent: { 'data-error:2026-11-19': '2026-11-19T04:00:00.000Z' } });
@@ -389,7 +399,7 @@ test('a failed company list sets dataError only when the user has range rules', 
   assert.equal(alertsFor(base({ dataError: false, rangeRules: [{ id: 'r', kind: 'nearLow' as const, pct: 10, scope: 'all' as const }] }), {}).some((a) => a.key.startsWith('data-error:')), false, 'no data-error when dataError=false even with rules');
 });
 
-test('every alert line carries a company link', () => {
+test('every alert carries a company link; range alerts carry per-company links; low52 alerts use /range', () => {
   const plans = [
     { id: 'p1', code: 'GP', until: null, targetPrice: 100, live: { status: 'reached', remaining: 1 } },
     { id: 'p2', code: 'BATBC', until: '2026-11-22', targetPrice: 300, live: { status: 'waiting', remaining: 2 } },
@@ -406,8 +416,14 @@ test('every alert line carries a company link', () => {
     rangeRules: [rule], rangeRows: [row],
     sessionDate: '2026-11-19',
   }), {});
-  for (const a of alerts.filter((a) => !a.key.startsWith('data-error:'))) {
+  for (const a of alerts.filter((a) => !a.key.startsWith('data-error:') && !a.key.startsWith('range:') && !a.key.startsWith('low52:'))) {
     assert.match(a.text, /https:\/\/dse-trade-helper\.vercel\.app\/c\//, `alert ${a.key} has no company link`);
+  }
+  for (const a of alerts.filter((a) => a.key.startsWith('range:'))) {
+    assert.match(a.text, /https:\/\/dse-trade-helper\.vercel\.app\/c\//, `range alert ${a.key} has no per-company link`);
+  }
+  for (const a of alerts.filter((a) => a.key.startsWith('low52:'))) {
+    assert.match(a.text, /https:\/\/dse-trade-helper\.vercel\.app\/range/, `low52 alert ${a.key} has no range link`);
   }
 });
 
@@ -461,4 +477,314 @@ test('price rule "once": turned off, its key goes, so turning it on again re-arm
   const off = { type: 'price_below' as const, id: 'o1', enabled: false, code: 'GP', target: 96, stop: 'once' as const };
   const state = { ...emptyState(), sent: { 'price-once:o1': '2026-11-18T04:00:00.000Z' } };
   assert.deepEqual(Object.keys(nextState(state, base({ priceRules: [off] }), [], [], '2026-11-19T04:05:00.000Z').sent), []);
+});
+
+test('low52Bands: company within 10% of low gets band 10; below low gets band 5', () => {
+  const rows = [
+    { code: 'GP', price: 108, weekLow52: 100, weekHigh52: 200 },
+    { code: 'ROBI', price: 98, weekLow52: 100, weekHigh52: 200 },
+  ];
+  const result = low52Bands({ watchlist: ['GP', 'ROBI'], owned: [], rangeRows: rows });
+  assert.equal(result.get('GP'), 10);
+  assert.equal(result.get('ROBI'), 5);
+});
+
+test('low52Bands: above 20% gets no band; at exactly 20% gets band 20', () => {
+  const rows = [
+    { code: 'A', price: 125, weekLow52: 100, weekHigh52: 300 },
+    { code: 'B', price: 120, weekLow52: 100, weekHigh52: 300 },
+  ];
+  const result = low52Bands({ watchlist: ['A', 'B'], owned: [], rangeRows: rows });
+  assert.equal(result.has('A'), false, '25% above low = no band');
+  assert.equal(result.get('B'), 20, 'exactly 20% above low = band 20');
+});
+
+test('low52Bands: broken range is skipped', () => {
+  const row = { code: 'EXIMBANK', price: 3, weekLow52: 245, weekHigh52: 466 };
+  const result = low52Bands({ watchlist: ['EXIMBANK'], owned: [], rangeRows: [row] });
+  assert.equal(result.has('EXIMBANK'), false);
+});
+
+test('low52Bands: code not in watchlist or owned is ignored', () => {
+  const rows = [{ code: 'GP', price: 105, weekLow52: 100, weekHigh52: 200 }];
+  const result = low52Bands({ watchlist: [], owned: [], rangeRows: rows });
+  assert.equal(result.has('GP'), false);
+});
+
+test('low52Bands: owned with 0 shares is not in scope', () => {
+  const rows = [{ code: 'GP', price: 105, weekLow52: 100, weekHigh52: 200 }];
+  const result = low52Bands({ watchlist: [], owned: [{ code: 'GP', shares: 0, avgCost: 100 }], rangeRows: rows });
+  assert.equal(result.has('GP'), false);
+});
+
+test('low52Bands: owned with shares > 0 is in scope', () => {
+  const rows = [{ code: 'GP', price: 105, weekLow52: 100, weekHigh52: 200 }];
+  const result = low52Bands({ watchlist: [], owned: [{ code: 'GP', shares: 5, avgCost: 100 }], rangeRows: rows });
+  assert.equal(result.get('GP'), 5);
+});
+
+test('low52 alert: first entry into band 20 sends; entering a closer band sends; same band does not resend', () => {
+  const rows = [{ code: 'GP', price: 118, weekLow52: 100, weekHigh52: 300 }];
+  const input = base({ watchlist: ['GP'], rangeRows: rows, sessionDate: '2026-11-19' });
+  const a1 = alertsFor(input, {}, {});
+  assert.equal(a1.some((x) => x.key.startsWith('low52:')), true, 'first entry to band 15 sends');
+
+  const state1 = nextState(emptyState(), input, a1.filter((x) => x.key.startsWith('low52:')).map((x) => x.key), [], '2026-11-19T04:00:00.000Z');
+  const a2 = alertsFor(input, {}, state1.low52 ?? {});
+  assert.equal(a2.some((x) => x.key.startsWith('low52:')), false, 'same band does not resend');
+});
+
+test('low52 alert: 9% above low sends band 10', () => {
+  const rows = [{ code: 'GP', price: 109, weekLow52: 100, weekHigh52: 300 }];
+  const a = alertsFor(base({ watchlist: ['GP'], rangeRows: rows, sessionDate: '2026-11-19' }), {}, {});
+  const low52 = a.filter((x) => x.key.startsWith('low52:'));
+  assert.equal(low52.length, 1);
+  assert.match(low52[0].key, /GP=10/);
+});
+
+test('low52 alert: above 20% then comes back sends again', () => {
+  const rows = [{ code: 'GP', price: 108, weekLow52: 100, weekHigh52: 300 }];
+  const prevLow52 = { GP: 10 };
+  const input = base({ watchlist: ['GP'], rangeRows: rows, sessionDate: '2026-11-19' });
+  const a = alertsFor(input, {}, prevLow52);
+  assert.equal(a.some((x) => x.key.startsWith('low52:')), false, 'same band 10, no alert');
+
+  const rows2 = [{ code: 'GP', price: 95, weekLow52: 100, weekHigh52: 300 }];
+  const a2 = alertsFor(base({ watchlist: ['GP'], rangeRows: rows2, sessionDate: '2026-11-19' }), {}, prevLow52);
+  assert.equal(a2.some((x) => x.key.startsWith('low52:')), true, 'band 5 is closer than 10, sends');
+});
+
+test('low52 alert: stale data sends nothing', () => {
+  const rows = [{ code: 'GP', price: 105, weekLow52: 100, weekHigh52: 300 }];
+  const a = alertsFor(base({ watchlist: ['GP'], rangeRows: rows, sessionDate: '2026-11-18' }), {}, {});
+  assert.equal(a.some((x) => x.key.startsWith('low52:')), false);
+});
+
+test('low52 alert: unsent keeps old band in nextState', () => {
+  const rows = [{ code: 'GP', price: 105, weekLow52: 100, weekHigh52: 300 }];
+  const input = base({ watchlist: ['GP'], rangeRows: rows, sessionDate: '2026-11-19' });
+  const prevLow52 = { GP: 20 };
+  const movers = alertsFor(input, {}, prevLow52).filter((x) => x.key.startsWith('low52:'));
+  assert.equal(movers.length, 1, 'band 5 is closer than 20');
+  const state = nextState({ ...emptyState(), low52: prevLow52 }, input, [], [], '2026-11-19T04:00:00.000Z');
+  assert.equal(state.low52?.GP, 20, 'unsent keeps old band');
+});
+
+test('low52 alert: code not in scope is removed from nextState low52', () => {
+  const rows = [{ code: 'GP', price: 105, weekLow52: 100, weekHigh52: 300 }];
+  const input = base({ watchlist: [], owned: [], rangeRows: rows, sessionDate: '2026-11-19' });
+  const prevLow52 = { GP: 10 };
+  const state = nextState({ ...emptyState(), low52: prevLow52 }, input, [], [], '2026-11-19T04:00:00.000Z');
+  assert.equal(state.low52?.GP, undefined, 'GP not in scope, removed');
+});
+
+test('low52 alert: one message for several companies', () => {
+  const rows = [
+    { code: 'GP', price: 105, weekLow52: 100, weekHigh52: 300 },
+    { code: 'ROBI', price: 112, weekLow52: 100, weekHigh52: 300 },
+  ];
+  const a = alertsFor(base({ watchlist: ['GP', 'ROBI'], rangeRows: rows, sessionDate: '2026-11-19' }), {}, {});
+  const low52 = a.filter((x) => x.key.startsWith('low52:'));
+  assert.equal(low52.length, 1, 'one message for all movers');
+  assert.match(low52[0].key, /GP=\d+/);
+  assert.match(low52[0].key, /ROBI=\d+/);
+});
+
+test('low52Verdict: green when signal=research and band 5', () => {
+  const v = low52Verdict(5, 'research', 'clean', 3.2, 70);
+  assert.equal(v.emoji, '🟢');
+  assert.match(v.reason, /good score \(70\)/);
+  assert.match(v.reason, /passes all checks/);
+});
+
+test('low52Verdict: green when signal=research and band 10', () => {
+  const v = low52Verdict(10, 'research', 'clean', 8.5, 65);
+  assert.equal(v.emoji, '🟢');
+});
+
+test('low52Verdict: red when signal=avoid', () => {
+  const v = low52Verdict(5, 'avoid', 'clean', 3.0, 40);
+  assert.equal(v.emoji, '🔴');
+  assert.match(v.reason, /high risk/);
+});
+
+test('low52Verdict: red when fraud=high regardless of signal', () => {
+  const v = low52Verdict(5, 'research', 'high', 3.0, 70);
+  assert.equal(v.emoji, '🔴');
+});
+
+test('low52Verdict: caution when fraud=suspicious', () => {
+  const v = low52Verdict(10, 'research', 'suspicious', 8.0, 60);
+  assert.equal(v.emoji, '🟡');
+  assert.match(v.reason, /warning sign/);
+});
+
+test('low52Verdict: caution when signal=research but band 15 (not close enough)', () => {
+  const v = low52Verdict(15, 'research', 'clean', 13.0, 65);
+  assert.equal(v.emoji, '🟡');
+});
+
+test('low52Verdict: caution when signal=research but band 20', () => {
+  const v = low52Verdict(20, 'research', 'clean', 19.0, 65);
+  assert.equal(v.emoji, '🟡');
+});
+
+test('low52Verdict: caution when signal=caution', () => {
+  const v = low52Verdict(10, 'caution', 'clean', 8.0, 50);
+  assert.equal(v.emoji, '🟡');
+  assert.match(v.reason, /caution signal/);
+});
+
+test('low52Verdict: caution when signal is neutral or missing', () => {
+  const v1 = low52Verdict(10, 'neutral', 'clean', 8.0, 50);
+  assert.equal(v1.emoji, '🟡');
+  const v2 = low52Verdict(10, undefined, undefined, 8.0, null);
+  assert.equal(v2.emoji, '🟡');
+});
+
+test('recDateLine: today', () => {
+  assert.equal(recDateLine('2026-11-19', '2026-11-19'), 'Record date: 19 Nov 2026 (today)');
+});
+
+test('recDateLine: tomorrow', () => {
+  assert.equal(recDateLine('2026-11-20', '2026-11-19'), 'Record date: 20 Nov 2026 (tomorrow)');
+});
+
+test('recDateLine: in N days', () => {
+  assert.equal(recDateLine('2026-11-29', '2026-11-19'), 'Record date: 29 Nov 2026 (in 10 days)');
+});
+
+test('recDateLine: yesterday (passed, yesterday)', () => {
+  assert.equal(recDateLine('2026-11-18', '2026-11-19'), 'Record date: 18 Nov 2026 (passed, yesterday)');
+});
+
+test('recDateLine: N days ago', () => {
+  assert.equal(recDateLine('2026-10-20', '2026-11-19'), 'Record date: 20 Oct 2026 (passed, 30 days ago)');
+});
+
+test('recDateLine: null returns null', () => {
+  assert.equal(recDateLine(null, '2026-11-19'), null);
+  assert.equal(recDateLine(undefined, '2026-11-19'), null);
+});
+
+test('low52 alert block: title shows verdict counts and block has all fields', () => {
+  const rows = [{ code: 'GP', price: 105, weekLow52: 100, weekHigh52: 200 }];
+  const companies = [{ code: 'GP', name: 'GP Ltd', sector: 'Telecom', signal: 'research', score: 72, fraud: 'clean', flags: [], pe: 9.8, dividendYield: 6.1, changePct: -1.3, recordDate: '2026-12-10', recordCashPct: 15, recordStockPct: 5, recordCashPerShare: 1.5 }];
+  const a = alertsFor(base({ watchlist: ['GP'], rangeRows: rows, companies: companies as never, sessionDate: '2026-11-19' }), {}, {});
+  const low52 = a.filter((x) => x.key.startsWith('low52:'));
+  assert.equal(low52.length, 1);
+  const text = low52[0].text;
+  assert.match(text, /<b>GP<\/b>/);
+  assert.match(text, /GP Ltd/);
+  assert.match(text, /Telecom/);
+  assert.match(text, /🟢/);
+  assert.match(text, /Score 72/);
+  assert.match(text, /P\/E 9\.8/);
+  assert.match(text, /Yield 6\.1%/);
+  assert.match(text, /৳1\.50 cash per share/);
+  assert.match(text, /5% bonus/);
+  assert.match(text, /Record date: 10 Dec 2026/);
+  assert.match(text, /Open: https:\/\/dse-trade-helper\.vercel\.app\/c\/GP/);
+  assert.match(text, /Near 52-week low/);
+});
+
+test('low52 alert block: warning line shown for suspicious fraud', () => {
+  const rows = [{ code: 'GP', price: 105, weekLow52: 100, weekHigh52: 200 }];
+  const companies = [{ code: 'GP', name: 'GP', sector: 'Telecom', signal: 'research', score: 50, fraud: 'suspicious', flags: ['Flag A', 'Flag B', 'Flag C'], pe: null, dividendYield: null, changePct: null, recordDate: null, recordCashPct: null, recordStockPct: null, recordCashPerShare: null }];
+  const a = alertsFor(base({ watchlist: ['GP'], rangeRows: rows, companies: companies as never, sessionDate: '2026-11-19' }), {}, {});
+  const text = a.find((x) => x.key.startsWith('low52:'))!.text;
+  assert.match(text, /⚠️ Warning signs: Flag A, Flag B/);
+  assert.doesNotMatch(text, /Flag C/);
+});
+
+test('low52 alert block: warning line hidden for clean fraud', () => {
+  const rows = [{ code: 'GP', price: 105, weekLow52: 100, weekHigh52: 200 }];
+  const companies = [{ code: 'GP', name: 'GP', sector: 'Telecom', signal: 'research', score: 72, fraud: 'clean', flags: ['Flag A'], pe: null, dividendYield: null, changePct: null, recordDate: null, recordCashPct: null, recordStockPct: null, recordCashPerShare: null }];
+  const a = alertsFor(base({ watchlist: ['GP'], rangeRows: rows, companies: companies as never, sessionDate: '2026-11-19' }), {}, {});
+  const text = a.find((x) => x.key.startsWith('low52:'))!.text;
+  assert.doesNotMatch(text, /Warning signs/);
+});
+
+test('low52 alert: 4096-char trim drops companies from end and adds "and N more" line', () => {
+  const rows = Array.from({ length: 15 }, (_, i) => ({ code: `C${String(i).padStart(2, '0')}`, price: 101 + i, weekLow52: 100, weekHigh52: 300 }));
+  const companies = rows.map((r) => ({ code: r.code, name: `Company ${r.code}`, sector: 'Finance', signal: 'research', score: 60, fraud: 'clean', flags: [], pe: 10, dividendYield: 2, changePct: -0.5, recordDate: '2027-01-01', recordCashPct: 10, recordStockPct: 5, recordCashPerShare: 1 }));
+  const a = alertsFor(base({ watchlist: rows.map((r) => r.code), rangeRows: rows, companies: companies as never, sessionDate: '2026-11-19' }), {}, {});
+  const low52 = a.filter((x) => x.key.startsWith('low52:'));
+  assert.equal(low52.length, 1);
+  assert.ok(low52[0].text.length <= 3800 + 100, 'text fits within limit');
+  assert.match(low52[0].text, /…and \d+ more/);
+});
+
+test('recDateLine: invalid format returns null', () => {
+  assert.equal(recDateLine('TBA', '2026-11-19'), null);
+  assert.equal(recDateLine('2026-13-40', '2026-11-19'), null);
+  assert.equal(recDateLine('', '2026-11-19'), null);
+  assert.equal(recDateLine('11-19-2026', '2026-11-19'), null);
+});
+
+test('buildLow52Block: HTML special chars in name, sector and flags are escaped', () => {
+  const rows = [{ code: 'GP', price: 105, weekLow52: 100, weekHigh52: 200 }];
+  const companies = [{ code: 'GP', name: '<b>Bold</b>', sector: 'A&B', signal: 'research', score: 60, fraud: 'suspicious', flags: ['<script>evil</script>', 'flag2'], pe: null, dividendYield: null, changePct: null, recordDate: null, recordCashPct: null, recordStockPct: null, recordCashPerShare: null }];
+  const a = alertsFor(base({ watchlist: ['GP'], rangeRows: rows, companies: companies as never, sessionDate: '2026-11-19' }), {}, {});
+  const text = a.find((x) => x.key.startsWith('low52:'))!.text;
+  assert.doesNotMatch(text, /<script>/);
+  assert.match(text, /&lt;b&gt;Bold&lt;\/b&gt;/);
+  assert.match(text, /A&amp;B/);
+  assert.match(text, /&lt;script&gt;evil&lt;\/script&gt;/);
+});
+
+test('buildLow52Text: flags over 80 chars are truncated; text over 4096 is hard-cut', () => {
+  const rows = [{ code: 'GP', price: 105, weekLow52: 100, weekHigh52: 200 }];
+  const longFlag = 'A'.repeat(5000);
+  const companies = [{ code: 'GP', name: 'GP', sector: 'Finance', signal: 'research', score: 60, fraud: 'suspicious', flags: [longFlag], pe: null, dividendYield: null, changePct: null, recordDate: null, recordCashPct: null, recordStockPct: null, recordCashPerShare: null }];
+  const a = alertsFor(base({ watchlist: ['GP'], rangeRows: rows, companies: companies as never, sessionDate: '2026-11-19' }), {}, {});
+  const text = a.find((x) => x.key.startsWith('low52:'))!.text;
+  assert.ok(text.length <= 4096, `text length ${text.length} exceeds 4096`);
+  assert.doesNotMatch(text, new RegExp('A'.repeat(81)));
+});
+
+test('alertsFor: sends no low52 alert when low52Enabled is false', () => {
+  const rows = [{ code: 'GP', price: 105, weekLow52: 100, weekHigh52: 300 }];
+  const a = alertsFor(base({ watchlist: ['GP'], rangeRows: rows, sessionDate: '2026-11-19', low52Enabled: false }), {}, {});
+  assert.equal(a.some((x) => x.key.startsWith('low52:')), false);
+});
+
+test('nextState: clears low52 to {} when low52Enabled is false', () => {
+  const rows = [{ code: 'GP', price: 105, weekLow52: 100, weekHigh52: 300 }];
+  const prevState = { ...emptyState(), low52: { GP: 10 } };
+  const input = base({ watchlist: ['GP'], rangeRows: rows, sessionDate: '2026-11-19', low52Enabled: false });
+  const s = nextState(prevState, input, [], [], '2026-11-19T04:00:00.000Z');
+  assert.deepEqual(s.low52, {});
+});
+
+test('nextState: empty rangeRows keeps all in-scope bands (data fetch failed)', () => {
+  const prevState = { ...emptyState(), low52: { GP: 10, ROBI: 15 } };
+  const input = base({ watchlist: ['GP', 'ROBI'], rangeRows: [], sessionDate: '2026-11-19' });
+  const s = nextState(prevState, input, [], [], '2026-11-19T04:00:00.000Z');
+  assert.equal(s.low52?.GP, 10, 'GP kept when row missing');
+  assert.equal(s.low52?.ROBI, 15, 'ROBI kept when row missing');
+});
+
+test('nextState: row with rangeLooksWrong keeps its band', () => {
+  const rows = [{ code: 'GP', price: 3, weekLow52: 245.25, weekHigh52: 466.75 }];
+  const prevState = { ...emptyState(), low52: { GP: 10 } };
+  const input = base({ watchlist: ['GP'], rangeRows: rows, sessionDate: '2026-11-19' });
+  const s = nextState(prevState, input, [], [], '2026-11-19T04:00:00.000Z');
+  assert.equal(s.low52?.GP, 10, 'broken range keeps band');
+});
+
+test('nextState: row above 20% removes its band', () => {
+  const rows = [{ code: 'GP', price: 130, weekLow52: 100, weekHigh52: 300 }];
+  const prevState = { ...emptyState(), low52: { GP: 20 } };
+  const input = base({ watchlist: ['GP'], rangeRows: rows, sessionDate: '2026-11-19' });
+  const s = nextState(prevState, input, [], [], '2026-11-19T04:00:00.000Z');
+  assert.equal(s.low52?.GP, undefined, '30% above low removes band');
+});
+
+test('nextState: quiet-hours run with no sent keys leaves low52 unchanged', () => {
+  const rows = [{ code: 'GP', price: 105, weekLow52: 100, weekHigh52: 300 }];
+  const prevState = { ...emptyState(), low52: { GP: 10 } };
+  const night = { ...base({ watchlist: ['GP'], rangeRows: rows }), clock: dhakaClock(new Date('2026-11-19T23:00:00+06:00')) };
+  const s = nextState(prevState, night, [], [], '2026-11-19T17:00:00.000Z');
+  assert.equal(s.low52?.GP, 10, 'quiet hours: low52 unchanged');
 });

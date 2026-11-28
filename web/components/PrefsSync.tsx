@@ -5,7 +5,7 @@ import { call, KEY_STORE, SIGNED_IN_STORE } from '@/components/trades-client';
 import { readStored, useStoredValue, writeStored } from '@/components/useStored';
 import { encodeAlertStore, parseAlertStore, type AlertRule } from '@/lib/alerts';
 import { BROKER_COMMISSION_PCT } from '@/lib/buy-planner';
-import { parseAlertRules, parsePrefs, PREFS_SYNCED_STORE, type Prefs } from '@/lib/prefs';
+import { LOW52_ALERTS_STORE, parseAlertRules, parsePrefs, PREFS_SYNCED_STORE, type Prefs } from '@/lib/prefs';
 import { parseRangeRules, RANGE_RULES_STORE, type RangeRule } from '@/lib/range';
 import { commissionFor } from '@/lib/trades';
 import { parseWatchlist } from '@/lib/watchlist';
@@ -15,13 +15,14 @@ const SAVE_DELAY_MS = 800;
 const DIRTY_STORE = 'prefsDirty';
 const DEFAULT_PCT = String(BROKER_COMMISSION_PCT);
 
-interface Local { watchlist: string[]; brokerCommissionPct: string; alertRules: AlertRule[]; rangeRules: RangeRule[] }
+interface Local { watchlist: string[]; brokerCommissionPct: string; alertRules: AlertRule[]; rangeRules: RangeRule[]; low52Alerts: boolean }
 const bodyOf = (v: Local) => JSON.stringify(v);
 const localNow = (): Local => ({
   watchlist: parseWatchlist(readStored('watchlist')),
   brokerCommissionPct: (readStored('brokerCommissionPct') ?? DEFAULT_PCT).trim(),
   alertRules: parseAlertRules(parseAlertStore(readStored('alerts')).rules),
   rangeRules: (() => { try { return parseRangeRules(JSON.parse(readStored(RANGE_RULES_STORE) || '[]')); } catch { return []; } })(),
+  low52Alerts: readStored(LOW52_ALERTS_STORE) !== 'off',
 });
 // First sync of a browser: keep everything from both sides (rules by id, Sheet first).
 const mergeRules = (sheet: AlertRule[], local: AlertRule[]) => parseAlertRules([...sheet, ...local.filter((r) => !sheet.some((s) => s.id === r.id))]);
@@ -40,6 +41,7 @@ export function PrefsSync() {
   const [pct, setPct] = useStoredValue('brokerCommissionPct', DEFAULT_PCT);
   const [rawAlerts, setAlerts] = useStoredValue('alerts', '{}');
   const [rawRange, setRange] = useStoredValue(RANGE_RULES_STORE, '[]');
+  const [rawLow52, setLow52] = useStoredValue(LOW52_ALERTS_STORE, 'on');
   const [loadedFor, setLoadedFor] = useState('');
   const [visits, setVisits] = useState(0);
   const [loads, setLoads] = useState(0);
@@ -68,21 +70,23 @@ export function PrefsSync() {
         brokerCommissionPct: p.brokerCommissionPct ?? local.brokerCommissionPct,
         alertRules: first ? mergeRules(p.alertRules ?? [], local.alertRules) : p.alertRules ?? local.alertRules,
         rangeRules: first ? mergeRangeRules(p.rangeRules ?? [], local.rangeRules) : p.rangeRules ?? local.rangeRules,
+        low52Alerts: p.low52Alerts ?? local.low52Alerts,
       };
       setWatch(JSON.stringify(next.watchlist));
       setPct(next.brokerCommissionPct);
       setAlerts(encodeAlertStore({ ...parseAlertStore(readStored('alerts')), rules: next.alertRules }));
       setRange(JSON.stringify(next.rangeRules));
+      setLow52(next.low52Alerts ? 'on' : 'off');
       writeStored(PREFS_SYNCED_STORE, '1');
       // Anything the Sheet does not hold exactly is uploaded by the save effect.
       saved.current = p.watchlist && p.brokerCommissionPct != null && p.alertRules && p.rangeRules
-        ? bodyOf({ watchlist: p.watchlist, brokerCommissionPct: p.brokerCommissionPct, alertRules: p.alertRules, rangeRules: p.rangeRules }) : '';
+        ? bodyOf({ watchlist: p.watchlist, brokerCommissionPct: p.brokerCommissionPct, alertRules: p.alertRules, rangeRules: p.rangeRules, low52Alerts: p.low52Alerts ?? true }) : '';
       lastRate.current = p.brokerCommissionPct ?? DEFAULT_PCT;
       setLoadedFor(who);
       setLoads((n) => n + 1);
     }).catch((e: unknown) => console.warn('prefs: could not read the watchlist, broker rate and alert rules from the Sheet', e));
     return () => { active = false; };
-  }, [who, header, visits, setWatch, setPct, setAlerts, setRange]);
+  }, [who, header, visits, setWatch, setPct, setAlerts, setRange, setLow52]);
 
   useEffect(() => {
     if (!who || loadedFor !== who) return;
@@ -100,7 +104,7 @@ export function PrefsSync() {
         .catch((e: unknown) => console.warn('prefs: could not save to the Sheet; it is saved on the next visit to this tab', e));
     }, SAVE_DELAY_MS);
     return () => clearTimeout(t);
-  }, [who, header, loadedFor, loads, rawWatch, pct, rawAlerts, rawRange]);
+  }, [who, header, loadedFor, loads, rawWatch, pct, rawAlerts, rawRange, rawLow52]);
 
   return null;
 }
