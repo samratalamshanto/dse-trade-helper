@@ -20,13 +20,12 @@ export function PhoneAlerts() {
       <p className="small muted">{t('Get a Telegram message when a price rule or a 52-week range rule matches, a plan reaches its price, a holding hits your stop-loss or target, or a dividend\'s last buy day is near.')}</p>
       {ownerMode ? <TelegramTestButton />
         : signedIn === '1' ? (
-          <>
-            <TelegramConnect />
-            <label className="small">
+          <TelegramConnect>
+            <label className="check small">
               <input type="checkbox" checked={rawLow52 !== 'off'} onChange={(e) => setLow52(e.target.checked ? 'on' : 'off')} />
-              {' '}{t('Telegram me when a watchlist or holding share comes within 20%, 15%, 10% or 5% of its 52-week low')}
+              <span>{t('Send a Telegram message when a share on your watchlist or in your portfolio comes within 20%, 15%, 10% or 5% of its 52-week low')}</span>
             </label>
-          </>
+          </TelegramConnect>
         )
         : <p className="small">{t('To get Telegram alerts, first sign in with Google on the')} <Link href="/portfolio">{t('Portfolio page')}</Link>{t('.')}</p>}
     </div>
