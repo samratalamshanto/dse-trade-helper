@@ -3,7 +3,7 @@ import path from 'node:path';
 import { DHAKA_OFFSET_MS } from './dhaka.ts';
 import { livePrices, marketSession } from './dse.ts';
 import { listPlans, picksFor } from './planner-service.ts';
-import { rangeFeed, describeMatch, describeRule, type Owned, type RangeRow, type RangeRule } from './range.ts';
+import { rangeFeed, describeMatch, describeRule, rangeLooksWrong, rangeStats, type Owned, type RangeRow, type RangeRule } from './range.ts';
 import type { CompanyRow } from './service.ts';
 import { evaluateRules, type AlertRule } from './alerts.ts';
 
@@ -67,6 +67,7 @@ export interface NotifyInput {
   sessionDate?: string | null;
   dataTime?: string | null;
   dataError?: boolean;
+  low52Enabled?: boolean;
 }
 export interface Alert { key: string; text: string; code?: string }
 export interface NotifyState {
@@ -79,6 +80,7 @@ export interface NotifyState {
   lastError?: { at: string; text: string } | null;
   // Per-user alerts: when the user was told their Google sign-in ended.
   signInAsked?: string;
+  low52?: Record<string, number>;
 }
 
 // Every alert ends with this line, as the site does.
@@ -91,24 +93,131 @@ const whole = (x: number) => `${x < 0 ? '-' : ''}৳${Math.round(Math.abs(x)).to
 const hhmm = (minutes: number) => `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
 const ALERT_ACTIONS: Record<string, string> = { review: 'Review: stop-loss or a warning', 'take-profit': 'Above your target' };
 
-export function alertsFor(input: NotifyInput, prevActions: Record<string, string>): Alert[] {
+const BANDS = [5, 10, 15, 20] as const;
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const;
+
+function fmtDate(iso: string): string {
+  const [y, m, d] = iso.split('-');
+  return `${parseInt(d, 10)} ${MONTHS[parseInt(m, 10) - 1]} ${y}`;
+}
+
+export function recDateLine(recordDate: string | null | undefined, today: string): string | null {
+  if (!recordDate || !/^\d{4}-\d{2}-\d{2}$/.test(recordDate)) return null;
+  const diff = Math.round((Date.parse(recordDate) - Date.parse(today)) / 86_400_000);
+  if (!Number.isFinite(diff)) return null;
+  const formatted = fmtDate(recordDate);
+  if (diff > 1) return `Record date: ${formatted} (in ${diff} days)`;
+  if (diff === 1) return `Record date: ${formatted} (tomorrow)`;
+  if (diff === 0) return `Record date: ${formatted} (today)`;
+  if (diff === -1) return `Record date: ${formatted} (passed, yesterday)`;
+  return `Record date: ${formatted} (passed, ${Math.abs(diff)} days ago)`;
+}
+
+export function low52Bands(input: Pick<NotifyInput, 'watchlist' | 'owned' | 'rangeRows'>): Map<string, number> {
+  const inScope = new Set([...input.watchlist, ...input.owned.filter((o) => o.shares > 0).map((o) => o.code)]);
+  const rowMap = new Map(input.rangeRows.map((r) => [r.code, r]));
+  const result = new Map<string, number>();
+  for (const code of inScope) {
+    const row = rowMap.get(code);
+    if (!row || rangeLooksWrong(row)) continue;
+    const stats = rangeStats(row);
+    if (!stats) continue;
+    if (stats.aboveLowPct < 0) { result.set(code, 5); continue; }
+    for (const b of BANDS) {
+      if (stats.aboveLowPct <= b) { result.set(code, b); break; }
+    }
+  }
+  return result;
+}
+
+export function low52Verdict(band: number, signal: string | undefined, fraud: string | undefined, aboveLowPct: number, score: number | null | undefined): { emoji: '🟢' | '🟡' | '🔴'; reason: string } {
+  if (signal === 'avoid' || fraud === 'high') return { emoji: '🔴', reason: 'high risk by these rules (warning signs or a loss)' };
+  if (signal === 'research' && (band === 5 || band === 10) && fraud !== 'suspicious') {
+    const scoreStr = score != null ? `good score (${score}), ` : '';
+    return { emoji: '🟢', reason: `${scoreStr}passes all checks, ${aboveLowPct}% above its low` };
+  }
+  if (fraud === 'suspicious') return { emoji: '🟡', reason: 'near its low, but a warning sign was found' };
+  if (signal === 'research') return { emoji: '🟡', reason: 'near its low but price has room to fall further' };
+  if (signal === 'caution') return { emoji: '🟡', reason: 'caution signal near its low' };
+  return { emoji: '🟡', reason: 'near its low, signal unclear' };
+}
+
+function buildLow52Block(code: string, band: number, pct: number, row: RangeRow | undefined, company: CompanyRow | undefined, today: string): string {
+  const lines: string[] = [];
+  const header = [`<b>${escapeHtml(code)}</b>`];
+  if (company?.name) header.push(escapeHtml(company.name));
+  if (company?.sector) header.push(escapeHtml(company.sector));
+  lines.push(header.join(' · '));
+  const v = low52Verdict(band, company?.signal, company?.fraud, pct, company?.score);
+  const verdictLabel = v.emoji === '🟢' ? 'Green' : v.emoji === '🔴' ? 'Red' : 'Caution';
+  lines.push(`${v.emoji} ${verdictLabel} — ${escapeHtml(v.reason)}`);
+  lines.push(`📉 Within ${band}% of its 52-week low (${pct}% above it)`);
+  const priceParts: string[] = [];
+  if (row?.price != null) {
+    const chg = company?.changePct != null ? ` (today ${company.changePct >= 0 ? '+' : '-'}${Math.abs(company.changePct).toFixed(1)}%)` : '';
+    priceParts.push(`Price ${taka(row.price)}${chg}`);
+  }
+  if (row?.weekLow52 != null) priceParts.push(`Low ${taka(row.weekLow52)}`);
+  if (row?.weekHigh52 != null) priceParts.push(`High ${taka(row.weekHigh52)}`);
+  if (priceParts.length) lines.push(priceParts.join(' · '));
+  const statParts: string[] = [];
+  if (company?.score != null) statParts.push(`Score ${company.score}`);
+  if (company?.signal) statParts.push(`Signal: ${escapeHtml(company.signal.charAt(0).toUpperCase() + company.signal.slice(1))}`);
+  if (company?.pe != null) statParts.push(`P/E ${(company.pe as number).toFixed(1)}`);
+  if (company?.dividendYield != null) statParts.push(`Yield ${(company.dividendYield as number).toFixed(1)}%`);
+  if (statParts.length) lines.push(statParts.join(' · '));
+  const divParts: string[] = [];
+  if (company?.recordCashPerShare != null) {
+    const cashPct = company.recordCashPct != null ? ` (${company.recordCashPct}%)` : '';
+    divParts.push(`${taka(company.recordCashPerShare as number)} cash per share${cashPct}`);
+  }
+  if ((company?.recordStockPct as number | null | undefined) != null && ((company?.recordStockPct as number) > 0)) {
+    divParts.push(`${company?.recordStockPct}% bonus`);
+  }
+  if (divParts.length) lines.push(`Dividend: ${divParts.join(' + ')}`);
+  const rdLine = recDateLine(company?.recordDate, today);
+  if (rdLine) lines.push(rdLine);
+  if ((company?.fraud === 'suspicious' || company?.fraud === 'high') && (company?.flags as string[] | undefined)?.length) {
+    lines.push(`⚠️ Warning signs: ${(company.flags as string[]).slice(0, 2).map((f) => escapeHtml(f.length > 80 ? f.slice(0, 79) + '…' : f)).join(', ')}`);
+  }
+  lines.push(`Open: ${SITE}/c/${encodeURIComponent(code)}`);
+  return lines.join('\n');
+}
+
+function buildLow52Text(title: string, blocks: string[], totalMovers: number, maxLen: number): string {
+  const moreLine = (n: number) => `\n…and ${n} more — Open: ${SITE}/range`;
+  let result = title;
+  for (let i = 0; i < blocks.length; i++) {
+    const remaining = totalMovers - i - 1;
+    const withBlock = result + '\n\n' + blocks[i];
+    const candidate = remaining > 0 ? withBlock + moreLine(remaining) : withBlock;
+    if (candidate.length > maxLen && i > 0) return result + moreLine(totalMovers - i);
+    result = withBlock;
+  }
+  const extra = totalMovers - blocks.length;
+  if (extra > 0) result += moreLine(extra);
+  if (result.length > 4096) result = result.slice(0, 4090) + '…';
+  return result;
+}
+
+export function alertsFor(input: NotifyInput, prevActions: Record<string, string>, prevLow52: Record<string, number> = {}): Alert[] {
   const { clock } = input;
   const out: Alert[] = [];
   // null = session fetch failed: stale on trading days (unknown freshness). undefined = not set by test: not stale.
   const isStale = input.sessionDate === null ? clock.tradingDay : input.sessionDate != null && input.sessionDate !== clock.date;
 
   if (input.dataError && clock.tradingDay) {
-    out.push({ key: `data-error:${clock.date}`, text: "Today's check could not read DSE data; alerts may be missing." });
+    out.push({ key: `data-error:${clock.date}`, text: `⚠️ <b>DSE data unavailable</b>\nToday's check could not read DSE data.\nAlerts may be missing.` });
   }
 
   for (const p of input.plans) {
     const code = escapeHtml(p.code);
     if (!isStale && p.live.status === 'reached' && p.targetPrice != null) {
-      const priceInfo = p.ltp != null ? `; current price ${taka(p.ltp)}` : '';
-      out.push({ key: `plan:${p.id}:reached:${clock.date}`, text: `<b>${code}</b> reached your plan price ${taka(p.targetPrice)}${priceInfo}; ${p.live.remaining} shares left in your plan — ${SITE}/c/${encodeURIComponent(p.code)}` });
+      const priceLine = p.ltp != null ? `\nCurrent price: ${taka(p.ltp)}` : '';
+      out.push({ key: `plan:${p.id}:reached:${clock.date}`, text: `🎯 <b>${code} reached your plan price</b>\nPlan price: ${taka(p.targetPrice)}${priceLine}\nShares left in your plan: ${p.live.remaining}\nOpen: ${SITE}/c/${encodeURIComponent(p.code)}` });
     }
     if ((p.live.status === 'reached' || p.live.status === 'waiting') && p.until === clock.tomorrow) {
-      out.push({ key: `plan:${p.id}:expiring:${p.until}`, text: `Your <b>${code}</b> buy plan ends on the next trading day (${p.until}) — ${p.live.remaining} shares still to buy. Edit the date or cancel it. ${SITE}/c/${encodeURIComponent(p.code)}` });
+      out.push({ key: `plan:${p.id}:expiring:${p.until}`, text: `📅 <b>Your ${code} buy plan expires next trading day</b>\nEnds on: ${p.until}\nShares still to buy: ${p.live.remaining}\nEdit the date or cancel it.\nOpen: ${SITE}/c/${encodeURIComponent(p.code)}` });
     }
   }
   for (const h of input.holdings) {
@@ -117,11 +226,13 @@ export function alertsFor(input: NotifyInput, prevActions: Record<string, string
     const action = h.check?.action ?? '';
     if (!isStale && ALERT_ACTIONS[action] && prevActions[h.code] !== action) {
       const why = (h.check?.reasons ?? []).map((r) => `• ${escapeHtml(r)}`).join('\n');
-      out.push({ key: `pos:${h.code}:${action}:${clock.date}`, code: h.code, text: `<b>${code}</b>: ${ALERT_ACTIONS[action]}\n${why}\nBased only on the limits you set. — ${SITE}/c/${encodeURIComponent(h.code)}`.trim() });
+      const actionLabel = action === 'review' ? 'Review' : 'Take profit';
+      out.push({ key: `pos:${h.code}:${action}:${clock.date}`, code: h.code, text: `🔔 <b>${code} — ${actionLabel}</b>\n${ALERT_ACTIONS[action]}${why ? '\n' + why : ''}\nBased only on the limits you set.\nOpen: ${SITE}/c/${encodeURIComponent(h.code)}` });
     }
     const lastBuy = input.lastBuyDates[h.code];
     if (lastBuy === clock.date || lastBuy === clock.tomorrow) {
-      out.push({ key: `div:${h.code}:${lastBuy}`, text: `<b>${code}</b>: ${lastBuy === clock.date ? 'today' : 'the next trading day'} (${lastBuy}) is the last day to buy for the dividend. If the board's dividend is approved, you must still hold the shares on the record date to get it — check that date with your broker. ${SITE}/c/${encodeURIComponent(h.code)}` });
+      const when = lastBuy === clock.date ? `Today (${lastBuy})` : `The next trading day (${lastBuy})`;
+      out.push({ key: `div:${h.code}:${lastBuy}`, text: `💰 <b>Last day to buy: ${code}</b>\n${when} is the last day to buy for the dividend.\nIf the board's dividend is approved, hold until the record date to receive it.\nCheck the record date with your broker.\nOpen: ${SITE}/c/${encodeURIComponent(h.code)}` });
     }
   }
   const priceRules = (input.priceRules ?? []).filter((r) => PRICE_RULE_TYPES.has(r.type));
@@ -131,7 +242,7 @@ export function alertsFor(input: NotifyInput, prevActions: Record<string, string
     const onceIds = new Set(priceRules.filter((r) => 'stop' in r && r.stop === 'once').map((r) => r.id));
     for (const e of evaluateRules(priceRules, snaps, [], clock.date, {}).events) {
       // A "once" rule keeps one key for good, so Telegram sends it one time even if no browser turns it off.
-      out.push({ key: onceIds.has(e.ruleId) ? `price-once:${e.ruleId}` : `price:${e.key}`, text: `${escapeHtml(e.message)} — ${SITE}/c/${encodeURIComponent(e.code)}` });
+      out.push({ key: onceIds.has(e.ruleId) ? `price-once:${e.ruleId}` : `price:${e.key}`, text: `${escapeHtml(e.message)}\nOpen: ${SITE}/c/${encodeURIComponent(e.code)}` });
     }
   }
   if (!isStale && input.rangeRules.length > 0) {
@@ -141,15 +252,50 @@ export function alertsFor(input: NotifyInput, prevActions: Record<string, string
     for (const rule of input.rangeRules) {
       const mine = matches.filter((m) => m.rule.id === rule.id);
       if (!mine.length) continue;
-      const lines = mine.slice(0, RANGE_DIGEST_MAX).map((m) => {
+      const lines = mine.slice(0, RANGE_DIGEST_MAX).flatMap((m) => {
         const r = rowMap.get(m.code);
         const nums = r?.price != null && r.weekLow52 != null && r.weekHigh52 != null
           ? ` ${taka(r.price)} (low ${taka(r.weekLow52)}, high ${taka(r.weekHigh52)})`
           : '';
-        return `• <b>${escapeHtml(m.code)}</b>${nums}: ${describeMatch(m)} — ${SITE}/c/${encodeURIComponent(m.code)}`;
+        return [`• <b>${escapeHtml(m.code)}</b>${nums}: ${describeMatch(m)}`, `Open: ${SITE}/c/${encodeURIComponent(m.code)}`];
       });
-      if (mine.length > RANGE_DIGEST_MAX) lines.push(`…and ${mine.length - RANGE_DIGEST_MAX} more on the 52-week range page`);
-      out.push({ key: `range:${rule.id}:${clock.date}`, text: [`<b>Your rule:</b> ${escapeHtml(describeRule(rule))}`, ...lines].join('\n') });
+      if (mine.length > RANGE_DIGEST_MAX) lines.push(`…and ${mine.length - RANGE_DIGEST_MAX} more — Open: ${SITE}/range`);
+      out.push({ key: `range:${rule.id}:${clock.date}`, text: [`📊 <b>Your 52-week rule</b>`, escapeHtml(describeRule(rule)), ...lines].join('\n') });
+    }
+  }
+  if (!isStale && input.low52Enabled !== false) {
+    const bands = low52Bands(input);
+    const companyMap = new Map((input.companies ?? []).map((c) => [c.code, c]));
+    const rowMap = new Map(input.rangeRows.map((r) => [r.code, r]));
+    const movers = [...bands.entries()].filter(([code, band]) => band < (prevLow52[code] ?? 21));
+    if (movers.length > 0) {
+      const withStats = movers.map(([code, band]) => {
+        const row = rowMap.get(code);
+        const pct = row ? (rangeStats(row)?.aboveLowPct ?? 0) : 0;
+        return { code, band, pct };
+      });
+      const verdictOrder: Record<string, number> = { '🟢': 0, '🟡': 1, '🔴': 2 };
+      const withVerdicts = withStats.map(({ code, band, pct }) => {
+        const c = companyMap.get(code);
+        return { code, band, pct, verdict: low52Verdict(band, c?.signal, c?.fraud, pct, c?.score) };
+      });
+      withVerdicts.sort((a, b) => (verdictOrder[a.verdict.emoji] - verdictOrder[b.verdict.emoji]) || (a.pct - b.pct) || (a.code < b.code ? -1 : 1));
+      let greenCount = 0, cautionCount = 0, redCount = 0;
+      for (const { verdict } of withVerdicts) {
+        if (verdict.emoji === '🟢') greenCount++;
+        else if (verdict.emoji === '🟡') cautionCount++;
+        else redCount++;
+      }
+      const countParts = ([greenCount > 0 ? `🟢 ${greenCount}` : null, cautionCount > 0 ? `🟡 ${cautionCount}` : null, redCount > 0 ? `🔴 ${redCount}` : null] as (string | null)[]).filter(Boolean).join(' · ');
+      const title = `📉 <b>Near 52-week low</b> — ${countParts}`;
+      const totalMovers = withVerdicts.length;
+      const displayBlocks = withVerdicts.slice(0, RANGE_DIGEST_MAX).map(({ code, band, pct }) =>
+        buildLow52Block(code, band, pct, rowMap.get(code), companyMap.get(code), clock.date)
+      );
+      const sortedPairs = movers.map(([c, b]) => `${c}=${b}`).sort().join(',');
+      const key = `low52:${clock.date}:${sortedPairs}`;
+      const text = buildLow52Text(title, displayBlocks, totalMovers, 3800);
+      out.push({ key, text });
     }
   }
   return out;
@@ -161,17 +307,20 @@ export function summaryText(input: NotifyInput): string {
   const reached = input.plans.filter((p) => p.live.status === 'reached').length;
   const waiting = input.plans.filter((p) => p.live.status === 'waiting').length;
   const lines = [
-    `<b>Morning summary (DSE data) — ${input.clock.date}</b>`,
+    `📋 <b>Morning summary (DSE data) — ${input.clock.date}</b>`,
     held.length ? `Holdings: ${whole(value)}${input.dayPl == null ? '' : ` (today ${input.dayPl >= 0 ? '+' : ''}${whole(input.dayPl)})`}` : 'Holdings: none',
     `Buy plans: ${reached} reached, ${waiting} waiting`,
   ];
-  if (input.picks.length) lines.push(`Research list: ${input.picks.map((p) => `${escapeHtml(p.code)} ${taka(p.price)} (${p.reason}) — ${SITE}/c/${encodeURIComponent(p.code)}`).join(', ')}`);
+  for (const p of input.picks) {
+    lines.push(`Research: ${escapeHtml(p.code)} ${taka(p.price)} (${p.reason})`);
+    lines.push(`Open: ${SITE}/c/${encodeURIComponent(p.code)}`);
+  }
   return lines.join('\n');
 }
 
 // Everything due and not yet sent; quiet hours hold everything back (nothing here is urgent enough to wake the owner).
 export function decide(input: NotifyInput, state: NotifyState): { due: Alert[]; held: Alert[] } {
-  const all = alertsFor(input, state.actions);
+  const all = alertsFor(input, state.actions, state.low52 ?? {});
   if (summaryDue(input.clock)) all.push({ key: `summary:${input.clock.date}`, text: summaryText(input) });
   const fresh = all.filter((a) => !state.sent[a.key]);
   return isQuiet(input.clock) ? { due: [], held: fresh } : { due: fresh, held: [] };
@@ -191,7 +340,29 @@ export function nextState(state: NotifyState, input: NotifyInput, sentKeys: stri
   const blocked = new Set(unsent.map((a) => a.code).filter(Boolean));
   const isStale = input.sessionDate === null ? input.clock.tradingDay : input.sessionDate != null && input.sessionDate !== input.clock.date;
   const actions = Object.fromEntries(input.holdings.filter((h) => h.shares > 0).map((h) => [h.code, isStale || blocked.has(h.code) ? state.actions[h.code] ?? '' : h.check?.action ?? '']));
-  return { ...state, sent, actions, lastRun: nowIso, lastSent: sentKeys.length ? nowIso : state.lastSent, pending: unsent.length };
+  const low52Enabled = input.low52Enabled !== false;
+  const bandsMap = low52Enabled ? low52Bands(input) : new Map<string, number>();
+  const inScope = new Set([...input.watchlist, ...input.owned.filter((o) => o.shares > 0).map((o) => o.code)]);
+  const prevLow52 = state.low52 ?? {};
+  const movers = [...bandsMap.entries()].filter(([code, band]) => band < (prevLow52[code] ?? 21));
+  const low52Key = movers.length > 0 ? `low52:${input.clock.date}:${movers.map(([c, b]) => `${c}=${b}`).sort().join(',')}` : null;
+  const alertSent = low52Key ? sentKeys.includes(low52Key) : false;
+  const low52: Record<string, number> = low52Enabled ? { ...prevLow52 } : {};
+  if (alertSent) {
+    for (const [code, band] of movers) low52[code] = band;
+  }
+  if (low52Enabled) {
+    const rowMap = new Map(input.rangeRows.map((r) => [r.code, r]));
+    for (const code of Object.keys(low52)) {
+      if (!inScope.has(code)) { delete low52[code]; continue; }
+      const row = rowMap.get(code);
+      if (row && !rangeLooksWrong(row)) {
+        const stats = rangeStats(row);
+        if (stats && stats.aboveLowPct > 20) delete low52[code];
+      }
+    }
+  }
+  return { ...state, sent, actions, low52, lastRun: nowIso, lastSent: sentKeys.length ? nowIso : state.lastSent, pending: unsent.length };
 }
 
 export function readState(file = STATE_FILE()): NotifyState {
@@ -282,6 +453,7 @@ async function gather(clock: Clock, budget: number | null | undefined): Promise<
     sessionDate: session?.sessionDate ?? null,
     dataTime: session?.dataTime ?? null,
     dataError,
+    low52Enabled: prefs?.low52Alerts !== false,
   };
 }
 

@@ -53,3 +53,24 @@ test('a range rule with a valid pick round-trips; an unknown pick is dropped fro
   const withBogus = { id: 'rr3', kind: 'nearLow' as const, pct: 5, scope: 'all' as const, pick: 'bogus' as never };
   assert.deepEqual(prefsFromRows(prefsToRows({ watchlist: [], brokerCommissionPct: '0.4', alertRules: [], rangeRules: [withBogus] }))?.rangeRules, [{ id: 'rr3', kind: 'nearLow', pct: 5, scope: 'all' }]);
 });
+
+test('low52Alerts round-trips through Sheet rows', () => {
+  assert.deepEqual(prefsFromRows(prefsToRows({ watchlist: [], brokerCommissionPct: '0.4', alertRules: [], rangeRules: [], low52Alerts: true })), { watchlist: [], brokerCommissionPct: '0.4', alertRules: [], rangeRules: [], low52Alerts: true });
+  assert.deepEqual(prefsFromRows(prefsToRows({ watchlist: [], brokerCommissionPct: '0.4', alertRules: [], rangeRules: [], low52Alerts: false })), { watchlist: [], brokerCommissionPct: '0.4', alertRules: [], rangeRules: [], low52Alerts: false });
+  assert.equal(prefsFromRows(prefsToRows({ watchlist: [], brokerCommissionPct: '0.4', alertRules: [], rangeRules: [] })).low52Alerts, undefined, 'not written when undefined');
+});
+
+test('prefsFromRows reads low52Alerts on/off and ignores other values', () => {
+  assert.equal(prefsFromRows([['low52Alerts', 'on']]).low52Alerts, true);
+  assert.equal(prefsFromRows([['low52Alerts', 'off']]).low52Alerts, false);
+  assert.equal(prefsFromRows([['low52Alerts', 'yes']]).low52Alerts, undefined);
+  assert.equal(prefsFromRows([['low52Alerts', '']]).low52Alerts, undefined);
+});
+
+test('parsePrefs accepts missing low52Alerts and rejects non-boolean value', () => {
+  assert.deepEqual(parsePrefs({ watchlist: [], brokerCommissionPct: '0.4', alertRules: [], rangeRules: [], low52Alerts: true }), { watchlist: [], brokerCommissionPct: '0.4', alertRules: [], rangeRules: [], low52Alerts: true });
+  assert.deepEqual(parsePrefs({ watchlist: [], brokerCommissionPct: '0.4', alertRules: [], rangeRules: [], low52Alerts: false }), { watchlist: [], brokerCommissionPct: '0.4', alertRules: [], rangeRules: [], low52Alerts: false });
+  assert.deepEqual(parsePrefs({ watchlist: [], brokerCommissionPct: '0.4', alertRules: [], rangeRules: [] })?.low52Alerts, undefined, 'missing = not sent');
+  assert.equal(parsePrefs({ watchlist: [], brokerCommissionPct: '0.4', alertRules: [], rangeRules: [], low52Alerts: 'on' }), null, 'string is not boolean');
+  assert.equal(parsePrefs({ watchlist: [], brokerCommissionPct: '0.4', alertRules: [], rangeRules: [], low52Alerts: 1 }), null, 'number is not boolean');
+});
