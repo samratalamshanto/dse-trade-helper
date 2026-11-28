@@ -98,6 +98,14 @@ test('token box: round trip; the stored form never contains the token; another k
   try { assert.throws(() => open(sealed)); } finally { process.env.TOKEN_ENC_KEY = keep; }
 });
 
+test('token box: a cut-short tag or body is refused', () => {
+  const b = Buffer.from(seal('1//refresh-token-abc'), 'base64url');
+  const shortTag = Buffer.concat([b.subarray(0, 12), b.subarray(12, 16)]).toString('base64url');
+  assert.throws(() => open(shortTag), /too short/);
+  assert.throws(() => open(b.subarray(0, 20).toString('base64url')), /too short/);
+  assert.throws(() => open(''), /too short/);
+});
+
 test('connect route: signed out 401, other site 403; signed in gets a one-time bot link and an encrypted row', async (t) => {
   const f = fakeGoogle(t);
   assert.equal((await link.POST(req('POST'))).status, 401);

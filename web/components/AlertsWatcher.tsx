@@ -83,7 +83,7 @@ export function AlertsWatcher() {
   const dismiss = (id: string) => setToasts((prev) => prev.filter((t) => t.id !== id));
 
   return (
-    <div className={styles.area} aria-live="polite" aria-label="Alert notifications" aria-atomic="false">
+    <div className={styles.area} role="region" aria-live="polite" aria-label="Alert notifications" aria-atomic="false">
       {toasts.map((t) => (
         <div key={t.id} className={styles.toast} role="status">
           <span className={styles.msg}>{t.message}</span>
